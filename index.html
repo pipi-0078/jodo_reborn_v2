@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>浄土再現 — 極楽国土</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1408; }
+    canvas { display: block; }
+    #overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.2rem; cursor: pointer; text-align: center;
+      background: radial-gradient(ellipse at center, rgba(26, 20, 8, 0.55), rgba(26, 20, 8, 0.92));
+      color: #e8c37a;
+      font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+      transition: opacity 0.6s ease;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    #overlay h1 { font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 500; letter-spacing: 0.35em; margin: 0; }
+    #overlay p { font-size: clamp(0.85rem, 2.5vw, 1.05rem); letter-spacing: 0.12em; line-height: 2; margin: 0; opacity: 0.85; }
+    #overlay .enter { border: 1px solid rgba(232, 195, 122, 0.6); padding: 0.6em 2.2em; letter-spacing: 0.3em; }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <h1>極楽国土</h1>
+    <p>其国衆生 無有衆苦 但受諸楽 故名極楽</p>
+    <p class="enter">クリックして入場</p>
+    <p>移動:W A S D ／ 見回す:マウス ／ 退出:ESC</p>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
