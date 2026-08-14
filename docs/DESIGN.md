@@ -34,13 +34,16 @@
 | [forthtemple/openworldthreejs](https://github.com/forthtemple/openworldthreejs) | ワールドモデルから床・壁を検出して歩行させる**衝突判定の設計** |
 | [VerseEngine/verse-three](https://github.com/VerseEngine/verse-three) | 将来マルチユーザー化する場合のP2Pメタバースエンジン候補 |
 
-### 阿弥陀如来坐像のアセット戦略
+### 阿弥陀如来坐像のアセット戦略 【確保済み ✅】
 
-1. **第一候補**: [Scan The World の鎌倉大仏スキャン](https://www.myminifactory.com/object/3d-print-the-great-buddha-at-kamakura-japan-1852)
-   — 鎌倉大仏は**まさに阿弥陀如来坐像**。フォトグラメトリの実データ。採用前にライセンス(非商用条件の有無)を確認する
-2. 第二候補: Sketchfab / Meshy 等のCC0仏像モデルを検索して流用
-3. 最終形: 上記をプレースホルダとし、将来的に定印(弥陀の定印)・光背・蓮華座を備えた専用モデルへ差し替え
-4. いずれも Blender で減面 → glb + Draco圧縮 → 目標 5MB 以下
+**採用アセット**: `public/assets/amida_gold.glb`(クレジットは [ATTRIBUTION.md](./ATTRIBUTION.md) 参照)
+
+- 原典: Sketchfab「阿弥陀如来坐像 / Wooden Amitabha sitting statue」(Atsushi Nakabayashi氏、CC-BY-SA-4.0、ライセンス確認済み)
+- 弥陀の定印を結んだ正統な阿弥陀如来坐像のフォトグラメトリスキャン。蓮華座付き
+- 最適化済み: 37.3万 → 8.2万トライアングル、29.3MB → 4.5MB
+- 木造の質感 → **金色のPBRメタリックマテリアル**に変換済み(baseColor: 金、metallic 1.0、roughness 0.38)。彫りの精細さはノーマルマップ(1024px)で維持
+- プレビュー: [preview_amida_gold.png](./preview_amida_gold.png)
+- Phase 2 での残作業: シーンの照明(西日+HDR環境)に合わせた金色の調整、光背シェーダの追加、スケール調整(現状 実寸約1m → シーン内で拡大配置)
 
 ---
 
