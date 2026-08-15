@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
+import { createPond } from './world/pond';
+import { createRings } from './world/rings';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -15,12 +17,17 @@ async function main(): Promise<void> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
-  createSky(scene);
+  createSky(scene, renderer);
   createGround(scene);
+  createPond(scene);
+  createRings(scene);
 
   const overlay = document.getElementById('overlay')!;
   const walker = new FirstPersonWalker(camera, document.body, overlay);
   scene.add(walker.controls.object);
+
+  // 動作検証用フック(ヘッドレステストからカメラを動かす)
+  (window as unknown as { __camera?: THREE.PerspectiveCamera }).__camera = camera;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { sampleGround } from '../world/layout';
 
 const EYE_HEIGHT = 1.6;
 const WALK_SPEED = 14;
@@ -49,15 +50,27 @@ export class FirstPersonWalker {
     if (keys.forward || keys.back) velocity.z -= direction.z * WALK_SPEED * DAMPING * dt;
     if (keys.left || keys.right) velocity.x -= direction.x * WALK_SPEED * DAMPING * dt;
 
+    const position = this.controls.object.position;
+    const prevX = position.x;
+    const prevZ = position.z;
+
     this.controls.moveRight(-velocity.x * dt);
     this.controls.moveForward(-velocity.z * dt);
 
-    const position = this.controls.object.position;
-    position.y = EYE_HEIGHT;
+    // 進入不可の場所(池の水面など)へは踏み込ませない
+    if (sampleGround(position.x, position.z).blocked) {
+      position.x = prevX;
+      position.z = prevZ;
+    }
+
     const radius = Math.hypot(position.x, position.z);
     if (radius > BOUNDARY) {
       position.x *= BOUNDARY / radius;
       position.z *= BOUNDARY / radius;
     }
+
+    // 足元の高さに目線を追従させる(階道の昇降・中島の登り)
+    const targetY = sampleGround(position.x, position.z).y + EYE_HEIGHT;
+    position.y = THREE.MathUtils.lerp(position.y, targetY, Math.min(1, dt * 10));
   }
 }

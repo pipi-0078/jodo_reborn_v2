@@ -1,11 +1,12 @@
 import * as THREE from 'three/webgpu';
+import { POND_OUTER } from './layout';
 
 export const WORLD_RADIUS = 1000;
 
-// 「黄金為地」— 大地は黄金。歩行時の視差が生まれるよう、
-// ラフネスにゆらぎを持たせて表面の変化をつくる
+// 「黄金為地」— 大地は黄金。中央は七宝池のためくり抜いてある。
+// 歩行時の視差が生まれるよう、ラフネスにゆらぎを持たせて表面の変化をつくる
 export function createGround(scene: THREE.Scene): void {
-  const geometry = new THREE.CircleGeometry(WORLD_RADIUS, 128);
+  const geometry = new THREE.RingGeometry(POND_OUTER, WORLD_RADIUS, 128, 8);
   geometry.rotateX(-Math.PI / 2);
 
   const material = new THREE.MeshStandardMaterial({

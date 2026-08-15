@@ -5,7 +5,7 @@ import { SkyMesh } from 'three/addons/objects/SkyMesh.js';
 const SUN_ELEVATION_DEG = 7;
 const SUN_AZIMUTH_DEG = 270;
 
-export function createSky(scene: THREE.Scene): { sunDirection: THREE.Vector3 } {
+export function createSky(scene: THREE.Scene, renderer: THREE.WebGPURenderer): { sunDirection: THREE.Vector3 } {
   const sky = new SkyMesh();
   sky.scale.setScalar(2000);
   sky.turbidity.value = 5;
@@ -17,7 +17,18 @@ export function createSky(scene: THREE.Scene): { sunDirection: THREE.Vector3 } {
   const theta = THREE.MathUtils.degToRad(SUN_AZIMUTH_DEG);
   const sunDirection = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
   sky.sunPosition.value.copy(sunDirection);
-  scene.add(sky);
+
+  // 空そのものから環境マップを焼き、金銀瑠璃玻璃と水面に反射を与える
+  try {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.add(sky);
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    scene.environmentIntensity = 0.7;
+  } catch (error) {
+    console.warn('環境マップの生成に失敗(反射なしで続行):', error);
+  }
+  scene.add(sky); // fromSceneで一時シーンへ移るため、本シーンへ戻す
 
   // 西日(主光源)
   const sun = new THREE.DirectionalLight(0xffdfae, 2.6);
