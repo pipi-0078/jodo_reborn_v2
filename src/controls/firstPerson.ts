@@ -5,7 +5,7 @@ import { sampleGround } from '../world/layout';
 const EYE_HEIGHT = 1.6;
 const WALK_SPEED = 14;
 const DAMPING = 8;
-const BOUNDARY = 165; // 最外周の並木の少し外まで歩ける
+const BOUNDARY = 112; // 最外周の並木の少し外まで歩ける
 
 export class FirstPersonWalker {
   readonly controls: PointerLockControls;
@@ -14,7 +14,7 @@ export class FirstPersonWalker {
   private readonly keys = { forward: false, back: false, left: false, right: false };
 
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement, overlay: HTMLElement) {
-    camera.position.set(75, EYE_HEIGHT, 0); // 東側、並木の内側にスポーン
+    camera.position.set(52, EYE_HEIGHT, 0); // 東側、並木の内側にスポーン
     camera.lookAt(0, EYE_HEIGHT, 0); // 西方(阿弥陀仏の方角)を向く
 
     this.controls = new PointerLockControls(camera, domElement);

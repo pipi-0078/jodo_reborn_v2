@@ -1,15 +1,15 @@
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-// 仕立て木(niwaki)風の宝樹を手続き生成する。
-// 曲がりのある三段の幹から枝が張り出し、その先に平たい葉層が重なる。
+// 円錐の葉を段重ねにした宝樹(針葉樹・クリスマスツリー型)。
+// 裾は波打たせて垂らし、頂に宝珠、枝先に宝玉の飾りを付ける。
 
-interface TreeTemplate {
-  wood: THREE.BufferGeometry;
-  canopy: THREE.BufferGeometry;
+export interface TreeTemplate {
+  wood: THREE.BufferGeometry; // 幹
+  canopy: THREE.BufferGeometry; // 円錐の葉(四宝の色が乗る)
+  jewels: THREE.BufferGeometry; // 宝珠・宝玉(発光)
 }
 
-// 再現性のある乱数(テンプレートの形を毎回同じにする)
 function mulberry32(seed: number): () => number {
   return () => {
     seed |= 0;
@@ -20,86 +20,74 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-// 中心からの半径方向に凹凸をつける(共有頂点が同じ量だけ動くよう、位置から決める)
-function roughen(geometry: THREE.BufferGeometry, amount: number): void {
+// 円錐の裾を波打たせ、端をわずかに垂らす(滑らかな法線を保つ)
+function ruffleCone(geometry: THREE.BufferGeometry, maxRadius: number, phase: number): void {
   const position = geometry.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < position.count; i++) {
     v.fromBufferAttribute(position, i);
-    const n = Math.sin(v.x * 12.3 + v.y * 7.1) * Math.cos(v.z * 9.7 + v.x * 3.3);
-    const s = 1 + n * amount;
-    position.setXYZ(i, v.x * s, v.y * s, v.z * s);
+    const radius = Math.hypot(v.x, v.z);
+    if (radius < 1e-4) continue;
+    const fraction = radius / maxRadius;
+    const theta = Math.atan2(v.z, v.x);
+    const wobble = 1 + 0.055 * Math.sin(theta * 7 + phase) * fraction;
+    const droop = 0.22 * fraction * fraction;
+    position.setXYZ(i, v.x * wobble, v.y - droop, v.z * wobble);
   }
   geometry.computeVertexNormals();
-}
-
-// 2点間を結ぶ先細りの枝
-function branchBetween(start: THREE.Vector3, end: THREE.Vector3, r1: number, r2: number): THREE.BufferGeometry {
-  const direction = end.clone().sub(start);
-  const length = direction.length();
-  const geometry = new THREE.CylinderGeometry(r2, r1, length, 6, 1);
-  geometry.translate(0, length / 2, 0);
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    direction.normalize(),
-  );
-  geometry.applyQuaternion(quaternion);
-  geometry.translate(start.x, start.y, start.z);
-  return geometry;
 }
 
 export function buildTreeTemplate(seed: number): TreeTemplate {
   const rand = mulberry32(seed);
   const woodParts: THREE.BufferGeometry[] = [];
   const canopyParts: THREE.BufferGeometry[] = [];
+  const jewelParts: THREE.BufferGeometry[] = [];
 
-  // 幹:先細りの円柱を三段、少しずつ折りながら積む
-  const radii = [0.32, 0.23, 0.16, 0.1];
-  const heights = [2.2, 1.9, 1.6];
-  let tip = new THREE.Vector3(0, 0, 0);
-  let angle = (rand() - 0.5) * 0.2;
-  let tilt = rand() * Math.PI * 2;
-  for (let s = 0; s < 3; s++) {
-    const rotation = new THREE.Matrix4().makeRotationAxis(
-      new THREE.Vector3(Math.cos(tilt), 0, Math.sin(tilt)),
-      angle,
-    );
-    rotation.setPosition(tip.x, tip.y, tip.z);
-    const segment = new THREE.CylinderGeometry(radii[s + 1], radii[s], heights[s], 8, 1);
-    segment.translate(0, heights[s] / 2, 0);
-    segment.applyMatrix4(rotation);
-    woodParts.push(segment);
-    tip = new THREE.Vector3(0, heights[s], 0).applyMatrix4(rotation);
-    angle += (rand() - 0.5) * 0.45;
-    tilt += (rand() - 0.5) * 1.2;
+  // 幹:根元だけ見える短い円柱
+  const trunk = new THREE.CylinderGeometry(0.14, 0.24, 1.4, 12);
+  trunk.translate(0, 0.7, 0);
+  woodParts.push(trunk);
+
+  // 葉:円錐を4〜5段、上へいくほど小さく重ねる
+  const tiers = 4 + Math.floor(rand() * 2);
+  const baseRadius = 2.0 + rand() * 0.4;
+  const totalHeight = 5.2 + rand() * 0.9;
+  let tierTopY = 0;
+  for (let i = 0; i < tiers; i++) {
+    const t = i / (tiers - 1);
+    const radius = THREE.MathUtils.lerp(baseRadius, 0.62, t);
+    const height = THREE.MathUtils.lerp(2.15, 1.25, t);
+    const baseY = 0.95 + t * (totalHeight - 2.75);
+    const cone = new THREE.ConeGeometry(radius, height, 26, 3, true);
+    cone.translate(0, height / 2, 0);
+    ruffleCone(cone, radius, rand() * Math.PI * 2);
+    cone.translate(0, baseY, 0);
+    canopyParts.push(cone);
+    tierTopY = baseY + height;
+
+    // 段の縁に宝玉の飾り(小さな多面体)
+    const ornamentCount = 3 - Math.floor(t * 2);
+    for (let j = 0; j < ornamentCount; j++) {
+      const theta = rand() * Math.PI * 2;
+      const ornament = new THREE.IcosahedronGeometry(0.1 + rand() * 0.04, 0);
+      ornament.translate(
+        Math.cos(theta) * radius * 0.92,
+        baseY + 0.08,
+        Math.sin(theta) * radius * 0.92,
+      );
+      jewelParts.push(ornament);
+    }
   }
 
-  // 枝と葉層:幹の上部から放射状に張り出す
-  const padCount = 5 + Math.floor(rand() * 2);
-  for (let i = 0; i < padCount; i++) {
-    const theta = (i / padCount) * Math.PI * 2 + rand() * 0.9;
-    const spread = 1.0 + rand() * 1.5;
-    const height = tip.y - 2.1 + (i / padCount) * 2.7 + rand() * 0.35;
-    const padCenter = new THREE.Vector3(Math.cos(theta) * spread, height, Math.sin(theta) * spread);
-    const branchStart = new THREE.Vector3(tip.x * 0.4, height - 0.7 - rand() * 0.4, tip.z * 0.4);
-    woodParts.push(branchBetween(branchStart, padCenter, 0.07, 0.035));
-
-    const pad = new THREE.IcosahedronGeometry(0.95, 1);
-    roughen(pad, 0.12);
-    pad.scale(1.25 + rand() * 0.5, 0.32 + rand() * 0.08, 1.25 + rand() * 0.5);
-    pad.translate(padCenter.x, padCenter.y + 0.18, padCenter.z);
-    canopyParts.push(pad);
-  }
-
-  // 天辺の冠
-  const crown = new THREE.IcosahedronGeometry(0.95, 1);
-  roughen(crown, 0.12);
-  crown.scale(1.15, 0.5, 1.15);
-  crown.translate(tip.x, tip.y + 0.42, tip.z);
-  canopyParts.push(crown);
+  // 頂の宝珠(ほうじゅ)。多面体と結合するためインデックスを外す
+  const finial = new THREE.SphereGeometry(0.22, 16, 12).toNonIndexed();
+  finial.scale(1, 1.35, 1);
+  finial.translate(0, tierTopY + 0.18, 0);
+  jewelParts.push(finial);
 
   return {
     wood: mergeGeometries(woodParts),
     canopy: mergeGeometries(canopyParts),
+    jewels: mergeGeometries(jewelParts),
   };
 }

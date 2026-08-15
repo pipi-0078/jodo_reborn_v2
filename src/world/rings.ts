@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { TREE_RINGS, CAUSEWAY_HALF_WIDTH, makeTreasureMaterials } from './layout';
 import { buildTreeTemplate } from './trees';
 
-const TREE_SPACING = 12; // 並木の間隔(m)
+const TREE_SPACING = 15; // 並木の間隔(m)
 const GATE_HALF_ANGLE = 0.09; // 欄楯の四方の門の半角(rad)
 const TREE_VARIANTS = 3; // 宝樹テンプレートの種類数
 
@@ -42,16 +42,25 @@ function createTrees(scene: THREE.Scene): void {
     }
   }
 
-  // 幹・枝:テンプレートごとにまとめて描く
+  // 幹:テンプレートごとにまとめて描く
   const woodMaterial = new THREE.MeshStandardMaterial({ color: 0x8a6420, metalness: 0.7, roughness: 0.5 });
+  // 宝玉・宝珠:淡く発光する金
+  const jewelMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffe9b0, metalness: 0.9, roughness: 0.15,
+    emissive: 0xffd98a, emissiveIntensity: 0.35,
+  });
   for (let v = 0; v < TREE_VARIANTS; v++) {
     const subset = placements.filter((p) => p.variant === v);
     const wood = new THREE.InstancedMesh(templates[v].wood, woodMaterial, subset.length);
-    subset.forEach((p, i) => wood.setMatrixAt(i, p.matrix));
-    scene.add(wood);
+    const jewels = new THREE.InstancedMesh(templates[v].jewels, jewelMaterial, subset.length);
+    subset.forEach((p, i) => {
+      wood.setMatrixAt(i, p.matrix);
+      jewels.setMatrixAt(i, p.matrix);
+    });
+    scene.add(wood, jewels);
   }
 
-  // 葉層:四宝×テンプレートの組ごとにまとめて描く
+  // 葉:四宝×テンプレートの組ごとにまとめて描く
   for (let t = 0; t < 4; t++) {
     for (let v = 0; v < TREE_VARIANTS; v++) {
       const subset = placements.filter((p) => p.treasure === t && p.variant === v);

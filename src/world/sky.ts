@@ -40,7 +40,7 @@ export function createSky(scene: THREE.Scene, renderer: THREE.WebGPURenderer): {
   scene.add(hemi);
 
   // 金色の靄で遠景を溶かす(空間が狭まったぶん、靄も近くに)
-  scene.fog = new THREE.Fog(0xf0cd8e, 60, 620);
+  scene.fog = new THREE.Fog(0xf0cd8e, 45, 420);
 
   return { sunDirection };
 }

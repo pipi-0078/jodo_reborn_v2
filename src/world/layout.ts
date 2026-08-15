@@ -1,9 +1,9 @@
 import * as THREE from 'three/webgpu';
 
 // 空間の寸法定義(七重の同心円レイアウトの中心)
-export const ISLAND_RADIUS = 14; // 中島(阿弥陀如来を安置する場所)
+export const ISLAND_RADIUS = 10; // 中島(阿弥陀如来を安置する場所)
 export const POND_INNER = ISLAND_RADIUS;
-export const POND_OUTER = 45; // 七宝池の外周
+export const POND_OUTER = 30; // 七宝池の外周
 export const WATER_LEVEL = -0.5;
 export const POND_DEPTH = -2.2;
 export const CAUSEWAY_HALF_WIDTH = 2.6; // 四辺階道の半幅
@@ -11,7 +11,7 @@ export const DECK_HEIGHT = 0.22; // 階道の路面高さ
 export const ISLAND_TOP = 0.4;
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
-export const TREE_RINGS = [55, 70, 85, 100, 115, 130, 145];
+export const TREE_RINGS = [38, 48, 58, 68, 78, 88, 98];
 
 // 四宝のマテリアル(金・銀・瑠璃・玻璃)
 export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {
