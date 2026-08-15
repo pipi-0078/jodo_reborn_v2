@@ -11,7 +11,7 @@ export const DECK_HEIGHT = 0.22; // 階道の路面高さ
 export const ISLAND_TOP = 0.4;
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
-export const TREE_RINGS = [62, 92, 122, 152, 182, 212, 242];
+export const TREE_RINGS = [55, 70, 85, 100, 115, 130, 145];
 
 // 四宝のマテリアル(金・銀・瑠璃・玻璃)
 export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {
