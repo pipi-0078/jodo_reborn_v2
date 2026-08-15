@@ -1,19 +1,83 @@
 import * as THREE from 'three/webgpu';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TREE_RINGS, CAUSEWAY_HALF_WIDTH, makeTreasureMaterials } from './layout';
 import { buildTreeTemplate } from './trees';
 
 const TREE_SPACING = 15; // 並木の間隔(m)
 const GATE_HALF_ANGLE = 0.09; // 欄楯の四方の門の半角(rad)
 const TREE_VARIANTS = 3; // 宝樹テンプレートの種類数
+const HERO_TREE_COUNT = 8; // 最内周の主役の木の本数
+const HERO_TREE_SCALE = 0.55; // 原形約15.7m → 約8.6m
 
 // 「七重欄楯 七重羅網 七重行樹 皆是四宝周匝囲繞」のうち欄楯と行樹
-export function createRings(scene: THREE.Scene): void {
-  createTrees(scene);
+export async function createRings(scene: THREE.Scene): Promise<void> {
+  createConiferRings(scene);
   createRailings(scene);
+  await createHeroTrees(scene);
 }
 
-// 七重行樹:仕立て木風の宝樹。金の幹に四宝の葉層
-function createTrees(scene: THREE.Scene): void {
+// 最内周:提供モデル「tesuto tree」(CC-BY-4.0)による主役の木。
+// 池を囲んで8本、四宝の彩色で立てる
+async function createHeroTrees(scene: THREE.Scene): Promise<void> {
+  const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/takara_tree.glb`);
+  gltf.scene.updateMatrixWorld(true);
+
+  const trunkGeometries: THREE.BufferGeometry[] = [];
+  const leafGeometries: THREE.BufferGeometry[] = [];
+  let trunkMaterial: THREE.Material | null = null;
+  let leafTexture: THREE.Texture | null = null;
+  gltf.scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const geometry = (object.geometry as THREE.BufferGeometry).clone().applyMatrix4(object.matrixWorld);
+    const material = object.material as THREE.MeshStandardMaterial;
+    if (material.name === 'material_1') {
+      leafGeometries.push(geometry);
+      leafTexture = material.map;
+    } else {
+      trunkGeometries.push(geometry);
+      trunkMaterial = material;
+    }
+  });
+  const trunk = trunkGeometries.length > 1 ? mergeGeometries(trunkGeometries) : trunkGeometries[0];
+  const leaves = leafGeometries.length > 1 ? mergeGeometries(leafGeometries) : leafGeometries[0];
+
+  // 接地と中心合わせ(元データは原点からずれている)
+  trunk.computeBoundingBox();
+  leaves.computeBoundingBox();
+  const box = trunk.boundingBox!.clone().union(leaves.boundingBox!);
+  const center = box.getCenter(new THREE.Vector3());
+  for (const geometry of [trunk, leaves]) {
+    geometry.translate(-center.x, -box.min.y, -center.z);
+  }
+
+  // 葉はグレースケール化済みなので、四宝の色をそのまま乗せられる
+  const tints = [0xf0c050, 0xe2eaf2, 0x6488f5, 0xf2fbff]; // 金・銀・瑠璃・玻璃
+  const leafMaterials = tints.map((color) => {
+    const material = new THREE.MeshStandardMaterial({
+      map: leafTexture, color, metalness: 0.4, roughness: 0.45, side: THREE.DoubleSide,
+    });
+    material.emissive.set(color).multiplyScalar(0.22); // 遠目でも彩度が沈まないように
+    material.emissiveMap = leafTexture;
+    return material;
+  });
+
+  const radius = TREE_RINGS[0];
+  for (let i = 0; i < HERO_TREE_COUNT; i++) {
+    // 四方の階道を避けて斜め45度の位置から等間隔に
+    const angle = Math.PI / HERO_TREE_COUNT + (i / HERO_TREE_COUNT) * Math.PI * 2;
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(trunk, trunkMaterial!));
+    group.add(new THREE.Mesh(leaves, leafMaterials[i % 4]));
+    group.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+    group.rotation.y = i * 2.399; // 黄金角で向きをばらす
+    group.scale.setScalar(HERO_TREE_SCALE * (0.92 + (i % 3) * 0.07));
+    scene.add(group);
+  }
+}
+
+// 外側6リング:円錐段重ねの宝樹(インスタンシング)
+function createConiferRings(scene: THREE.Scene): void {
   const treasures = makeTreasureMaterials();
   const templates = Array.from({ length: TREE_VARIANTS }, (_, i) => buildTreeTemplate(1000 + i * 77));
 
@@ -24,7 +88,7 @@ function createTrees(scene: THREE.Scene): void {
   const rotation = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
 
-  for (let ring = 0; ring < TREE_RINGS.length; ring++) {
+  for (let ring = 1; ring < TREE_RINGS.length; ring++) {
     const radius = TREE_RINGS[ring];
     const count = Math.floor((2 * Math.PI * radius) / TREE_SPACING);
     for (let i = 0; i < count; i++) {

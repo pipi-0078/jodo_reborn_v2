@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   createSky(scene, renderer);
   createGround(scene);
   createPond(scene);
-  createRings(scene);
+  await createRings(scene);
 
   const overlay = document.getElementById('overlay')!;
   const walker = new FirstPersonWalker(camera, document.body, overlay);
