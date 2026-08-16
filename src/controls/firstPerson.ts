@@ -1,8 +1,11 @@
 import * as THREE from 'three/webgpu';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-import { sampleGround } from '../world/layout';
+import type { GroundSample } from '../world/layout';
 
 const EYE_HEIGHT = 1.6;
+const FLAT_GROUND: GroundSampler = () => ({ y: 0, blocked: false });
+
+export type GroundSampler = (x: number, z: number) => GroundSample;
 const WALK_SPEED = 14;
 const DAMPING = 8;
 const BOUNDARY = 112; // 最外周の並木の少し外まで歩ける
@@ -12,8 +15,11 @@ export class FirstPersonWalker {
   private readonly velocity = new THREE.Vector3();
   private readonly direction = new THREE.Vector3();
   private readonly keys = { forward: false, back: false, left: false, right: false };
+  private readonly sampleGround: GroundSampler;
 
-  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement, overlay: HTMLElement) {
+  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement, overlay: HTMLElement,
+    sampleGround: GroundSampler = FLAT_GROUND) {
+    this.sampleGround = sampleGround;
     camera.position.set(52, EYE_HEIGHT, 0); // 東側、並木の内側にスポーン
     camera.lookAt(0, EYE_HEIGHT, 0); // 西方(阿弥陀仏の方角)を向く
 
@@ -58,7 +64,7 @@ export class FirstPersonWalker {
     this.controls.moveForward(-velocity.z * dt);
 
     // 進入不可の場所(池の水面など)へは踏み込ませない
-    if (sampleGround(position.x, position.z).blocked) {
+    if (this.sampleGround(position.x, position.z).blocked) {
       position.x = prevX;
       position.z = prevZ;
     }
@@ -70,7 +76,7 @@ export class FirstPersonWalker {
     }
 
     // 足元の高さに目線を追従させる(階道の昇降・中島の登り)
-    const targetY = sampleGround(position.x, position.z).y + EYE_HEIGHT;
+    const targetY = this.sampleGround(position.x, position.z).y + EYE_HEIGHT;
     position.y = THREE.MathUtils.lerp(position.y, targetY, Math.min(1, dt * 10));
   }
 }

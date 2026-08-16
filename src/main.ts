@@ -1,8 +1,8 @@
+// いったん更地:アセットギャラリー(gallery.html)で部材を揃えてから再建立する。
+// 池・並木などの旧実装は src/world/ に残してあり、承認済みアセットで組み直す予定。
 import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
-import { createPond } from './world/pond';
-import { createRings } from './world/rings';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -19,8 +19,6 @@ async function main(): Promise<void> {
 
   createSky(scene, renderer);
   createGround(scene);
-  createPond(scene);
-  await createRings(scene);
 
   const overlay = document.getElementById('overlay')!;
   const walker = new FirstPersonWalker(camera, document.body, overlay);

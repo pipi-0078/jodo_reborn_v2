@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -5,5 +6,11 @@ export default defineConfig({
   base: '/jodo_reborn_v2/',
   build: {
     chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        gallery: resolve(import.meta.dirname, 'gallery.html'),
+      },
+    },
   },
 });

@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": "amida",
+      "name": "阿弥陀如来坐像",
+      "file": "amida_gold.glb",
+      "desc": "弥陀の定印を結ぶ坐像。木彫スキャンを金色化(Phase 2で中島に安置予定)",
+      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 減面・金色マテリアル化"
+    },
+    {
+      "id": "takara_tree",
+      "name": "大樹(写実型)",
+      "file": "takara_tree.glb",
+      "desc": "池の最前列に立つ主役の木。葉には四宝の色を乗せられる",
+      "credit": "原型: toshiki3782「tesuto tree」(Sketchfab) CC-BY-4.0 / 改変: 減面・葉のグレースケール化",
+      "tint": { "materialName": "material_1", "color": "#f0c050" }
+    },
+    {
+      "id": "tree_conifer",
+      "name": "針葉宝樹(Blender製)",
+      "file": "tree_conifer.glb",
+      "desc": "円錐の葉を五段重ねた針葉樹型。頂に宝珠。葉は四宝の色に染められる",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
+      "id": "tree_broadleaf",
+      "name": "金葉樹(Blender製)",
+      "file": "tree_broadleaf.glb",
+      "desc": "骨格から生やした枝ぶりに、金の葉の房をまとう広葉樹型",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
+      "id": "tree_weeping",
+      "name": "垂宝樹(Blender製)",
+      "file": "tree_weeping.glb",
+      "desc": "枝垂れの房の先に光る宝玉を提げる。羅網の気配をまとう木",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    }
+  ]
+}
