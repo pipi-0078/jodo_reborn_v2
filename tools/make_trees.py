@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""宝樹の3パターンをBlender(bpy)で生成してglb出力する。
+"""宝樹3パターンをBlender(bpy)で生成してglb出力する(v2)。
+
+v1の反省: 円錐や球のプリミティブを積むだけではthree.jsの手続き生成と大差なかった。
+v2はBlenderらしい作り方に全面刷新:
+  - 幹・枝はNURBSカーブ+点ごとの半径テーパー(自然な先細り・うねり・重力の垂れ)
+  - 葉は枝先に数百枚を散布(金貨状の葉・針葉の房・数珠の飾り)
 
 使い方: python3 tools/make_trees.py
 出力: public/assets/tree_conifer.glb / tree_broadleaf.glb / tree_weeping.glb
-
 前提: pip install bpy (Blender 5.x ヘッドレス)
 """
 import math
@@ -11,19 +15,22 @@ import random
 import sys
 
 import bpy
-import bmesh
-from mathutils import Vector
+from mathutils import Matrix, Quaternion, Vector
 
 OUT_DIR = "public/assets"
 
+GOLD_TRUNK = (0.5, 0.34, 0.11)
+GOLD_LEAF = (1.0, 0.72, 0.24)
+PALE_LEAF = (0.92, 0.9, 0.85)  # 実行時に四宝の色を乗せられる明るい葉
 
-# ---------------------------------------------------------------- 共通
+
+# ---------------------------------------------------------------- 基盤
 
 def reset_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def make_material(name, color, metallic, roughness, emission=None, emission_strength=0.0, alpha=1.0):
+def make_material(name, color, metallic, roughness, emission=None, emission_strength=0.0):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
@@ -34,47 +41,6 @@ def make_material(name, color, metallic, roughness, emission=None, emission_stre
         bsdf.inputs["Emission Color"].default_value = (*emission, 1.0)
         bsdf.inputs["Emission Strength"].default_value = emission_strength
     return mat
-
-
-GOLD_TRUNK = (0.55, 0.38, 0.12)
-GOLD_LEAF = (0.85, 0.62, 0.2)
-PALE_LEAF = (0.92, 0.9, 0.85)  # 実行時に四宝の色を乗せられる明るい葉
-
-
-def clouds_texture(name, scale):
-    tex = bpy.data.textures.new(name, "CLOUDS")
-    tex.noise_scale = scale
-    return tex
-
-
-def displace(obj, scale, strength):
-    mod = obj.modifiers.new("displace", "DISPLACE")
-    mod.texture = clouds_texture(obj.name + "_noise", scale)
-    mod.strength = strength
-
-
-def subsurf(obj, levels):
-    mod = obj.modifiers.new("subsurf", "SUBSURF")
-    mod.levels = levels
-    mod.render_levels = levels
-
-
-def shade_smooth(obj):
-    bpy.context.view_layer.objects.active = obj
-    obj.select_set(True)
-    bpy.ops.object.shade_smooth()
-    obj.select_set(False)
-
-
-def join(objects, name):
-    bpy.ops.object.select_all(action="DESELECT")
-    for o in objects:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = objects[0]
-    bpy.ops.object.join()
-    joined = bpy.context.active_object
-    joined.name = name
-    return joined
 
 
 def triangle_count():
@@ -93,170 +59,247 @@ def export(path):
     print(f"  -> {path} ({triangle_count()} tris)")
 
 
-# 骨格(頂点と辺)からスキンモディファイアで幹・枝をつくる
-def skeleton_tree(name, seed, height, levels, children, spread, radius0):
-    random.seed(seed)
+# ---------------------------------------------------------------- 枝(カーブ)
+
+class BranchSet:
+    """1本の木の枝群。NURBSスプラインの集合として持ち、最後にメッシュ化する。"""
+
+    def __init__(self, name):
+        self.curve = bpy.data.curves.new(name, "CURVE")
+        self.curve.dimensions = "3D"
+        self.curve.bevel_depth = 1.0  # 実半径は点ごとのradiusで決める
+        self.curve.bevel_resolution = 4
+        self.curve.use_fill_caps = True
+
+    def add(self, points, radii):
+        spline = self.curve.splines.new("NURBS")
+        spline.points.add(len(points) - 1)
+        for pt, p, r in zip(spline.points, points, radii):
+            pt.co = (p.x, p.y, p.z, 1)
+            pt.radius = r
+        spline.use_endpoint_u = True
+
+    def realize(self, material):
+        obj = bpy.data.objects.new(self.curve.name, self.curve)
+        bpy.context.collection.objects.link(obj)
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.convert(target="MESH")
+        mesh_obj = bpy.context.active_object
+        mesh_obj.data.materials.append(material)
+        bpy.ops.object.shade_smooth()
+        return mesh_obj
+
+
+def grow(start, direction, length, segments, droop, wiggle, rand, up_pull=0.0):
+    """1本の枝の背骨を伸ばす。重力の垂れ(droop)と揺らぎ(wiggle)、上向きの引き(up_pull)。"""
+    points = [Vector(start)]
+    d = Vector(direction).normalized()
+    step = length / segments
+    for _ in range(segments):
+        jitter = Vector((rand.uniform(-1, 1) * wiggle, rand.uniform(-1, 1) * wiggle, 0))
+        d = (d + jitter + Vector((0, 0, up_pull - droop))).normalized()
+        points.append(points[-1] + d * step)
+    return points
+
+
+def taper(r0, r1, count):
+    return [r0 + (r1 - r0) * (i / (count - 1)) for i in range(count)]
+
+
+def sample(points, t):
+    """背骨上の位置tの座標と進行方向を返す。"""
+    index = min(int(t * (len(points) - 1)), len(points) - 2)
+    a, b = points[index], points[index + 1]
+    frac = t * (len(points) - 1) - index
+    return a.lerp(b, frac), (b - a).normalized()
+
+
+# ---------------------------------------------------------------- 葉の散布
+
+def template_pydata(create_op, **kwargs):
+    create_op(**kwargs)
+    obj = bpy.context.active_object
+    verts = [v.co.copy() for v in obj.data.vertices]
+    faces = [tuple(p.vertices) for p in obj.data.polygons]
+    bpy.data.objects.remove(obj, do_unlink=True)
+    return verts, faces
+
+
+def scatter(name, verts, faces, transforms, material, smooth=True):
+    all_verts, all_faces = [], []
+    for matrix in transforms:
+        base = len(all_verts)
+        all_verts.extend(matrix @ v for v in verts)
+        all_faces.extend(tuple(i + base for i in f) for f in faces)
     mesh = bpy.data.meshes.new(name)
-    bm = bmesh.new()
-    tips = []  # (Vector, depth)
-
-    def grow(base_vert, direction, length, depth):
-        tip = base_vert.co + direction * length
-        tip_vert = bm.verts.new(tip)
-        bm.edges.new((base_vert, tip_vert))
-        if depth >= levels:
-            tips.append((Vector(tip), depth))
-            return
-        count = children if depth > 0 else max(children, 3)
-        for _ in range(count):
-            axis = Vector((random.uniform(-1, 1), random.uniform(-1, 1), 0.3)).normalized()
-            new_dir = (direction * (1 - spread) + axis * spread).normalized()
-            grow(tip_vert, new_dir, length * random.uniform(0.55, 0.72), depth + 1)
-
-    root = bm.verts.new((0, 0, 0))
-    grow(root, Vector((random.uniform(-0.08, 0.08), random.uniform(-0.08, 0.08), 1)).normalized(), height * 0.45, 0)
-    bm.to_mesh(mesh)
-    bm.free()
-
+    mesh.from_pydata(all_verts, [], all_faces)
+    mesh.validate()
+    if smooth:
+        for poly in mesh.polygons:
+            poly.use_smooth = True
     obj = bpy.data.objects.new(name, mesh)
+    obj.data.materials.append(material)
     bpy.context.collection.objects.link(obj)
-    skin = obj.modifiers.new("skin", "SKIN")
-    skin.use_smooth_shade = True
-    # 根元から先端へ細くする
-    verts = obj.data.skin_vertices[0].data
-    coords = [v.co.z for v in obj.data.vertices]
-    zmax = max(coords) or 1
-    for v, mv in zip(verts, obj.data.vertices):
-        t = mv.co.z / zmax
-        r = radius0 * (1 - 0.82 * t)
-        v.radius = (r, r)
-    subsurf(obj, 1)
-    return obj, tips
+    return obj
+
+
+def orient(direction):
+    return Vector((0, 0, 1)).rotation_difference(Vector(direction).normalized())
+
+
+def transform_at(location, rotation, scale):
+    return Matrix.LocRotScale(location, rotation, Vector(scale))
 
 
 # ---------------------------------------------------------------- パターン1: 針葉宝樹
 
 def build_conifer(path):
     reset_scene()
+    rand = random.Random(7)
     trunk_mat = make_material("trunk", GOLD_TRUNK, 0.85, 0.45)
     leaf_mat = make_material("foliage", PALE_LEAF, 0.4, 0.5)
+    hoju_mat = make_material("hoju", (1.0, 0.9, 0.6), 0.9, 0.15, (1.0, 0.85, 0.5), 2.0)
 
-    bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=0.26, radius2=0.04, depth=7.2, location=(0, 0, 3.6))
-    trunk = bpy.context.active_object
-    trunk.data.materials.append(trunk_mat)
-    shade_smooth(trunk)
+    branches = BranchSet("conifer")
+    trunk_pts = grow(Vector((0, 0, 0)), Vector((0.03, -0.02, 1)), 7.4, 10, 0.0, 0.015, rand)
+    branches.add(trunk_pts, taper(0.24, 0.03, len(trunk_pts)))
 
-    tiers = []
-    random.seed(7)
-    for i in range(5):
-        t = i / 4
-        radius = 2.3 * (1 - 0.68 * t)
-        depth = 1.9 - 0.7 * t
-        z = 1.3 + t * 4.4
-        bpy.ops.mesh.primitive_cone_add(vertices=28, radius1=radius, radius2=0.03, depth=depth,
-                                        location=(0, 0, z + depth / 2))
-        tier = bpy.context.active_object
-        subsurf(tier, 2)
-        displace(tier, 0.45, 0.14)
-        shade_smooth(tier)
-        tiers.append(tier)
-    foliage = join(tiers, "foliage")
-    foliage.data.materials.append(leaf_mat)
+    tuft_verts, tuft_faces = template_pydata(bpy.ops.mesh.primitive_ico_sphere_add, subdivisions=1, radius=1)
+    tufts = []
 
-    # 頂の宝珠
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12, radius=0.24, location=(0, 0, 7.3))
-    hoju = bpy.context.active_object
-    hoju.scale = (1, 1, 1.3)
-    hoju.data.materials.append(make_material("hoju", (1.0, 0.9, 0.6), 0.9, 0.15, (1.0, 0.85, 0.5), 2.0))
-    shade_smooth(hoju)
+    whorls = 7
+    for w in range(whorls):
+        t = w / (whorls - 1)
+        z = 1.1 + t * 5.2
+        base, _ = sample(trunk_pts, z / 7.4)
+        count = 8 - int(t * 3)
+        length = 2.5 * (1 - 0.72 * t) + 0.3
+        for b in range(count):
+            theta = (b / count) * math.tau + rand.uniform(0, 0.7)
+            direction = Vector((math.cos(theta), math.sin(theta), 0.28 - 0.1 * t))
+            pts = grow(base, direction, length, 6, droop=0.13, wiggle=0.03, rand=rand)
+            branches.add(pts, taper(0.055 * (1 - 0.4 * t), 0.012, len(pts)))
+            # 枝に沿って針葉の房を伏せる
+            for k in range(5):
+                s = 0.25 + 0.75 * (k / 4)
+                pos, tangent = sample(pts, s)
+                size = 0.5 * (1 - 0.35 * t) * (1 - 0.3 * s + 0.3)
+                rot = orient(tangent)
+                tufts.append(transform_at(pos, rot, (size * 0.5, size * 0.5, size * 1.1)))
+    # 頂の房と宝珠
+    top = trunk_pts[-1]
+    tufts.append(transform_at(top + Vector((0, 0, 0.18)), Quaternion(), (0.28, 0.28, 0.62)))
+    scatter("foliage", tuft_verts, tuft_faces, tufts, leaf_mat)
+    branches.realize(trunk_mat)
+
+    hoju_verts, hoju_faces = template_pydata(
+        bpy.ops.mesh.primitive_uv_sphere_add, segments=20, ring_count=12, radius=0.2)
+    scatter("hoju", hoju_verts, hoju_faces,
+            [transform_at(top + Vector((0, 0, 0.95)), Quaternion(), (1, 1, 1.35))], hoju_mat)
 
     export(path)
 
 
-# ---------------------------------------------------------------- パターン2: 金葉樹(広葉)
+# ---------------------------------------------------------------- パターン2: 金葉樹(銀杏の金貨)
 
 def build_broadleaf(path):
     reset_scene()
+    rand = random.Random(11)
     trunk_mat = make_material("trunk", GOLD_TRUNK, 0.85, 0.45)
-    leaf_mat = make_material("foliage", (1.0, 0.76, 0.28), 0.9, 0.32)
+    leaf_mat = make_material("foliage", GOLD_LEAF, 0.95, 0.3)
 
-    trunk, tips = skeleton_tree("trunk", seed=11, height=6.2, levels=3, children=3, spread=0.55, radius0=0.3)
-    trunk.data.materials.append(trunk_mat)
+    branches = BranchSet("broadleaf")
+    trunk_pts = grow(Vector((0, 0, 0)), Vector((0.06, 0.03, 1)), 4.6, 8, 0.0, 0.03, rand)
+    branches.add(trunk_pts, taper(0.3, 0.1, len(trunk_pts)))
 
-    clumps = []
-    random.seed(23)
-    for tip, _depth in tips:
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=random.uniform(0.5, 0.8),
-                                              location=(tip.x, tip.y, tip.z + 0.1))
-        clump = bpy.context.active_object
-        clump.scale = (1.2, 1.2, 0.75)
-        displace(clump, 0.4, 0.28)
-        shade_smooth(clump)
-        clumps.append(clump)
-    foliage = join(clumps, "foliage")
-    foliage.data.materials.append(leaf_mat)
+    coin_verts, coin_faces = template_pydata(bpy.ops.mesh.primitive_cylinder_add, vertices=10, radius=1, depth=0.1)
+    coins = []
 
+    def leaves_at(position, tangent, count, size):
+        for _ in range(count):
+            offset = Vector((rand.uniform(-1, 1), rand.uniform(-1, 1), rand.uniform(-1, 1))) * 0.34
+            rot = Quaternion(
+                Vector((rand.uniform(-1, 1), rand.uniform(-1, 1), rand.uniform(-1, 1))).normalized(),
+                rand.uniform(0, math.tau))
+            s = size * rand.uniform(0.75, 1.25)
+            coins.append(transform_at(position + tangent * 0.1 + offset, rot, (s, s, s)))
+
+    primaries = 8
+    for b in range(primaries):
+        t_attach = 0.5 + 0.5 * (b / (primaries - 1)) * 0.95
+        base, _ = sample(trunk_pts, min(t_attach, 1.0))
+        theta = (b / primaries) * math.tau + rand.uniform(0, 0.8)
+        direction = Vector((math.cos(theta), math.sin(theta), rand.uniform(0.55, 1.0)))
+        length = rand.uniform(2.1, 3.0) * (1 - 0.25 * (t_attach - 0.5))
+        pts = grow(base, direction, length, 7, droop=0.05, wiggle=0.05, rand=rand, up_pull=0.02)
+        branches.add(pts, taper(0.09, 0.018, len(pts)))
+        # 二次枝と葉
+        for _ in range(3):
+            s = rand.uniform(0.45, 0.9)
+            start, tangent = sample(pts, s)
+            side = tangent.cross(Vector((0, 0, 1))).normalized()
+            direction2 = (tangent * 0.5 + side * rand.uniform(-1, 1) + Vector((0, 0, rand.uniform(0.1, 0.5)))).normalized()
+            pts2 = grow(start, direction2, rand.uniform(0.8, 1.4), 4, droop=0.06, wiggle=0.06, rand=rand)
+            branches.add(pts2, taper(0.03, 0.008, len(pts2)))
+            for k in range(4):
+                pos, tan = sample(pts2, 0.35 + 0.65 * (k / 3))
+                leaves_at(pos, tan, count=5, size=0.16)
+        tip_pos, tip_tan = sample(pts, 1.0)
+        leaves_at(tip_pos, tip_tan, count=8, size=0.17)
+
+    scatter("foliage", coin_verts, coin_faces, coins, leaf_mat, smooth=False)
+    branches.realize(trunk_mat)
     export(path)
 
 
-# ---------------------------------------------------------------- パターン3: 垂宝樹(枝垂れ)
+# ---------------------------------------------------------------- パターン3: 垂宝樹(数珠の柳)
 
 def build_weeping(path):
     reset_scene()
+    rand = random.Random(31)
     trunk_mat = make_material("trunk", GOLD_TRUNK, 0.85, 0.45)
     strand_mat = make_material("strand", GOLD_LEAF, 0.9, 0.3)
-    jewel_mat = make_material("jewel", (1.0, 0.95, 0.75), 0.6, 0.1, (1.0, 0.9, 0.6), 2.5)
+    jewel_mat = make_material("jewel", (1.0, 0.95, 0.75), 0.6, 0.1, (1.0, 0.9, 0.6), 2.2)
 
-    trunk, tips = skeleton_tree("trunk", seed=31, height=6.5, levels=2, children=3, spread=0.5, radius0=0.28)
-    trunk.data.materials.append(trunk_mat)
+    branches = BranchSet("weeping")
+    trunk_pts = grow(Vector((0, 0, 0)), Vector((0.08, -0.04, 1)), 5.6, 8, 0.0, 0.03, rand)
+    branches.add(trunk_pts, taper(0.26, 0.07, len(trunk_pts)))
 
-    random.seed(41)
-    strands = []
-    jewels = []
-    for tip, _depth in tips:
-        for _ in range(5):
-            # 弧を描いて垂れる房をポリラインでつくり、ベベルで太らせる
-            curve = bpy.data.curves.new("strand", "CURVE")
-            curve.dimensions = "3D"
-            curve.bevel_depth = 0.022
-            curve.bevel_resolution = 3
-            spline = curve.splines.new("NURBS")
-            length = random.uniform(2.2, 3.4)
-            direction = Vector((random.uniform(-1, 1), random.uniform(-1, 1), 0)).normalized()
-            points = []
-            for step in range(8):
-                s = step / 7
-                out = direction * (0.35 * math.sin(s * math.pi * 0.5)) * length * 0.45
-                down = Vector((0, 0, -1)) * (s * s) * length
-                p = Vector(tip) + out + down
-                points.append(p)
-            spline.points.add(len(points) - 1)
-            for pt, p in zip(spline.points, points):
-                pt.co = (p.x, p.y, p.z, 1)
-            spline.use_endpoint_u = True  # 端点を通す(宝玉が房の先端に密着するように)
-            obj = bpy.data.objects.new("strand", curve)
-            bpy.context.collection.objects.link(obj)
-            strands.append(obj)
-            # 房の先に宝玉
-            end = points[-1]
-            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.075, location=(end.x, end.y, end.z))
-            shade_smooth(bpy.context.active_object)
-            jewels.append(bpy.context.active_object)
+    bead_verts, bead_faces = template_pydata(bpy.ops.mesh.primitive_ico_sphere_add, subdivisions=1, radius=1)
+    beads = []
 
-    # カーブをメッシュ化して結合
-    bpy.ops.object.select_all(action="DESELECT")
-    for s in strands:
-        s.select_set(True)
-    bpy.context.view_layer.objects.active = strands[0]
-    bpy.ops.object.convert(target="MESH")
-    strand_meshes = [o for o in bpy.context.selected_objects if o.type == "MESH"]
-    strand_obj = join(strand_meshes, "strands")
-    strand_obj.data.materials.append(strand_mat)
-    shade_smooth(strand_obj)
+    primaries = 6
+    for b in range(primaries):
+        base, _ = sample(trunk_pts, rand.uniform(0.75, 1.0))
+        theta = (b / primaries) * math.tau + rand.uniform(0, 0.9)
+        direction = Vector((math.cos(theta), math.sin(theta), rand.uniform(0.5, 0.9)))
+        pts = grow(base, direction, rand.uniform(1.4, 2.0), 5, droop=0.1, wiggle=0.04, rand=rand)
+        branches.add(pts, taper(0.06, 0.02, len(pts)))
+        # 各枝から数珠の房を垂らす
+        for _ in range(7):
+            s = rand.uniform(0.3, 1.0)
+            start, _tangent = sample(pts, s)
+            out = Vector((rand.uniform(-1, 1), rand.uniform(-1, 1), 0)).normalized() * 0.22
+            length = rand.uniform(2.0, 3.4)
+            strand_pts = []
+            for step in range(9):
+                u = step / 8
+                sway = out * math.sin(u * math.pi * 0.5)
+                drop = Vector((0, 0, -1)) * (u ** 1.7) * length
+                strand_pts.append(start + sway + drop)
+            branches.add(strand_pts, taper(0.02, 0.008, len(strand_pts)))
+            # 房に数珠を通す(下半分に密に)
+            for k in range(6):
+                u = 0.45 + 0.55 * (k / 5)
+                pos, _ = sample(strand_pts, u)
+                r = 0.05 if k < 5 else 0.085  # 末端はひと回り大きな親玉
+                beads.append(transform_at(pos, Quaternion(), (r, r, r)))
 
-    jewel_obj = join(jewels, "jewels")
-    jewel_obj.data.materials.append(jewel_mat)
-
+    scatter("jewels", bead_verts, bead_faces, beads, jewel_mat)
+    branches.realize(trunk_mat)
+    # 幹・枝・房は同じマテリアルだが、房の金色を強調するため全体をstrand色に寄せる
     export(path)
 
 
