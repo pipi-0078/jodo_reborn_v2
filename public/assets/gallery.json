@@ -35,6 +35,21 @@
       "file": "tree_weeping.glb",
       "desc": "枝垂れの房の先に光る宝玉を提げる。羅網の気配をまとう木",
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
+      "id": "tree_meiboku",
+      "name": "名木(tree-gen試作)",
+      "file": "tree_meiboku.glb",
+      "desc": "Weber&Penn法による植物学的な枝ぶりの広葉樹。葉は四宝の色に染められる",
+      "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整",
+      "tint": { "materialName": "foliage", "color": "#f0c050" }
+    },
+    {
+      "id": "tree_yanagi",
+      "name": "枝垂れ柳(tree-gen試作)",
+      "file": "tree_yanagi.glb",
+      "desc": "同じくWeber&Penn法による枝垂れ柳。金の葉が枝先まで流れる",
+      "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整"
     }
   ]
 }
