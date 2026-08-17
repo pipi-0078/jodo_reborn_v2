@@ -9,14 +9,14 @@
       font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
     canvas { display: block; }
     #list {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
-      display: flex; gap: 8px; padding: 14px; overflow-x: auto;
-      background: linear-gradient(to bottom, rgba(26,20,8,0.85), transparent);
+      position: fixed; top: 0; left: 0; right: 96px; z-index: 10;
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 14px;
+      background: linear-gradient(to bottom, rgba(26,20,8,0.85), rgba(26,20,8,0.35) 70%, transparent);
     }
     #list button {
-      flex: none; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+      flex: none; padding: 7px 14px; border-radius: 999px; cursor: pointer;
       border: 1px solid rgba(232,195,122,0.5); background: rgba(26,20,8,0.55);
-      color: #e8c37a; font-family: inherit; font-size: 14px; letter-spacing: 0.1em;
+      color: #e8c37a; font-family: inherit; font-size: 13px; letter-spacing: 0.08em;
     }
     #list button.active { background: #e8c37a; color: #2a2010; }
     #caption {

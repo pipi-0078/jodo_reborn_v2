@@ -89,7 +89,9 @@ async function main(): Promise<void> {
     loading.classList.add('hidden');
   }
 
-  const manifest = await fetch(`${import.meta.env.BASE_URL}assets/gallery.json`).then((r) => r.json());
+  // no-cacheで毎回サーバに確認する(GitHub Pagesのキャッシュで新作が見えなくなるのを防ぐ)
+  const manifest = await fetch(`${import.meta.env.BASE_URL}assets/gallery.json`, { cache: 'no-cache' })
+    .then((r) => r.json());
   const items: GalleryItem[] = manifest.items;
   const list = document.getElementById('list')!;
   items.forEach((item, index) => {
