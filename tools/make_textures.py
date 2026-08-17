@@ -151,8 +151,42 @@ def make_bark(size=512):
     Image.fromarray((normal * 255).astype(np.uint8)).save(os.path.join(OUT, "bark_normal.png"))
 
 
+# ---------------------------------------------------------------- 蓮の花びら
+
+def make_petal(size=512):
+    """蓮の花びら。UVは縦=花びらの根元(下)→先端(上)。
+    白っぽい地に縦の葉脈、先端へ向けてわずかに濃くなる。実行時に四宝の色を乗算する。"""
+    img = Image.new("RGB", (size, size), (250, 248, 244))
+    draw = ImageDraw.Draw(img)
+
+    # 先端(上)へ向けた濃淡グラデーション
+    for y in range(size):
+        t = y / size  # 0=先端, 1=根元
+        # 根元は明るく、先端は少し濃い(乗算で色が深く出る)
+        value = int(255 - 52 * (1 - t) ** 1.6)
+        draw.line([(0, y), (size, y)], fill=(value, value - 3, max(0, value - 8)))
+
+    # 縦の葉脈(中央から扇形にわずかに開く)
+    cx = size // 2
+    for i in range(22):
+        offset = (i - 10.5) / 10.5  # -1..1
+        x0 = cx + offset * size * 0.36
+        x1 = cx + offset * size * 0.48
+        shade = rng.randint(6, 20)
+        points = []
+        for y in range(0, size + 16, 16):
+            t = y / size
+            x = x0 + (x1 - x0) * (1 - t) + math.sin(y * 0.02 + i) * 1.5
+            points.append((x, y))
+        draw.line(points, fill=(255 - shade * 3, 252 - shade * 3, 246 - shade * 3), width=2)
+
+    img = img.filter(ImageFilter.GaussianBlur(0.7))
+    img.save(os.path.join(OUT, "petal.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
     make_bark()
+    make_petal()
     print("textures ->", OUT)

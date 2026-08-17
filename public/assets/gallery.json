@@ -45,6 +45,38 @@
       "tint": { "materialName": "foliage", "color": "#f0c050" }
     },
     {
+      "id": "lotus_blue",
+      "name": "青蓮華",
+      "file": "lotus.glb",
+      "desc": "車輪ほどの大きさの蓮。花びら22枚を一枚ずつ成形(青色青光)",
+      "credit": "制作: 本プロジェクト(Blenderパラメトリック曲面)",
+      "tint": { "materialName": "petal", "color": "#6f8cf5" }
+    },
+    {
+      "id": "lotus_yellow",
+      "name": "黄蓮華",
+      "file": "lotus.glb",
+      "desc": "同型の黄(黄色黄光)",
+      "credit": "制作: 本プロジェクト",
+      "tint": { "materialName": "petal", "color": "#f2c452" }
+    },
+    {
+      "id": "lotus_red",
+      "name": "赤蓮華",
+      "file": "lotus.glb",
+      "desc": "同型の赤(赤色赤光)",
+      "credit": "制作: 本プロジェクト",
+      "tint": { "materialName": "petal", "color": "#f07a7a" }
+    },
+    {
+      "id": "lotus_white",
+      "name": "白蓮華",
+      "file": "lotus.glb",
+      "desc": "同型の白(白色白光)",
+      "credit": "制作: 本プロジェクト",
+      "tint": { "materialName": "petal", "color": "#f7faff" }
+    },
+    {
       "id": "tree_yanagi",
       "name": "枝垂れ柳(tree-gen試作)",
       "file": "tree_yanagi.glb",

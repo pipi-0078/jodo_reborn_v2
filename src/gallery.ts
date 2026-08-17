@@ -63,8 +63,8 @@ async function main(): Promise<void> {
           const material = object.material as THREE.MeshStandardMaterial;
           if (material.name === item.tint!.materialName) {
             material.color.copy(color);
-            material.metalness = 0.4;
-            material.roughness = 0.45;
+            // 「青色青光」— それぞれの色で内側からほのかに光らせる
+            material.emissive.copy(color).multiplyScalar(0.18);
           }
         }
       });
