@@ -97,20 +97,39 @@ def build_petal(length, width, open_angle, curl, cup, roll):
     return obj
 
 
-def build_lotus(path):
+# 満開: (枚数, 開き角, 長さ, 幅, 反り, 基準半径)
+WHORLS_BLOOM = [
+    (8, 68, 0.62, 0.42, 0.55, 0.10),  # 外輪: 開いて先端が反り上がる
+    (8, 48, 0.58, 0.38, 0.48, 0.08),  # 中輪
+    (6, 28, 0.50, 0.32, 0.36, 0.06),  # 内輪: 立って中心を包む
+]
+
+# 蕾: 花びらが中心を包み、先端がすぼまる涙滴型
+WHORLS_BUD = [
+    (8, 14, 0.52, 0.46, 0.30, 0.055),  # 外輪: わずかに開きかけ
+    (8, 6, 0.56, 0.42, 0.22, 0.04),    # 中輪: 立って包む
+    (6, -2, 0.50, 0.36, 0.16, 0.028),  # 内輪: 内へ傾いて先端を閉じる
+]
+
+
+def build_lotus(path, whorls, with_center=True, stem_height=0.0, cup=0.5):
     reset_scene()
     petal_mat = petal_material()
     pod_mat = plain_material("pod", (0.85, 0.78, 0.35), 0.3, 0.5)
     seed_mat = plain_material("seed", (0.55, 0.45, 0.15), 0.4, 0.4)
     stamen_mat = plain_material("stamen", (1.0, 0.85, 0.45), 0.5, 0.35, (1.0, 0.8, 0.4), 1.2)
 
-    petals = []
-    # (枚数, 開き角, 長さ, 幅, 反り, 基準半径)
-    whorls = [
-        (8, 68, 0.62, 0.42, 0.55, 0.10),   # 外輪: 開いて先端が反り上がる
-        (8, 48, 0.58, 0.38, 0.48, 0.08),  # 中輪
-        (6, 28, 0.50, 0.32, 0.36, 0.06),   # 内輪: 立って中心を包む
-    ]
+    base_z = stem_height
+    # 茎: 水面から立ち上がり、わずかにしなる
+    if stem_height > 0:
+        lean = rand.uniform(0.06, 0.12)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=0.022, depth=stem_height * 1.05,
+                                            location=(lean * stem_height * 0.4, 0, stem_height * 0.5))
+        stem = bpy.context.active_object
+        stem.rotation_euler = (0, lean, 0)
+        bpy.ops.object.shade_smooth()
+        stem.data.materials.append(plain_material("stem", (0.5, 0.52, 0.24), 0.25, 0.55))
+
     for w, (count, open_angle, length, width, curl, radius) in enumerate(whorls):
         for k in range(count):
             theta = (k / count) * math.tau + w * (math.pi / count)  # 輪ごとに半位相ずらす
@@ -119,7 +138,7 @@ def build_lotus(path):
                 width * rand.uniform(0.94, 1.06),
                 open_angle,
                 curl * rand.uniform(0.9, 1.1),
-                cup=0.5,
+                cup=cup,
                 roll=rand.uniform(-0.05, 0.05),
             )
             petal.data.materials.append(petal_mat)
@@ -127,50 +146,54 @@ def build_lotus(path):
             # (matrix_worldの遅延評価に頼ると開き角が失われる)
             petal.matrix_world = (
                 Matrix.Rotation(theta, 4, "Z")
-                @ Matrix.Translation((0, -radius, 0.02 + w * 0.015))
-                @ Matrix.Rotation(math.radians(open_angle + rand.uniform(-4, 4)), 4, "X")
+                @ Matrix.Translation((0, -radius, base_z + 0.02 + w * 0.015))
+                @ Matrix.Rotation(math.radians(open_angle + rand.uniform(-3, 3)), 4, "X")
                 @ Matrix.Rotation(rand.uniform(-0.05, 0.05), 4, "Z")
             )
 
-    # 花托(かたく): 蓮の実の台
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.11, depth=0.09, location=(0, 0, 0.16))
-    pod = bpy.context.active_object
-    pod.scale = (1, 1, 1)
-    bpy.ops.object.shade_smooth()
-    pod.data.materials.append(pod_mat)
-    # 実
-    for k in range(13):
-        golden = k * math.tau * 0.381966
-        r = 0.075 * math.sqrt(k / 13)
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.013,
-                                             location=(math.cos(golden) * r, math.sin(golden) * r, 0.21))
-        seed = bpy.context.active_object
+    if with_center:
+        # 花托(かたく): 蓮の実の台
+        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.11, depth=0.09,
+                                            location=(0, 0, base_z + 0.16))
+        pod = bpy.context.active_object
         bpy.ops.object.shade_smooth()
-        seed.data.materials.append(seed_mat)
+        pod.data.materials.append(pod_mat)
+        # 実
+        for k in range(13):
+            golden = k * math.tau * 0.381966
+            r = 0.075 * math.sqrt(k / 13)
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.013,
+                                                 location=(math.cos(golden) * r, math.sin(golden) * r,
+                                                           base_z + 0.21))
+            seed = bpy.context.active_object
+            bpy.ops.object.shade_smooth()
+            seed.data.materials.append(seed_mat)
 
-    # 雄しべ: 花托の周りに細い糸+先端の葯
-    for k in range(44):
-        theta = (k / 44) * math.tau + rand.uniform(-0.04, 0.04)
-        r0 = 0.115
-        lean = rand.uniform(0.12, 0.3)
-        top = Vector((math.cos(theta) * (r0 + lean * 0.35), math.sin(theta) * (r0 + lean * 0.35),
-                      0.2 + rand.uniform(0, 0.03)))
-        base = Vector((math.cos(theta) * r0, math.sin(theta) * r0, 0.12))
-        mid = (base + top) / 2
-        direction = top - base
-        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.0035, depth=direction.length, location=mid)
-        stamen = bpy.context.active_object
-        stamen.rotation_mode = "QUATERNION"
-        stamen.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(direction.normalized())
-        stamen.data.materials.append(stamen_mat)
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.009, location=top)
-        anther = bpy.context.active_object
-        bpy.ops.object.shade_smooth()
-        anther.data.materials.append(stamen_mat)
+        # 雄しべ: 花托の周りに細い糸+先端の葯
+        for k in range(44):
+            theta = (k / 44) * math.tau + rand.uniform(-0.04, 0.04)
+            r0 = 0.115
+            lean = rand.uniform(0.12, 0.3)
+            top = Vector((math.cos(theta) * (r0 + lean * 0.35), math.sin(theta) * (r0 + lean * 0.35),
+                          base_z + 0.2 + rand.uniform(0, 0.03)))
+            base = Vector((math.cos(theta) * r0, math.sin(theta) * r0, base_z + 0.12))
+            mid = (base + top) / 2
+            direction = top - base
+            bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.0035, depth=direction.length, location=mid)
+            stamen = bpy.context.active_object
+            stamen.rotation_mode = "QUATERNION"
+            stamen.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(direction.normalized())
+            stamen.data.materials.append(stamen_mat)
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.009, location=top)
+            anther = bpy.context.active_object
+            bpy.ops.object.shade_smooth()
+            anther.data.materials.append(stamen_mat)
 
     export(path)
 
 
 if __name__ == "__main__":
-    build_lotus(os.path.join(OUT_DIR, "lotus.glb"))
+    build_lotus(os.path.join(OUT_DIR, "lotus.glb"), WHORLS_BLOOM)
+    build_lotus(os.path.join(OUT_DIR, "lotus_bud.glb"), WHORLS_BUD,
+                with_center=False, stem_height=0.5, cup=0.62)
     print("done", file=sys.stderr)

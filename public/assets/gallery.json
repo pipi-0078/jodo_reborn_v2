@@ -77,6 +77,14 @@
       "tint": { "materialName": "petal", "color": "#f7faff" }
     },
     {
+      "id": "lotus_bud",
+      "name": "蓮の蕾",
+      "file": "lotus_bud.glb",
+      "desc": "開花前の蕾。茎で水面から立ち上がる(色は満開と同じ四色で使う)",
+      "credit": "制作: 本プロジェクト",
+      "tint": { "materialName": "petal", "color": "#f2a8c0" }
+    },
+    {
       "id": "tree_yanagi",
       "name": "枝垂れ柳(tree-gen試作)",
       "file": "tree_yanagi.glb",
