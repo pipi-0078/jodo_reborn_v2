@@ -150,6 +150,8 @@ def build_bridge(path):
     glow_mat = plain_material("glow", (1.0, 0.92, 0.7), 0.1, 0.4, (1.0, 0.85, 0.55), 2.6)
 
     steps = 32
+    BASE = -0.55  # 基礎の底面(据え付け時に水面下へ沈む深さ)
+
     # デッキ(反りに沿った帯)
     rows = []
     for i in range(steps + 1):
@@ -157,14 +159,22 @@ def build_bridge(path):
         rows.append([Vector((p.x, -WIDTH / 2, p.z)), Vector((p.x, WIDTH / 2, p.z))])
     grid_strip("deck", rows, deck_mat, 0.09)
 
-    # 側桁(両側の帯)
+    # 側桁(両側の帯)。デッキの縁に重ねて一体に見せる
     for side in (-1, 1):
-        y = side * (WIDTH / 2 + 0.055)
+        y = side * (WIDTH / 2 - 0.01)
         rows = []
         for i in range(steps + 1):
             p, _ = arc_point(i / steps)
-            rows.append([Vector((p.x, y, p.z - 0.16)), Vector((p.x, y, p.z + 0.14))])
-        grid_strip("girder", rows, gold_mat, 0.11)
+            rows.append([Vector((p.x, y, p.z - 0.2)), Vector((p.x, y, p.z + 0.15))])
+        grid_strip("girder", rows, gold_mat, 0.13)
+
+    # 橋台(たもとの土台): デッキ両端をしっかり上に載せ、灯籠もこの上に立つ
+    abutment_tops = {}
+    for sx in (-1, 1):
+        x = sx * (SPAN / 2 - 0.1)  # デッキ端が橋台の上に半分以上載るよう内側へ
+        top = 0.05
+        box_at("abutment", (x, 0, (top + BASE) / 2), (1.4, WIDTH + 1.3, top - BASE), gold_mat)
+        abutment_tops[sx] = top
 
     # 欄干
     posts = 9
@@ -211,18 +221,18 @@ def build_bridge(path):
             rail.data.materials.append(mat)
             bpy.ops.object.shade_smooth()
 
-    # 四隅の灯籠
+    # 四隅の灯籠(橋台の上、欄干の延長線上に立てる)
     for sx in (-1, 1):
         for sy in (-1, 1):
-            p, _ = arc_point(0.0 if sx < 0 else 1.0)
-            lantern((p.x + sx * 0.35, sy * (WIDTH / 2 + 0.32), p.z - 0.02), gold_mat, glow_mat)
+            lantern((sx * (SPAN / 2 - 0.1), sy * (WIDTH / 2 + 0.32), abutment_tops[sx]), gold_mat, glow_mat)
 
-    # 水中への支柱
+    # 水中への支柱(底面は橋台と同じ深さに揃え、上端はデッキ裏へ差し込む)
     for sx in (-1, 1):
         p, _ = arc_point(0.5 + sx * 0.28)
+        depth = p.z - BASE
         for sy in (-1, 1):
-            bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.11, depth=1.6,
-                                                location=(p.x, sy * (WIDTH / 2 - 0.1), p.z - 0.85))
+            bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.11, depth=depth,
+                                                location=(p.x, sy * (WIDTH / 2 - 0.12), (p.z + BASE) / 2))
             bpy.context.active_object.data.materials.append(gold_mat)
 
     export(path)
