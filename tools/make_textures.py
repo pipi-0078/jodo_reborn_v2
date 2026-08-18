@@ -184,9 +184,37 @@ def make_petal(size=512):
     img.save(os.path.join(OUT, "petal.png"))
 
 
+# ---------------------------------------------------------------- 金の敷石(橋・道用)
+
+def make_paving(size=512, tiles=6):
+    """金の敷石。目地の溝と、タイルごとのわずかな色むら。"""
+    img = Image.new("RGB", (size, size))
+    draw = ImageDraw.Draw(img)
+    tile = size // tiles
+    for ty in range(tiles):
+        for tx in range(tiles):
+            v = rng.randint(-14, 14)
+            base = (196 + v, 158 + v, 84 + v // 2)
+            draw.rectangle([tx * tile, ty * tile, (tx + 1) * tile - 1, (ty + 1) * tile - 1], fill=base)
+    # ノイズを重ねる
+    noise = smooth_noise(size, octaves=5, seed=21)
+    arr = np.asarray(img).astype(float)
+    arr *= (0.92 + noise[:, :, None] * 0.16)
+    img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+    # 目地
+    draw = ImageDraw.Draw(img)
+    for k in range(tiles + 1):
+        p = min(k * tile, size - 1)
+        draw.line([(0, p), (size, p)], fill=(120, 92, 40), width=4)
+        draw.line([(p, 0), (p, size)], fill=(120, 92, 40), width=4)
+    img = img.filter(ImageFilter.GaussianBlur(0.6))
+    img.save(os.path.join(OUT, "paving.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
     make_bark()
     make_petal()
+    make_paving()
     print("textures ->", OUT)

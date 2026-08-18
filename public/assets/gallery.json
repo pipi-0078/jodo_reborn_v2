@@ -37,6 +37,13 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
+      "id": "bridge",
+      "name": "金の反橋",
+      "file": "bridge.glb",
+      "desc": "擬宝珠の欄干と瑠璃の中桟、四隅に灯籠を灯した反橋(全長8m)",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
       "id": "tree_meiboku",
       "name": "名木(tree-gen試作)",
       "file": "tree_meiboku.glb",
