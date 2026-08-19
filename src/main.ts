@@ -1,9 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
-import { createPond } from './world/pond';
-import { createProps } from './world/props';
-import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -18,13 +15,12 @@ async function main(): Promise<void> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
+  // 更地。アセットはギャラリーで承認を得てから、ここに据える。
   createSky(scene, renderer);
-  createGround(scene, true);
-  createPond(scene);
-  await createProps(scene);
+  createGround(scene);
 
   const overlay = document.getElementById('overlay')!;
-  const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
+  const walker = new FirstPersonWalker(camera, document.body, overlay);
   scene.add(walker.controls.object);
 
   // 動作検証用フック(ヘッドレステストからカメラを動かす)
