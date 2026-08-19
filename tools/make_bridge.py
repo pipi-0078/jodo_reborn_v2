@@ -95,10 +95,11 @@ def grid_strip(name, points_rows, material, thickness):
 
 
 def box_at(name, location, size, material, rotation=None):
+    # size=1の立方体は±0.5なので、倍率=そのままの寸法で正しい大きさになる
     bpy.ops.mesh.primitive_cube_add(size=1, location=location)
     obj = bpy.context.active_object
     obj.name = name
-    obj.scale = (size[0] / 2, size[1] / 2, size[2] / 2)
+    obj.scale = (size[0], size[1], size[2])
     if rotation:
         obj.rotation_euler = rotation
     obj.data.materials.append(material)
@@ -133,10 +134,10 @@ def lantern(location, gold_mat, glow_mat):
     bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.14, depth=0.26, location=(x, y, z + 1.23))
     firebox = bpy.context.active_object
     firebox.data.materials.append(glow_mat)
-    bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.2, radius2=0.03, depth=0.14, location=(x, y, z + 1.45))
+    bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.2, radius2=0.03, depth=0.16, location=(x, y, z + 1.42))
     roof = bpy.context.active_object
     roof.data.materials.append(gold_mat)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.045, location=(x, y, z + 1.56))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.045, location=(x, y, z + 1.52))
     hoju = bpy.context.active_object
     bpy.ops.object.shade_smooth()
     hoju.data.materials.append(gold_mat)
@@ -195,8 +196,9 @@ def build_bridge(path):
                 for s in range(1, 4):
                     tt = t + (s / 4) * (1 / (posts - 1))
                     pp, _ = arc_point(tt)
-                    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.02, depth=rail_height - 0.06,
-                                                        location=(pp.x, y, pp.z + (rail_height - 0.06) / 2))
+                    # 手すりの芯まで届かせて、頭を軸の中に埋める
+                    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.02, depth=rail_height,
+                                                        location=(pp.x, y, pp.z + rail_height / 2))
                     bpy.context.active_object.data.materials.append(gold_mat)
         # 手すり(金)と中桟(瑠璃)。弧を密にサンプリングしてぴったり沿わせる
         for z_off, radius, mat in ((rail_height, 0.05, gold_mat), (rail_height * 0.55, 0.028, lapis_mat)):
