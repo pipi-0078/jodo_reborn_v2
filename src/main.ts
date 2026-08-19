@@ -1,8 +1,9 @@
-// いったん更地:アセットギャラリー(gallery.html)で部材を揃えてから再建立する。
-// 池・並木などの旧実装は src/world/ に残してあり、承認済みアセットで組み直す予定。
 import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
+import { createPond } from './world/pond';
+import { createProps } from './world/props';
+import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -18,10 +19,12 @@ async function main(): Promise<void> {
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
   createSky(scene, renderer);
-  createGround(scene);
+  createGround(scene, true);
+  createPond(scene);
+  await createProps(scene);
 
   const overlay = document.getElementById('overlay')!;
-  const walker = new FirstPersonWalker(camera, document.body, overlay);
+  const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
   scene.add(walker.controls.object);
 
   // 動作検証用フック(ヘッドレステストからカメラを動かす)

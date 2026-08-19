@@ -29,8 +29,19 @@ from make_trees import export, plain_material, reset_scene  # noqa: E402
 SPAN = 8.0
 RISE = 1.1
 WIDTH = 2.4
-RADIUS = (SPAN * SPAN) / (8 * RISE) + RISE / 2  # 反りの円弧半径
-HALF_ANGLE = math.asin((SPAN / 2) / RADIUS)
+RADIUS = 0.0
+HALF_ANGLE = 0.0
+
+
+def configure(span, rise, width):
+    """橋の寸法を設定する(池の幅に合わせて架け替えるため)。"""
+    global SPAN, RISE, WIDTH, RADIUS, HALF_ANGLE
+    SPAN, RISE, WIDTH = span, rise, width
+    RADIUS = (SPAN * SPAN) / (8 * RISE) + RISE / 2  # 反りの円弧半径
+    HALF_ANGLE = math.asin((SPAN / 2) / RADIUS)
+
+
+configure(SPAN, RISE, WIDTH)
 
 GOLD = (0.85, 0.62, 0.2)
 LAPIS = (0.16, 0.3, 0.78)
@@ -178,7 +189,7 @@ def build_bridge(path):
         abutment_tops[sx] = top
 
     # 欄干
-    posts = 9
+    posts = max(9, int(SPAN / 1.0) | 1)
     rail_height = 0.88
     for side in (-1, 1):
         y = side * (WIDTH / 2 - 0.05)
@@ -241,5 +252,9 @@ def build_bridge(path):
 
 
 if __name__ == "__main__":
+    configure(8.0, 1.1, 2.4)
     build_bridge(os.path.join(OUT_DIR, "bridge.glb"))
+    # 池の四方に架ける長橋(中島r=10 → 岸r=30 を跨ぐ)
+    configure(22.0, 2.6, 3.0)
+    build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"))
     print("done", file=sys.stderr)

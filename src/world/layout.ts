@@ -6,8 +6,10 @@ export const POND_INNER = ISLAND_RADIUS;
 export const POND_OUTER = 30; // 七宝池の外周
 export const WATER_LEVEL = -0.5;
 export const POND_DEPTH = -2.2;
-export const CAUSEWAY_HALF_WIDTH = 2.6; // 四辺階道の半幅
-export const DECK_HEIGHT = 0.22; // 階道の路面高さ
+export const CAUSEWAY_HALF_WIDTH = 1.5; // 橋の通行帯の半幅
+export const BRIDGE_RISE = 2.6; // 橋の反り高
+export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
+export const BRIDGE_HALF = 11; // 全長22mの半分
 export const ISLAND_TOP = 0.4;
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
@@ -39,11 +41,9 @@ export function sampleGround(x: number, z: number): GroundSample {
   if (r < POND_INNER) return { y: ISLAND_TOP, blocked: false };
   if (r < POND_OUTER) {
     if (onCauseway(x, z)) {
-      // 端では外周の地面(y=0)・中島(y=ISLAND_TOP)へなだらかに接続する
-      const tOuter = THREE.MathUtils.smoothstep(r, POND_OUTER - 4, POND_OUTER);
-      const tInner = 1 - THREE.MathUtils.smoothstep(r, POND_INNER, POND_INNER + 4);
-      const deckY = THREE.MathUtils.lerp(DECK_HEIGHT, 0, tOuter);
-      return { y: Math.max(deckY, tInner * ISLAND_TOP), blocked: false };
+      // 橋の反り(放物線)に沿って昇降する
+      const u = THREE.MathUtils.clamp((r - BRIDGE_CENTER) / BRIDGE_HALF, -1, 1);
+      return { y: BRIDGE_RISE * (1 - u * u), blocked: false };
     }
     return { y: WATER_LEVEL, blocked: true };
   }
