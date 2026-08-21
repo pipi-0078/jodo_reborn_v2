@@ -211,10 +211,36 @@ def make_paving(size=512, tiles=6):
     img.save(os.path.join(OUT, "paving.png"))
 
 
+# ---------------------------------------------------------------- 碼碯(めのう)の縞
+
+def make_agate(size=256):
+    """基壇装飾用。朱・橙・褐色のゆらぐ縞模様。"""
+    img = Image.new("RGB", (size, size))
+    draw = ImageDraw.Draw(img)
+    palette = [(178, 74, 40), (206, 118, 52), (150, 84, 48), (222, 150, 84), (128, 62, 36)]
+    y = 0
+    k = 0
+    while y < size:
+        band = rng.randint(6, 22)
+        color = palette[k % len(palette)]
+        for yy in range(y, min(y + band, size)):
+            # 縞を横方向にゆらす
+            shift = int(6 * math.sin(yy * 0.05 + k))
+            for x in range(size):
+                v = rng.randint(-10, 10)
+                img.putpixel(((x + shift) % size, yy),
+                             (max(0, color[0] + v), max(0, color[1] + v), max(0, color[2] + v)))
+        y += band
+        k += 1
+    img = img.filter(ImageFilter.GaussianBlur(0.8))
+    img.save(os.path.join(OUT, "agate.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
     make_bark()
     make_petal()
     make_paving()
+    make_agate()
     print("textures ->", OUT)

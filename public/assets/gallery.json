@@ -8,12 +8,22 @@
       "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 減面・金色マテリアル化"
     },
     {
+      "id": "pavilion",
+      "name": "七宝楼閣",
+      "file": "pavilion.glb",
+      "desc": "金銀瑠璃玻瓈硨磲赤珠碼碯で荘厳した二層の楼閣。玻瓈の壁、瑠璃の反り屋根、赤珠の垂れ飾り",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
       "id": "takara_tree",
       "name": "大樹(写実型)",
       "file": "takara_tree.glb",
       "desc": "池の最前列に立つ主役の木。葉には四宝の色を乗せられる",
       "credit": "原型: toshiki3782「tesuto tree」(Sketchfab) CC-BY-4.0 / 改変: 減面・葉のグレースケール化",
-      "tint": { "materialName": "material_1", "color": "#f0c050" }
+      "tint": {
+        "materialName": "material_1",
+        "color": "#f0c050"
+      }
     },
     {
       "id": "tree_conifer",
@@ -49,7 +59,10 @@
       "file": "tree_meiboku.glb",
       "desc": "Weber&Penn法による植物学的な枝ぶりの広葉樹。葉は四宝の色に染められる",
       "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整",
-      "tint": { "materialName": "foliage", "color": "#f0c050" }
+      "tint": {
+        "materialName": "foliage",
+        "color": "#f0c050"
+      }
     },
     {
       "id": "lotus_blue",
@@ -57,7 +70,10 @@
       "file": "lotus.glb",
       "desc": "車輪ほどの大きさの蓮。花びら22枚を一枚ずつ成形(青色青光)",
       "credit": "制作: 本プロジェクト(Blenderパラメトリック曲面)",
-      "tint": { "materialName": "petal", "color": "#6f8cf5" }
+      "tint": {
+        "materialName": "petal",
+        "color": "#6f8cf5"
+      }
     },
     {
       "id": "lotus_yellow",
@@ -65,7 +81,10 @@
       "file": "lotus.glb",
       "desc": "同型の黄(黄色黄光)",
       "credit": "制作: 本プロジェクト",
-      "tint": { "materialName": "petal", "color": "#f2c452" }
+      "tint": {
+        "materialName": "petal",
+        "color": "#f2c452"
+      }
     },
     {
       "id": "lotus_red",
@@ -73,7 +92,10 @@
       "file": "lotus.glb",
       "desc": "同型の赤(赤色赤光)",
       "credit": "制作: 本プロジェクト",
-      "tint": { "materialName": "petal", "color": "#f07a7a" }
+      "tint": {
+        "materialName": "petal",
+        "color": "#f07a7a"
+      }
     },
     {
       "id": "lotus_white",
@@ -81,7 +103,10 @@
       "file": "lotus.glb",
       "desc": "同型の白(白色白光)",
       "credit": "制作: 本プロジェクト",
-      "tint": { "materialName": "petal", "color": "#f7faff" }
+      "tint": {
+        "materialName": "petal",
+        "color": "#f7faff"
+      }
     },
     {
       "id": "lotus_bud",
@@ -89,7 +114,10 @@
       "file": "lotus_bud.glb",
       "desc": "開花前の蕾。茎で水面から立ち上がる(色は満開と同じ四色で使う)",
       "credit": "制作: 本プロジェクト",
-      "tint": { "materialName": "petal", "color": "#f2a8c0" }
+      "tint": {
+        "materialName": "petal",
+        "color": "#f2a8c0"
+      }
     },
     {
       "id": "tree_yanagi",
