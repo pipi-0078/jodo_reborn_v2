@@ -129,8 +129,8 @@ def torus(location, major, minor, material, rotation=None):
     return obj
 
 
-def sphere(location, radius, material, scale_z=1.0):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12, radius=radius, location=location)
+def sphere(location, radius, material, scale_z=1.0, segments=16, rings=12):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments, ring_count=rings, radius=radius, location=location)
     obj = bpy.context.active_object
     obj.scale = (1, 1, scale_z)
     bpy.ops.object.shade_smooth()
@@ -160,12 +160,16 @@ def _poly_tube(points, radius, material):
 
 
 def curved_roof(width, depth, height, lift, base_z, material, gold=None,
-                xc=0.0, yc=0.0, steps=18, bells=True):
-    """ゆるく反った寄棟屋根。瓦面+金の軒縁と降り棟+四隅の風鐸。"""
+                xc=0.0, yc=0.0, steps=18, bells=True,
+                ridge_len=0.0, rafters=True, yoraku=None):
+    """ゆるく反った屋根。ridge_len>0でy軸方向の大棟+鴟尾を持つ入母屋型。
+    瓦面+金の軒縁と降り棟+二重の垂木と瓦当+四隅の風鐸+瓔珞の垂れ飾り。"""
     hw, hd = width / 2, depth / 2
+    rl = ridge_len
 
     def zf(x, y):
-        u = max(abs(x) / hw, abs(y) / hd)
+        ry = max(0.0, abs(y) - rl) / (hd - rl) if rl > 0 else abs(y) / hd
+        u = max(abs(x) / hw, ry)
         corner = ((abs(x) / hw) * (abs(y) / hd)) ** 2
         return base_z + height * (1 - u) ** 1.6 + lift * corner
 
@@ -198,33 +202,64 @@ def curved_roof(width, depth, height, lift, base_z, material, gold=None,
             rim.append((xc + x, yc + y, zf(x, y) + 0.09))
     rim.append(rim[0])
     _poly_tube(rim, 0.055, gold)
-    # 垂木: 軒下に並ぶ金の腕木 / 瓦当: 軒先の丸い飾り金具
-    for nx, ny in ((0, -1), (1, 0), (0, 1), (-1, 0)):
-        span = width if ny != 0 else depth
-        cnt = max(4, int(span / 0.45))
-        for k in range(cnt):
-            t = 0.06 + 0.88 * k / (cnt - 1)
-            if ny != 0:
-                x, y = -hw + width * t, ny * hd
-                size, rot = (0.07, 0.55, 0.09), (-0.25 * ny, 0, 0)
-                drot = (math.pi / 2, 0, 0)
-            else:
-                x, y = nx * hw, -hd + depth * t
-                size, rot = (0.55, 0.07, 0.09), (0, 0.25 * nx, 0)
-                drot = (0, math.pi / 2, 0)
-            ez = zf(x, y)
-            box_at("taruki", (xc + x - nx * 0.22, yc + y - ny * 0.22, ez - 0.16), size, gold, rotation=rot)
-            cyl((xc + x + nx * 0.05, yc + y + ny * 0.05, ez + 0.01), 0.05, 0.035,
-                gold, vertices=8, rotation=drot)
-    # 降り棟: 四隅から頂へ走る金の棟
+    # 垂木(二軒=地垂木+飛檐垂木の二重) / 瓦当: 軒先の丸い飾り金具
+    if rafters:
+        for nx, ny in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            span = width if ny != 0 else depth
+            cnt = max(5, int(span / 0.32))
+            for k in range(cnt):
+                t = 0.05 + 0.90 * k / (cnt - 1)
+                if ny != 0:
+                    x, y = -hw + width * t, ny * hd
+                    size, rot = (0.065, 0.5, 0.085), (-0.25 * ny, 0, 0)
+                    drot = (math.pi / 2, 0, 0)
+                else:
+                    x, y = nx * hw, -hd + depth * t
+                    size, rot = (0.5, 0.065, 0.085), (0, 0.25 * nx, 0)
+                    drot = (0, math.pi / 2, 0)
+                ez = zf(x, y)
+                box_at("taruki", (xc + x - nx * 0.20, yc + y - ny * 0.20, ez - 0.15), size, gold, rotation=rot)
+                box_at("jitaruki", (xc + x - nx * 0.52, yc + y - ny * 0.52, ez - 0.28), size, gold, rotation=rot)
+                cyl((xc + x + nx * 0.05, yc + y + ny * 0.05, ez + 0.01), 0.05, 0.035,
+                    gold, vertices=8, rotation=drot)
+    # 瓔珞: 軒先から下がる珠飾りの連(金の珠+赤珠の雫)
+    if yoraku is not None:
+        for nx, ny in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            span = width if ny != 0 else depth
+            cnt = max(3, int(span / 1.0))
+            for k in range(cnt):
+                t = 0.14 + 0.72 * k / (cnt - 1)
+                x = (-hw + width * t) if ny != 0 else nx * hw
+                y = ny * hd if ny != 0 else (-hd + depth * t)
+                gx, gy, gz = xc + x + nx * 0.04, yc + y + ny * 0.04, zf(x, y) - 0.02
+                cyl((gx, gy, gz - 0.05), 0.006, 0.10, gold, vertices=5)
+                sphere((gx, gy, gz - 0.13), 0.030, gold, segments=7, rings=5)
+                sphere((gx, gy, gz - 0.19), 0.030, gold, segments=7, rings=5)
+                sphere((gx, gy, gz - 0.27), 0.048, yoraku, scale_z=1.35, segments=8, rings=6)
+    # 降り棟: 四隅から棟端(宝形なら頂)へ走る金の棟
     for sx in (-1, 1):
         for sy in (-1, 1):
             pts = []
             for k in range(9):
                 t = k / 8
-                x, y = sx * hw * (1 - t), sy * hd * (1 - t)
+                x = sx * hw * (1 - t)
+                y = sy * (hd * (1 - t) + rl * t)
                 pts.append((xc + x, yc + y, zf(x, y) + 0.08))
             _poly_tube(pts, 0.05, gold)
+    if rl > 0:
+        # 大棟と、その両端に反り立つ金の鴟尾
+        top = zf(0, 0)
+        box_at("omune", (xc, yc, top + 0.10), (0.24, rl * 2 + 0.24, 0.20), gold)
+        for sy in (-1, 1):
+            ye = rl + 0.10
+            box_at("shibi_base", (xc, yc + sy * ye, top + 0.24), (0.20, 0.30, 0.16), gold)
+            horn = []
+            for k in range(8):
+                t = k / 7
+                horn.append((xc, yc + sy * (ye + 0.06 + 0.24 * t),
+                             top + 0.28 + 0.50 * t ** 1.6))
+            _poly_tube(horn, 0.062, gold)
+            sphere((xc, yc + sy * (ye + 0.32), top + 0.84), 0.055, gold, segments=10, rings=8)
             if bells:
                 # 風鐸: 反り上がった軒先に吊る小さな鐘
                 bx, by = xc + sx * (hw - 0.12), yc + sy * (hd - 0.12)
@@ -241,6 +276,11 @@ def curved_roof(width, depth, height, lift, base_z, material, gold=None,
 def column(x, y, base_z, shaft_h, gold, shako, radius=0.17):
     """柱: 銀の礎盤+金の帯+象牙色の柱身+硨磲の柱頭。"""
     box_at("colbase", (x, y, base_z + 0.06), (0.5, 0.5, 0.12), mat_of("silver"))
+    bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=radius + 0.11, radius2=radius + 0.02,
+                                    depth=0.10, location=(x, y, base_z + 0.17))
+    renge = bpy.context.active_object
+    bpy.ops.object.shade_smooth()
+    renge.data.materials.append(mat_of("gold"))
     cyl((x, y, base_z + 0.12 + shaft_h / 2), radius, shaft_h, shako)
     cyl((x, y, base_z + 0.18), radius + 0.03, 0.06, gold)          # 根元の金帯
     cyl((x, y, base_z + 0.12 + shaft_h - 0.05), radius + 0.03, 0.06, gold)  # 頂の金帯
@@ -375,6 +415,21 @@ def build_pavilion(path):
             column(x, y, 1.38, 3.3, gold, shako_soft)
     for y in (-3.8, 3.8):
         column(0, y, 1.38, 3.3, gold, shako_soft)
+    # 貫: 柱列を結ぶ横材(内法貫と腰貫、端は木鼻として突き出す)
+    for bz, th in ((4.30, 0.13), (2.45, 0.11)):
+        for sx in (-1, 1):
+            box_at("nuki", (sx * 2.7, 0, bz), (th, 8.1, th), gold)
+        for sy in (-1, 1):
+            box_at("nuki", (0, sy * 3.8, bz), (5.95, th, th), gold)
+    # 欄間: 柱頂の間を埋める玻瓈と金の格子
+    for sx in (-1, 1):
+        box_at("ranma", (sx * 2.7, 0, 4.58), (0.04, 7.6, 0.42), hari)
+        for k in range(23):
+            box_at("ranma_koushi", (sx * 2.7, -3.52 + k * 0.32, 4.58), (0.06, 0.055, 0.46), gold)
+    for sy in (-1, 1):
+        box_at("ranma", (0, sy * 3.8, 4.58), (5.4, 0.04, 0.42), hari)
+        for k in range(16):
+            box_at("ranma_koushi", (-2.4 + k * 0.32, sy * 3.8, 4.58), (0.055, 0.06, 0.46), gold)
 
     # ---- 露台(一階の屋根床)+欄干 ----
     box_at("terrace", (0, 0, 4.94), (7, 9.5, 0.2), shippo)
@@ -407,9 +462,17 @@ def build_pavilion(path):
                 box_at("byou", (2.28, syd * ry, rz), (0.03, 0.045, 0.045), silver)
         torus((2.30, syd * 0.14, 6.05), 0.055, 0.012, silver, rotation=(0, math.pi / 2, 0))
 
+    # 長押: 玻瓈壁を押さえる金の水平帯
+    for nz in (5.62, 7.32):
+        for sx in (-1, 1):
+            box_at("nageshi", (sx * 2.26, 0, nz), (0.07, 4.55, 0.15), gold)
+        for sy in (-1, 1):
+            box_at("nageshi", (0, sy * 2.26, nz), (4.55, 0.07, 0.15), gold)
     box_at("towereave", (0, 0, 7.78), (5.6, 5.6, 0.18), shippo)
+    _poly_tube([(2.82, -2.82, 7.88), (2.82, 2.82, 7.88), (-2.82, 2.82, 7.88),
+                (-2.82, -2.82, 7.88), (2.82, -2.82, 7.88)], 0.04, gold)
     kumimono(5.4, 5.4, 7.62, gold)
-    curved_roof(7.0, 7.0, 1.0, 0.55, 7.85, ruri, gold)
+    curved_roof(7.0, 7.0, 1.0, 0.55, 7.85, ruri, gold, ridge_len=1.4, yoraku=shuju)
 
     # 上層(小さな階+上屋根)
     box_at("clerestory", (0, 0, 8.45), (3.4, 3.4, 1.2), shippo)
@@ -424,8 +487,8 @@ def build_pavilion(path):
             off = -1.14 + k * 0.38
             box_at("renji", (sgn * 1.74, off, 8.45), (0.05, 0.075, 0.72), gold)
             box_at("renji", (off, sgn * 1.74, 8.45), (0.075, 0.05, 0.72), gold)
-    curved_roof(4.4, 4.4, 1.5, 0.4, 9.05, ruri, gold)
-    hoju(0, 0, 10.55, gold)
+    curved_roof(4.4, 4.4, 1.5, 0.4, 9.05, ruri, gold, ridge_len=0.9, yoraku=shuju)
+    hoju(0, 0, 10.72, gold)
 
     # ---- 小楼(左右)と回廊 ----
     for sy in (-1, 1):
@@ -434,12 +497,17 @@ def build_pavilion(path):
         for sx in (-1, 1):
             for syy in (-1, 1):
                 column(sx * 1.6, yc + syy * 1.6, 1.35, 2.3, gold, shako_soft, radius=0.13)
+        for sx in (-1, 1):
+            box_at("nuki", (sx * 1.6, yc, 3.05), (0.11, 3.7, 0.11), gold)
+            box_at("nuki", (0, yc + sx * 1.6, 3.05), (3.7, 0.11, 0.11), gold)
         box_at("sideeave", (0, yc, 3.83), (4.6, 4.6, 0.16), shippo)
+        _poly_tube([(2.32, yc - 2.32, 3.92), (2.32, yc + 2.32, 3.92), (-2.32, yc + 2.32, 3.92),
+                    (-2.32, yc - 2.32, 3.92), (2.32, yc - 2.32, 3.92)], 0.04, gold)
         for sgn in (-1, 1):
             for k in range(5):
                 bracket(-2.0 + 0.5 + k * 0.9, yc + sgn * 2.2, 3.72, gold, along_x=True)
                 bracket(sgn * 2.2, yc - 2.0 + 0.5 + k * 0.9, 3.72, gold, along_x=False)
-        curved_roof(5.6, 5.6, 1.2, 0.4, 3.9, ruri, gold, xc=0, yc=yc, steps=14)
+        curved_roof(5.6, 5.6, 1.2, 0.4, 3.9, ruri, gold, xc=0, yc=yc, steps=14, yoraku=shuju)
         hoju(0, yc, 5.1, gold, scale=0.6)
         # 回廊
         yc2 = sy * 5.15
@@ -447,7 +515,9 @@ def build_pavilion(path):
         for sx in (-1, 1):
             for syy in (-1, 1):
                 cyl((sx * 0.9, yc2 + syy * 0.55, 1.35 + 0.975), 0.1, 1.95, shako_soft)
-        box_at("corrroof", (0, yc2, 3.36), (2.6, 1.9, 0.12), shippo)
+        box_at("corrroof", (0, yc2, 3.34), (2.6, 1.9, 0.10), shippo)
+        curved_roof(3.0, 2.3, 0.38, 0.12, 3.40, ruri, gold, xc=0, yc=yc2,
+                    steps=8, bells=False, rafters=False)
 
     # ---- 舞台(正面+xの水上デッキ)+欄干+支柱 ----
     box_at("stage", (6.6, 0, 1.11), (3.2, 7, 0.18), stone)
