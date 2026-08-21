@@ -56,16 +56,35 @@ def hari_material():
     return mat
 
 
-def agate_material():
-    mat = bpy.data.materials.new("meno")
+def textured(name, image, *, normal=None, metallic, roughness, tile=None):
+    """画像+法線マップ付きマテリアル。tileで文様の繰り返し数を指定。"""
+    mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     tree = mat.node_tree
     bsdf = tree.nodes["Principled BSDF"]
-    bsdf.inputs["Metallic"].default_value = 0.15
-    bsdf.inputs["Roughness"].default_value = 0.45
+    bsdf.inputs["Metallic"].default_value = metallic
+    bsdf.inputs["Roughness"].default_value = roughness
     tex = tree.nodes.new("ShaderNodeTexImage")
-    tex.image = bpy.data.images.load(os.path.join(TEX, "agate.png"))
+    tex.image = bpy.data.images.load(os.path.join(TEX, image))
     tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    vector_out = None
+    if tile:
+        coords = tree.nodes.new("ShaderNodeTexCoord")
+        mapping = tree.nodes.new("ShaderNodeMapping")
+        mapping.inputs["Scale"].default_value = (tile[0], tile[1], 1)
+        tree.links.new(coords.outputs["UV"], mapping.inputs["Vector"])
+        tree.links.new(mapping.outputs["Vector"], tex.inputs["Vector"])
+        vector_out = mapping.outputs["Vector"]
+    if normal:
+        nimg = tree.nodes.new("ShaderNodeTexImage")
+        nimg.image = bpy.data.images.load(os.path.join(TEX, normal))
+        nimg.image.colorspace_settings.name = "Non-Color"
+        if vector_out is not None:
+            tree.links.new(vector_out, nimg.inputs["Vector"])
+        nmap = tree.nodes.new("ShaderNodeNormalMap")
+        nmap.inputs["Strength"].default_value = 1.0
+        tree.links.new(nimg.outputs["Color"], nmap.inputs["Color"])
+        tree.links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
     return mat
 
 
@@ -106,21 +125,86 @@ def sphere(location, radius, material, scale_z=1.0):
     return obj
 
 
-def curved_roof(width, depth, height, lift, base_z, material, steps=18):
-    """ゆるく反った寄棟屋根。u=縁からの距離、四隅は持ち上げる。"""
+def _poly_tube(points, radius, material):
+    curve = bpy.data.curves.new("trim", "CURVE")
+    curve.dimensions = "3D"
+    curve.bevel_depth = radius
+    curve.bevel_resolution = 3
+    curve.use_fill_caps = True
+    spline = curve.splines.new("POLY")
+    spline.points.add(len(points) - 1)
+    for cp, p in zip(spline.points, points):
+        cp.co = (p[0], p[1], p[2], 1)
+    obj = bpy.data.objects.new("trim", curve)
+    bpy.context.collection.objects.link(obj)
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.convert(target="MESH")
+    mesh = bpy.context.active_object
+    mesh.data.materials.append(material)
+    bpy.ops.object.shade_smooth()
+
+
+def curved_roof(width, depth, height, lift, base_z, material, gold=None,
+                xc=0.0, yc=0.0, steps=18, bells=True):
+    """ゆるく反った寄棟屋根。瓦面+金の軒縁と降り棟+四隅の風鐸。"""
     hw, hd = width / 2, depth / 2
+
+    def zf(x, y):
+        u = max(abs(x) / hw, abs(y) / hd)
+        corner = ((abs(x) / hw) * (abs(y) / hd)) ** 2
+        return base_z + height * (1 - u) ** 1.6 + lift * corner
+
     rows = []
     for i in range(steps + 1):
         x = -hw + width * i / steps
         row = []
         for j in range(steps + 1):
             y = -hd + depth * j / steps
-            u = max(abs(x) / hw, abs(y) / hd)
-            corner = ((abs(x) / hw) * (abs(y) / hd)) ** 2
-            z = base_z + height * (1 - u) ** 1.6 + lift * corner
-            row.append(Vector((x, y, z)))
+            row.append(Vector((xc + x, yc + y, zf(x, y))))
         rows.append(row)
     grid_strip("roof", rows, material, 0.14)
+
+    if gold is None:
+        return
+    # 軒縁: 屋根の外周に沿う金の縁
+    rim = []
+    n = 14
+    for edge in range(4):
+        for k in range(n):
+            t = k / n
+            if edge == 0:
+                x, y = -hw + width * t, -hd
+            elif edge == 1:
+                x, y = hw, -hd + depth * t
+            elif edge == 2:
+                x, y = hw - width * t, hd
+            else:
+                x, y = -hw, hd - depth * t
+            rim.append((xc + x, yc + y, zf(x, y) + 0.09))
+    rim.append(rim[0])
+    _poly_tube(rim, 0.055, gold)
+    # 降り棟: 四隅から頂へ走る金の棟
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            pts = []
+            for k in range(9):
+                t = k / 8
+                x, y = sx * hw * (1 - t), sy * hd * (1 - t)
+                pts.append((xc + x, yc + y, zf(x, y) + 0.08))
+            _poly_tube(pts, 0.05, gold)
+            if bells:
+                # 風鐸: 反り上がった軒先に吊る小さな鐘
+                bx, by = xc + sx * (hw - 0.12), yc + sy * (hd - 0.12)
+                bz = zf(sx * (hw - 0.12), sy * (hd - 0.12))
+                cyl((bx, by, bz - 0.06), 0.008, 0.14, gold, vertices=6)
+                bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=0.075, radius2=0.03,
+                                                depth=0.12, location=(bx, by, bz - 0.19))
+                bell = bpy.context.active_object
+                bpy.ops.object.shade_smooth()
+                bell.data.materials.append(gold)
+                sphere((bx, by, bz - 0.28), 0.02, gold)
 
 
 def column(x, y, base_z, shaft_h, gold, shako, radius=0.17):
@@ -180,16 +264,25 @@ def build_pavilion(path):
     reset_scene()
     gold = mat_of("gold")
     silver = mat_of("silver")
-    ruri = mat_of("ruri")
-    shako_soft = plain_material("shako_soft", (0.90, 0.86, 0.78), 0.35, 0.45)  # 柱身の象牙色
     shuju = mat_of("shuju")
-    stone = mat_of("stone")
     hari = hari_material()
-    meno = agate_material()
+    # 面には文様テクスチャを張る(細かさと豪華さの主役)
+    ruri = textured("ruri_tiles", "roof_tiles.png", normal="roof_tiles_normal.png",
+                    metallic=0.35, roughness=0.35, tile=(3, 3))
+    shippo = textured("shippo_gold", "shippo.png", normal="shippo_normal.png",
+                      metallic=0.8, roughness=0.35, tile=(2, 2))
+    shippo_wide = textured("shippo_wide", "shippo.png", normal="shippo_normal.png",
+                           metallic=0.8, roughness=0.35, tile=(6, 1))
+    goldcol = textured("goldcol", "column_gold.png", normal="column_gold_normal.png",
+                       metallic=0.85, roughness=0.35, tile=(2, 1))
+    goldfloor = textured("goldfloor", "paving.png", metallic=0.6, roughness=0.45, tile=(3, 3))
+    stone = goldfloor  # 床・軒はすべて金に
+    shako_soft = goldcol  # 柱身も金(柱頭の硨磲は残す)
+    meno = textured("meno", "agate.png", metallic=0.15, roughness=0.45, tile=(8, 1))
 
     # ---- 基壇(碼碯の帯+石の上段) ----
     box_at("podium1", (0, 0, 0.30), (11, 21, 0.60), meno)
-    box_at("podium2", (0, 0, 0.90), (10, 20, 0.60), stone)
+    box_at("podium2", (0, 0, 0.90), (10, 20, 0.60), shippo_wide)
 
     # ---- 背面(-x)の幅広階段: 銀の縁 ----
     for i in range(6):
@@ -210,7 +303,7 @@ def build_pavilion(path):
         column(0, y, 1.38, 3.3, gold, shako_soft)
 
     # ---- 露台(一階の屋根床)+欄干 ----
-    box_at("terrace", (0, 0, 4.94), (7, 9.5, 0.2), stone)
+    box_at("terrace", (0, 0, 4.94), (7, 9.5, 0.2), shippo)
     box_at("terracetrim", (0, 0, 5.05), (7.1, 9.6, 0.06), gold)
     e = (3.55, 4.8)
     railing([((-e[0], -e[1]), (e[0], -e[1])), ((e[0], -e[1]), (e[0], e[1])),
@@ -230,16 +323,16 @@ def build_pavilion(path):
         box_at("wall", (0, sy * 2.2, 6.45), (4.2, 0.06, 2.2), hari)
     box_at("door", (2.24, 0, 6.15), (0.06, 1.3, 1.9), gold)  # 正面の金の扉
 
-    box_at("towereave", (0, 0, 7.78), (5.6, 5.6, 0.15), stone)
+    box_at("towereave", (0, 0, 7.78), (5.6, 5.6, 0.18), shippo)
     kumimono(5.4, 5.4, 7.62, gold)
-    curved_roof(7.0, 7.0, 1.0, 0.55, 7.85, ruri)
+    curved_roof(7.0, 7.0, 1.0, 0.55, 7.85, ruri, gold)
 
     # 上層(小さな階+上屋根)
-    box_at("clerestory", (0, 0, 8.45), (3.4, 3.4, 1.2), ruri)
+    box_at("clerestory", (0, 0, 8.45), (3.4, 3.4, 1.2), shippo)
     for sx in (-1, 1):
         for sy in (-1, 1):
             box_at("cpost", (sx * 1.7, sy * 1.7, 8.45), (0.14, 0.14, 1.2), gold)
-    curved_roof(4.4, 4.4, 1.5, 0.4, 9.05, ruri)
+    curved_roof(4.4, 4.4, 1.5, 0.4, 9.05, ruri, gold)
     hoju(0, 0, 10.55, gold)
 
     # ---- 小楼(左右)と回廊 ----
@@ -249,9 +342,12 @@ def build_pavilion(path):
         for sx in (-1, 1):
             for syy in (-1, 1):
                 column(sx * 1.6, yc + syy * 1.6, 1.35, 2.3, gold, shako_soft, radius=0.13)
-        box_at("sideeave", (0, yc, 3.83), (4.6, 4.6, 0.14), stone)
-        kumimono_y(yc, gold)
-        curved_roof_at(0, yc, 5.6, 5.6, 1.2, 0.4, 3.9, ruri)
+        box_at("sideeave", (0, yc, 3.83), (4.6, 4.6, 0.16), shippo)
+        for sgn in (-1, 1):
+            for k in range(5):
+                box_at("kumi", (-2.0 + 0.5 + k * 0.9, yc + sgn * 2.2, 3.7), (0.22, 0.26, 0.2), gold)
+                box_at("kumi", (sgn * 2.2, yc - 2.0 + 0.5 + k * 0.9, 3.7), (0.26, 0.22, 0.2), gold)
+        curved_roof(5.6, 5.6, 1.2, 0.4, 3.9, ruri, gold, xc=0, yc=yc, steps=14)
         hoju(0, yc, 5.1, gold, scale=0.6)
         # 回廊
         yc2 = sy * 5.15
@@ -259,7 +355,7 @@ def build_pavilion(path):
         for sx in (-1, 1):
             for syy in (-1, 1):
                 cyl((sx * 0.9, yc2 + syy * 0.55, 1.35 + 0.975), 0.1, 1.95, shako_soft)
-        box_at("corrroof", (0, yc2, 3.36), (2.6, 1.9, 0.12), ruri)
+        box_at("corrroof", (0, yc2, 3.36), (2.6, 1.9, 0.12), shippo)
 
     # ---- 舞台(正面+xの水上デッキ)+欄干+支柱 ----
     box_at("stage", (6.6, 0, 1.11), (3.2, 7, 0.18), stone)
@@ -274,31 +370,6 @@ def build_pavilion(path):
     print("patched hari->BLEND")
 
 
-# 小楼用の補助(中心をずらした組物と屋根)
-def kumimono_y(yc, gold):
-    for s in (-1, 1):
-        for k in range(5):
-            x = -2.0 + 0.5 + k * 0.9
-            box_at("kumi", (x, yc + s * 2.2, 3.7), (0.22, 0.26, 0.2), gold)
-        for k in range(5):
-            y = yc - 2.0 + 0.5 + k * 0.9
-            box_at("kumi", (s * 2.2, y, 3.7), (0.26, 0.22, 0.2), gold)
-
-
-def curved_roof_at(xc, yc, width, depth, height, lift, base_z, material):
-    hw, hd = width / 2, depth / 2
-    steps = 14
-    rows = []
-    for i in range(steps + 1):
-        x = -hw + width * i / steps
-        row = []
-        for j in range(steps + 1):
-            y = -hd + depth * j / steps
-            u = max(abs(x) / hw, abs(y) / hd)
-            corner = ((abs(x) / hw) * (abs(y) / hd)) ** 2
-            row.append(Vector((xc + x, yc + y, base_z + height * (1 - u) ** 1.6 + lift * corner)))
-        rows.append(row)
-    grid_strip("roof", rows, material, 0.13)
 
 
 if __name__ == "__main__":
