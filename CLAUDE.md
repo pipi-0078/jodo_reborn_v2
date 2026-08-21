@@ -30,7 +30,7 @@
 - `src/` メイン空間(main.ts)とギャラリー(gallery.ts)
 - `tools/make_*.py` Blenderによるアセット生成(bpy、ヘッドレス)
 - `public/assets/` 完成アセット + gallery.json(陳列台帳)
-- `diary/` X投稿用の作業記録(Obsidianへ自動同期)
+- 日記は別リポジトリ `pipi-0078/jodo_diary`(`/home/user/jodo_diary`)。ObsidianのVault本体
 - `.claude/skills/x-worklog/` 日記作成スキル
 
 ## 環境復元(コンテナは使い捨て)

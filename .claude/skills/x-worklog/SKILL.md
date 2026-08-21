@@ -7,13 +7,23 @@ description: 浄土再現プロジェクトの作業記録をX(旧Twitter)投稿
 
 このプロジェクトの作業記録は、施主(ヨシボウさん)がXにコピー&ペーストで投稿できる
 記事として書く。内部向けの開発日誌ではなく、読者が「浄土再現」に関心を持てる読み物にする。
-成果物は毎日2つ:記事(.md)とタイトル入りサムネイル(.png)。どちらも `diary/` に置く。
-`diary/` はObsidian Gitでヨシボウさんの Vault に自動同期されるため、コミット&プッシュが「Obsidianへの投稿」を意味する。
+成果物は毎日2つ:記事(.md)とタイトル入りサムネイル(.png)。どちらも**日記専用リポジトリ**に置く。
+
+置き場所(2026-08-22に分離):
+
+- 日記の保管先は `pipi-0078/jodo_diary`(このプロジェクトのリポジトリとは別)。
+  作業機では `/home/user/jodo_diary` にクローンされている。無ければ
+  `git clone https://github.com/pipi-0078/jodo_diary /home/user/jodo_diary` で用意する
+- 記事とサムネイルは、そのリポジトリの**直下**に置く(`diary/` のような下位フォルダは作らない)
+- このリポジトリがヨシボウさんのObsidian Vaultそのものなので、
+  `jodo_diary` へのコミット&プッシュが「Obsidianへの投稿」を意味する
+- **プロジェクト本体のリポジトリに日記を置かないこと。** 以前は `jodo_reborn_v2/diary/` に
+  置いていたが、Obsidian Gitの同期が転ぶと3Dアセットまで巻き添えで消える事故が起きたため分離した
 
 ## 成果物と命名
 
-- 記事: `diary/YYYY-MM-DD-X投稿用.md`(1日1ファイル。同日に再実行したら上書き更新)
-- サムネイル: `diary/YYYY-MM-DD-thumbnail.png`(1600×900)
+- 記事: `/home/user/jodo_diary/YYYY-MM-DD-X投稿用.md`(1日1ファイル。同日に再実行したら上書き更新)
+- サムネイル: `/home/user/jodo_diary/YYYY-MM-DD-thumbnail.png`(1600×900)
 - コミット後、SendUserFileで両方をチャットにも添付する(施主はスマホで受け取って投稿することが多い)
 
 ## 記事の書き方
@@ -67,8 +77,10 @@ description: 浄土再現プロジェクトの作業記録をX(旧Twitter)投稿
 1. `npm ci && npm run build`(既にdistが最新ならスキップ)
 2. `scripts/thumbnail.mjs` を使う。タイトル文字列と出力先を引数で渡す:
    ```bash
-   node .claude/skills/x-worklog/scripts/thumbnail.mjs "記事タイトル" diary/YYYY-MM-DD-thumbnail.png
+   node .claude/skills/x-worklog/scripts/thumbnail.mjs "記事タイトル" /home/user/jodo_diary/YYYY-MM-DD-thumbnail.png
    ```
+   ギャラリーの一品を主役にする日は、スクリプト冒頭の `ITEM` にgallery.jsonのidを入れる
+   (メイン空間を撮る日は `null` にする)。
    スクリプト内のカメラ座標(CAMERA定数)は「その日いちばん見せたいもの」に向けて毎回調整する。
    新しい建立物(仏像・楼閣・蓮華など)ができた日は、必ずそれが主役になる構図にする
 3. スクリーンショットを目で確認してから採用する。空が画面の半分を超えていたら失敗。
@@ -83,8 +95,13 @@ description: 浄土再現プロジェクトの作業記録をX(旧Twitter)投稿
 
 ## 仕上げ
 
-1. 記事とサムネイルを `git add diary/ && git commit && git push -u origin <作業ブランチ>`
-   (コミットメッセージは内容がわかる日本語で)
+1. 記事とサムネイルを日記リポジトリへ納める(コミットメッセージは内容がわかる日本語で):
+   ```bash
+   cd /home/user/jodo_diary && git pull origin main \
+     && git add . && git commit -m "..." && git push -u origin main
+   ```
+   **必ず先にpullすること。** Vault側の編集を消さないための鉄則(2026-08-22の事故の教訓)。
+   プロジェクト本体(jodo_reborn_v2)側で変更したファイルがあれば、そちらは別途コミットする
 2. SendUserFileで記事とサムネイルをチャットに添付
 3. 投稿タイミングの提案があれば一言添える(例:大きな節目の直後は引きが強い)
 
