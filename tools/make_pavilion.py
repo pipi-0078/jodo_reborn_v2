@@ -268,17 +268,17 @@ def build_pavilion(path):
     hari = hari_material()
     # 面には文様テクスチャを張る(細かさと豪華さの主役)
     ruri = textured("ruri_tiles", "roof_tiles.png", normal="roof_tiles_normal.png",
-                    metallic=0.35, roughness=0.35, tile=(3, 3))
+                    metallic=0.35, roughness=0.35, tile=(4, 4))
     shippo = textured("shippo_gold", "shippo.png", normal="shippo_normal.png",
-                      metallic=0.8, roughness=0.35, tile=(2, 2))
+                      metallic=0.8, roughness=0.35, tile=(3, 3))
     shippo_wide = textured("shippo_wide", "shippo.png", normal="shippo_normal.png",
-                           metallic=0.8, roughness=0.35, tile=(6, 1))
+                           metallic=0.8, roughness=0.35, tile=(10, 1))
     goldcol = textured("goldcol", "column_gold.png", normal="column_gold_normal.png",
                        metallic=0.85, roughness=0.35, tile=(2, 1))
-    goldfloor = textured("goldfloor", "paving.png", metallic=0.6, roughness=0.45, tile=(3, 3))
+    goldfloor = textured("goldfloor", "paving.png", metallic=0.6, roughness=0.45, tile=(4, 4))
     stone = goldfloor  # 床・軒はすべて金に
     shako_soft = goldcol  # 柱身も金(柱頭の硨磲は残す)
-    meno = textured("meno", "agate.png", metallic=0.15, roughness=0.45, tile=(8, 1))
+    meno = textured("meno", "agate.png", metallic=0.15, roughness=0.45, tile=(10, 1))
 
     # ---- 基壇(碼碯の帯+石の上段) ----
     box_at("podium1", (0, 0, 0.30), (11, 21, 0.60), meno)
