@@ -12,9 +12,11 @@ const OUTPUT = resolve(process.argv[3] ?? 'thumbnail.png');
 const PORT = 8933;
 
 // その日いちばん見せたいものへ向ける(毎回調整すること)
+// ギャラリーの一品を主役にする日は ITEM にidを入れる(メイン世界を撮る日は null)
+const ITEM = 'pavilion';
 const CAMERA = {
-  position: [31, 2.1, 13],
-  lookAt: [-30, 1.2, -14],
+  position: [16.5, 6.2, 9.5],
+  lookAt: [2.2, 5.0, -1.2],
 };
 
 // dist/ を /jodo_reborn_v2/ ベースパスで配信するための仮ルート
@@ -30,11 +32,23 @@ try {
   const browser = await chromium.launch({ executablePath, args: ['--use-angle=swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   page.on('pageerror', (e) => console.error('[pageerror]', e.message));
-  await page.goto(`http://localhost:${PORT}/jodo_reborn_v2/`);
+  await page.goto(`http://localhost:${PORT}/jodo_reborn_v2/${ITEM ? 'gallery.html' : ''}`);
   await page.waitForTimeout(6000); // アセット読み込みとフォールバック初期化を待つ
+  if (ITEM) {
+    await page.evaluate((id) => {
+      window.__show(id);
+      // 陳列棚のUIは伏せて、部材そのものを見せる
+      ['list', 'back', 'caption', 'loading'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }, ITEM);
+    await page.waitForTimeout(2500);
+  }
 
   await page.evaluate(({ position, lookAt }) => {
-    document.getElementById('overlay').style.display = 'none';
+    const ov = document.getElementById('overlay');
+    if (ov) ov.style.display = 'none';
     const camera = window.__camera;
     camera.aspect = 1600 / 900;
     camera.updateProjectionMatrix();
