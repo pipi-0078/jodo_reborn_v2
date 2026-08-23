@@ -211,6 +211,54 @@ def renji_ring(r, z, h, gold, hari, slat_step=0.30):
                    (0.055, 0.06, h + 0.10), gold, rotation=(0, 0, tang))
 
 
+def sankarado(R, th, z0, h, gold, panel_mat, hari, w=1.30):
+    """桟唐戸ふうの板戸。框に囲まれた二枚の鏡板+格狭間の抜き。"""
+    ux, uy = math.cos(th), math.sin(th)
+    tang = th + math.pi / 2
+
+    def at(t, n, z, size, mat, name):
+        box_at(name, ((R + n) * ux + t * math.cos(tang),
+                      (R + n) * uy + t * math.sin(tang), z),
+               size, mat, rotation=(0, 0, tang))
+
+    at(0, 0.05, z0 + h - 0.05, (w + 0.30, 0.08, 0.10), gold, "dframe_t")
+    at(0, 0.05, z0 + 0.05, (w + 0.30, 0.08, 0.10), gold, "dframe_b")
+    for sd in (-1, 1):
+        at(sd * (w / 2 + 0.07), 0.05, z0 + h / 2, (0.10, 0.08, h), gold, "dframe_s")
+        at(sd * w / 4, 0.035, z0 + h / 2, (w / 2 - 0.06, 0.05, h - 0.20), panel_mat, "dpanel")
+        # 中桟(上下二段の鏡板に割る)
+        at(sd * w / 4, 0.055, z0 + h * 0.62, (w / 2 - 0.06, 0.04, 0.07), gold, "dsan")
+        # 上段は玻瓈の抜き(明かり取り)
+        at(sd * w / 4, 0.045, z0 + h * 0.81, (w / 2 - 0.20, 0.03, h * 0.26), hari, "dhikari")
+        for m in range(4):
+            at(sd * w / 4 - (w / 2 - 0.16) / 2 + m * (w / 2 - 0.16) / 3, 0.055,
+               z0 + h * 0.81, (0.05, 0.045, h * 0.30), gold, "dkoushi")
+        for rz in (0.22, 0.48):
+            for ry in (0.10, 0.30):
+                at(sd * (w / 4 + ry - 0.2), 0.075, z0 + h * rz, (0.045, 0.03, 0.045), gold, "byou")
+
+
+def renji_panel(R, th, z, h, gold, hari, w=1.35, step=0.155):
+    """連子窓一枚: 玻瓈の面に細かい金の縦子を並べる。"""
+    ux, uy = math.cos(th), math.sin(th)
+    tang = th + math.pi / 2
+
+    def at(t, n, zz, size, mat, name):
+        box_at(name, ((R + n) * ux + t * math.cos(tang),
+                      (R + n) * uy + t * math.sin(tang), zz),
+               size, mat, rotation=(0, 0, tang))
+
+    at(0, 0.03, z, (w, 0.04, h), hari, "rwin")
+    at(0, 0.05, z + h / 2 + 0.05, (w + 0.22, 0.07, 0.09), gold, "rframe_t")
+    at(0, 0.05, z - h / 2 - 0.05, (w + 0.22, 0.07, 0.09), gold, "rframe_b")
+    for sd in (-1, 1):
+        at(sd * (w / 2 + 0.06), 0.05, z, (0.09, 0.07, h + 0.20), gold, "rframe_s")
+    n = int(w / step)
+    for m in range(n + 1):
+        t = -w / 2 + w * m / n
+        at(t, 0.05, z, (0.045, 0.055, h), gold, "renji")
+
+
 def wall_frame(R, z0, z1, gold, mids=(), pil=0.16, tube=0.05):
     """壁面の分節: 八隅の柱形と、上下(と中間)を巡る長押。
     「ただの面」を避け、板張りが框に納まって見えるようにする。"""
@@ -288,6 +336,11 @@ def build(path):
     core.rotation_euler = (0, 0, HALF)
     wall_frame(3.3, 1.40, 4.50, gold, mids=(3.42,), pil=0.18, tube=0.055)
     doors(3.32, 1.42, 1.85, gold, migaki)
+    # 斜め四面には板戸、全八面の頭上に欄間の連子窓を入れて壁の続きを断つ
+    for k in range(4):
+        sankarado(3.30, k * math.pi / 2 + math.pi / 4, 1.42, 1.85, gold, migaki, hari)
+    for k in range(8):
+        renji_panel(3.30, k * math.pi / 4, 3.86, 0.62, gold, hari, w=1.55, step=0.17)
     for bz in (2.55, 4.05):
         ringpts = [(4.9 * math.cos(k * OCT), 4.9 * math.sin(k * OCT), bz) for k in range(9)]
         _poly_tube(ringpts, 0.06, gold)
@@ -304,6 +357,8 @@ def build(path):
     drum1 = cyl((0, 0, 5.42), 3.45, 1.0, hameita_l, vertices=8)
     drum1.rotation_euler = (0, 0, HALF)
     wall_frame(3.45, 4.95, 5.90, gold, pil=0.17)
+    for k in range(8):
+        renji_panel(3.45, k * math.pi / 4, 5.42, 0.46, gold, hari, w=1.50, step=0.185)
     cyl((0, 0, 5.90), 3.9, 0.16, goldfloor, vertices=8)
     orailing(3.75, 6.0, gold, hari, shuju)
     for k in range(8):
@@ -313,6 +368,8 @@ def build(path):
     core2.rotation_euler = (0, 0, HALF)
     wall_frame(2.2, 5.95, 8.35, gold, mids=(7.05,), pil=0.15)
     renji_ring(2.95, 7.9, 0.30, gold, hari)
+    for k in range(8):
+        renji_panel(2.20, k * math.pi / 4, 7.30, 1.00, gold, hari, w=1.05, step=0.145)
     cyl((0, 0, 8.42), 3.6, 0.15, hanabishi, vertices=8)
     for k in range(8):
         for t in (-0.22, 0.22):
@@ -323,7 +380,7 @@ def build(path):
     core3 = cyl((0, 0, 9.85), 1.55, 1.9, hameita_s, vertices=8)
     core3.rotation_euler = (0, 0, HALF)
     wall_frame(1.55, 8.90, 10.80, gold, pil=0.13, tube=0.045)
-    renji_ring(1.58, 10.05, 0.55, gold, hari, slat_step=0.24)
+    renji_ring(1.58, 10.05, 0.55, gold, hari, slat_step=0.16)
     cyl((0, 0, 10.86), 2.25, 0.13, hanabishi, vertices=8)
     octo_roof(3.2, 1.0, 0.4, 10.94, gtiles, gold, shuju, rings=10, mseg=5)
 
