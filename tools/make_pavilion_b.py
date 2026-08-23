@@ -211,14 +211,34 @@ def renji_ring(r, z, h, gold, hari, slat_step=0.30):
                    (0.055, 0.06, h + 0.10), gold, rotation=(0, 0, tang))
 
 
+def wall_frame(R, z0, z1, gold, mids=(), pil=0.16, tube=0.05):
+    """壁面の分節: 八隅の柱形と、上下(と中間)を巡る長押。
+    「ただの面」を避け、板張りが框に納まって見えるようにする。"""
+    for z in (z0 + 0.11, z1 - 0.11, *mids):
+        pts = [((R + 0.035) * math.cos(k * OCT + HALF),
+                (R + 0.035) * math.sin(k * OCT + HALF), z) for k in range(9)]
+        _poly_tube(pts, tube, gold)
+    for k in range(8):
+        th = k * OCT + HALF          # 八角の頂点(稜)に柱形を立てる
+        box_at("hashiragata", ((R + 0.02) * math.cos(th), (R + 0.02) * math.sin(th),
+                               (z0 + z1) / 2), (pil, pil, z1 - z0), gold, rotation=(0, 0, th))
+
+
 def build(path):
     reset_scene()
     gold = mat_of("gold")
     shuju = mat_of("shuju")
     hari = hari_material()
     # 文様ではなく材質そのもの: 壁は金箔押し、帯と床は鎚目、扉は磨き
-    karakusa = textured("kinpaku", "kinpaku.png", normal="kinpaku_normal.png",
-                        metallic=0.92, roughness=0.28, tile=(4, 2))
+    kinpaku = textured("kinpaku", "kinpaku.png", normal="kinpaku_normal.png",
+                       metallic=0.92, roughness=0.28, tile=(4, 2))
+    # 壁は金の羽目板張り。周長に合わせて板幅がそろうよう、階ごとに繰り返し数を変える
+    hameita_l = textured("hameita_l", "hameita.png", normal="hameita_normal.png",
+                         metallic=0.92, roughness=0.32, tile=(4, 1))
+    hameita_m = textured("hameita_m", "hameita.png", normal="hameita_normal.png",
+                         metallic=0.92, roughness=0.32, tile=(3, 1))
+    hameita_s = textured("hameita_s", "hameita.png", normal="hameita_normal.png",
+                         metallic=0.92, roughness=0.32, tile=(2, 1))
     hanabishi = textured("tsuchime", "tsuchime.png", normal="tsuchime_normal.png",
                          metallic=0.92, roughness=0.36, tile=(7, 1))
     renben = textured("tsuchime_low", "tsuchime.png", normal="tsuchime_normal.png",
@@ -235,7 +255,7 @@ def build(path):
     # ---- 基壇二段(蓮弁の帯+花菱の帯)+金の框 ----
     pod1 = cyl((0, 0, 0.30), 7.6, 0.60, renben, vertices=8)
     pod1.rotation_euler = (0, 0, HALF)
-    pod2 = cyl((0, 0, 0.88), 6.9, 0.56, hanabishi, vertices=8)
+    pod2 = cyl((0, 0, 0.88), 6.9, 0.56, kinpaku, vertices=8)
     pod2.rotation_euler = (0, 0, HALF)
     for (R, z) in ((7.6, 0.60), (6.9, 1.16)):
         ringpts = [(R * math.cos(k * OCT + HALF), R * math.sin(k * OCT + HALF), z)
@@ -264,8 +284,9 @@ def build(path):
     for k in range(8):
         th = k * OCT
         gcolumn(4.9 * math.cos(th), 4.9 * math.sin(th), 1.32, 3.05, goldcol, gold)
-    core = cyl((0, 0, 2.95), 3.3, 3.1, karakusa, vertices=8)
+    core = cyl((0, 0, 2.95), 3.3, 3.1, hameita_l, vertices=8)
     core.rotation_euler = (0, 0, HALF)
+    wall_frame(3.3, 1.40, 4.50, gold, mids=(3.42,), pil=0.18, tube=0.055)
     doors(3.32, 1.42, 1.85, gold, migaki)
     for bz in (2.55, 4.05):
         ringpts = [(4.9 * math.cos(k * OCT), 4.9 * math.sin(k * OCT), bz) for k in range(9)]
@@ -280,15 +301,17 @@ def build(path):
     octo_roof(6.9, 0.95, 0.5, 4.66, gtiles, gold, shuju)
 
     # ---- 二層: 胴(屋根を貫いて床を受ける)+縁+列柱+核壁+連子窓+屋根 ----
-    drum1 = cyl((0, 0, 5.42), 3.45, 1.0, karakusa, vertices=8)
+    drum1 = cyl((0, 0, 5.42), 3.45, 1.0, hameita_l, vertices=8)
     drum1.rotation_euler = (0, 0, HALF)
+    wall_frame(3.45, 4.95, 5.90, gold, pil=0.17)
     cyl((0, 0, 5.90), 3.9, 0.16, goldfloor, vertices=8)
     orailing(3.75, 6.0, gold, hari, shuju)
     for k in range(8):
         th = k * OCT
         gcolumn(3.0 * math.cos(th), 3.0 * math.sin(th), 5.98, 2.25, goldcol, gold, radius=0.13)
-    core2 = cyl((0, 0, 7.15), 2.2, 2.4, karakusa, vertices=8)
+    core2 = cyl((0, 0, 7.15), 2.2, 2.4, hameita_m, vertices=8)
     core2.rotation_euler = (0, 0, HALF)
+    wall_frame(2.2, 5.95, 8.35, gold, mids=(7.05,), pil=0.15)
     renji_ring(2.95, 7.9, 0.30, gold, hari)
     cyl((0, 0, 8.42), 3.6, 0.15, hanabishi, vertices=8)
     for k in range(8):
@@ -297,8 +320,9 @@ def build(path):
     octo_roof(4.5, 0.85, 0.42, 8.50, gtiles, gold, shuju)
 
     # ---- 三層(小さな灯りの層)+屋根 ----
-    core3 = cyl((0, 0, 9.85), 1.55, 1.9, karakusa, vertices=8)
+    core3 = cyl((0, 0, 9.85), 1.55, 1.9, hameita_s, vertices=8)
     core3.rotation_euler = (0, 0, HALF)
+    wall_frame(1.55, 8.90, 10.80, gold, pil=0.13, tube=0.045)
     renji_ring(1.58, 10.05, 0.55, gold, hari, slat_step=0.24)
     cyl((0, 0, 10.86), 2.25, 0.13, hanabishi, vertices=8)
     octo_roof(3.2, 1.0, 0.4, 10.94, gtiles, gold, shuju, rings=10, mseg=5)

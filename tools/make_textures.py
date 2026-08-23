@@ -614,6 +614,72 @@ def make_migaki(size=1024):
     height_to_normal(height, 0.9).save(os.path.join(OUT, "migaki_normal.png"))
 
 
+def make_hameita(size=2048, planks=12):
+    """金の羽目板張り。板の継ぎ目(目地)と面取り、板ごとの濃淡、板端の継ぎ、
+    そのうえに金箔の箔足と皺と擦れ。壁が「ただの面」にならないための主材。"""
+    r = random.Random(707)
+    cloud = tileable_noise(size, octaves=6, seed=701)
+    grain = tileable_noise(size, octaves=8, seed=702)
+
+    pw = size / planks
+    xs = np.arange(size, dtype=np.float32)[None, :]
+
+    # 板ごとの濃淡
+    tone = np.zeros((size, size), dtype=np.float32)
+    for j in range(planks):
+        tone[:, int(j * pw):int((j + 1) * pw)] = r.uniform(-1.0, 1.0)
+
+    # 目地(彫り込み)と面取り(左右の稜)
+    groove = np.zeros((size, size), dtype=np.float32)
+    bevel = np.zeros((size, size), dtype=np.float32)
+    gw = max(2.0, size * 0.0022)      # 目地の幅
+    bw = max(3.0, size * 0.0050)      # 面取りの幅
+    for j in range(planks + 1):
+        cx = j * pw
+        d = np.abs(((xs - cx + size / 2) % size) - size / 2)
+        groove = np.maximum(groove, np.clip(1 - d / gw, 0, 1))
+        edge = np.clip(1 - np.abs(d - (gw + bw * 0.5)) / (bw * 0.5), 0, 1)
+        side = np.sign(((xs - cx + size / 2) % size) - size / 2)
+        bevel = bevel + edge * side * 0.5
+    groove = np.repeat(groove, size, axis=0) if groove.shape[0] == 1 else groove
+    bevel = np.repeat(bevel, size, axis=0) if bevel.shape[0] == 1 else bevel
+
+    # 板端の継ぎ(横目地)。板ごとに高さを変えて規則性を消す
+    butt_img = Image.new("L", (size, size), 0)
+    bd = ImageDraw.Draw(butt_img)
+    for j in range(planks):
+        for _ in range(r.choice([0, 1, 1, 2])):
+            y = r.uniform(size * 0.12, size * 0.88)
+            x0, x1 = j * pw + gw, (j + 1) * pw - gw
+            bd.line([(x0, y), (x1, y)], fill=255, width=int(gw) + 1)
+    butt = np.asarray(butt_img.filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32) / 255
+
+    # 金箔の表情(箔足・皺・擦れ)を板の上に重ねる
+    fine = tileable_noise(size, octaves=7, seed=703)
+    gy, gx = np.gradient(fine)
+    wrinkle = np.clip(np.sqrt(gx * gx + gy * gy) * 30 - 0.6, 0, 1) ** 1.5
+    scr_img = Image.new("L", (size, size), 0)
+    cd = ImageDraw.Draw(scr_img)
+    for _ in range(900):
+        x, y = r.uniform(0, size), r.uniform(0, size)
+        a = r.uniform(0, math.pi)
+        L = r.uniform(size * 0.006, size * 0.05)
+        _wrap_draw(cd, size, lambda dx, dy, x=x, y=y, a=a, L=L:
+                   cd.line([(x - L * math.cos(a) / 2 + dx, y - L * math.sin(a) / 2 + dy),
+                            (x + L * math.cos(a) / 2 + dx, y + L * math.sin(a) / 2 + dy)],
+                           fill=r.randint(35, 110), width=1))
+    scratch = np.asarray(scr_img.filter(ImageFilter.GaussianBlur(0.7))).astype(np.float32) / 255
+
+    cut = np.maximum(groove, butt)
+    height = np.clip(0.56 - cut * 0.50 + bevel * 0.10
+                     + wrinkle * 0.13 + (grain - 0.5) * 0.09 - scratch * 0.10, 0, 1)
+    shade = np.clip(0.64 - cut * 0.42 + bevel * 0.13 + tone * 0.045
+                    + (cloud - 0.5) * 0.13 + wrinkle * 0.12 - scratch * 0.09, 0, 1)
+    Image.fromarray(_gold_shade(shade, (146, 102, 34), (255, 234, 170))).save(
+        os.path.join(OUT, "hameita.png"))
+    height_to_normal(height, 2.6).save(os.path.join(OUT, "hameita_normal.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
@@ -631,4 +697,5 @@ if __name__ == "__main__":
     make_kinpaku()
     make_tsuchime()
     make_migaki()
+    make_hameita()
     print("textures ->", OUT)
