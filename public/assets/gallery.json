@@ -15,6 +15,13 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
+      "id": "pavilion_b",
+      "name": "黄金八角楼(別案)",
+      "file": "pavilion_b.glb",
+      "desc": "八角平面を三層に積んだ塔型の楼閣。全身黄金、壁に唐草、基壇に蓮弁と花菱、頂に九輪の相輪",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
       "id": "takara_tree",
       "name": "大樹(写実型)",
       "file": "takara_tree.glb",

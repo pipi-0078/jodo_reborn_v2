@@ -313,6 +313,138 @@ def make_column_gold(size=512):
     height_to_normal(height, 1.6).save(os.path.join(OUT, "column_gold_normal.png"))
 
 
+
+
+# ---------------------------------------------------------------- 唐草文様(黄金楼の壁)
+
+def make_karakusa(size=1024):
+    """蔓が波打ち、渦を巻く唐草文様。金の浮彫り+法線マップ。横に完全に繋がる。"""
+    img = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(img)
+    band = size // 4
+    per = size // 4
+
+    def spiral(cx, cy, r0, sgn, phase):
+        pts = []
+        for k in range(110):
+            t = k / 109
+            r = r0 * (1 - 0.90 * t)
+            a = sgn * (t * 2.6 * 2 * math.pi) + phase
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+        draw.line(pts, fill=255, width=9)
+        # 渦の芯に珠
+        ex, ey = pts[-1]
+        draw.ellipse([ex - 7, ey - 7, ex + 7, ey + 7], fill=255)
+
+    for row in range(4):
+        cy = row * band + band // 2
+        amp = band * 0.16
+        ph = row * math.pi / 2
+        # 波打つ蔓(横にループが繋がるようにsin一周期×4)
+        pts = [(x, cy + amp * math.sin(2 * math.pi * x / per + ph)) for x in range(-8, size + 9, 4)]
+        draw.line(pts, fill=255, width=10)
+        for k in range(4):
+            # 山と谷から渦が伸びる
+            xc1 = (k * per + per * 0.25 - ph / (2 * math.pi) * per) % size
+            xc2 = (k * per + per * 0.75 - ph / (2 * math.pi) * per) % size
+            spiral(xc1, cy - band * 0.27, band * 0.235, -1, math.pi / 2)
+            spiral(xc2, cy + band * 0.27, band * 0.235, 1, -math.pi / 2)
+        # 蔓に沿う小さな葉
+        for k in range(16):
+            x = (k * size / 16 + per / 8) % size
+            y = cy + amp * math.sin(2 * math.pi * x / per + ph)
+            draw.ellipse([x - 6, y - 13, x + 6, y + 13], outline=255, width=4)
+    img = img.filter(ImageFilter.GaussianBlur(2.2))
+    height = np.asarray(img).astype(np.float32) / 255
+    base = np.array([148, 106, 40], dtype=float)
+    lit = np.array([255, 226, 150], dtype=float)
+    rgb = (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
+    Image.fromarray(rgb).save(os.path.join(OUT, "karakusa.png"))
+    height_to_normal(height, 3.2).save(os.path.join(OUT, "karakusa_normal.png"))
+
+
+# ---------------------------------------------------------------- 花菱格子(基壇・軒裏)
+
+def make_hanabishi(size=1024, cells=8):
+    """斜め格子に四弁の花菱を打った文様。完全に繋がる。"""
+    img = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(img)
+    p = size // cells
+    for k in range(-cells, cells * 2 + 1):
+        draw.line([(k * p, 0), (k * p + size, size)], fill=210, width=5)
+        draw.line([(k * p, size), (k * p + size, 0)], fill=210, width=5)
+    # 菱の中心に四弁花
+    for i in range(cells):
+        for j in range(cells):
+            cx, cy = i * p + p // 2, j * p + p // 2
+            r = p * 0.16
+            for ang in (0, 90, 180, 270):
+                a = math.radians(ang)
+                px, py = cx + r * math.cos(a), cy + r * math.sin(a)
+                draw.ellipse([px - p * 0.085, py - p * 0.085, px + p * 0.085, py + p * 0.085], fill=255)
+            draw.ellipse([cx - p * 0.06, cy - p * 0.06, cx + p * 0.06, cy + p * 0.06], fill=140)
+    img = img.filter(ImageFilter.GaussianBlur(1.8))
+    height = np.asarray(img).astype(np.float32) / 255
+    base = np.array([155, 112, 44], dtype=float)
+    lit = np.array([252, 220, 138], dtype=float)
+    rgb = (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
+    Image.fromarray(rgb).save(os.path.join(OUT, "hanabishi.png"))
+    height_to_normal(height, 2.8).save(os.path.join(OUT, "hanabishi_normal.png"))
+
+
+# ---------------------------------------------------------------- 蓮弁の帯(基壇の縁)
+
+def make_renben(size=1024):
+    """基壇を巡る蓮の花弁の帯。二重の弁が重なる。横に繋がる。"""
+    img = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(img)
+    n = 8
+    w = size // n
+    # 奥の弁(半つ割りずらし)
+    for k in range(n + 1):
+        cx = k * w - w // 2
+        draw.pieslice([cx - w * 0.46, size * 0.30, cx + w * 0.46, size * 1.45], 180, 360, fill=110)
+        draw.arc([cx - w * 0.46, size * 0.30, cx + w * 0.46, size * 1.45], 180, 360, fill=170, width=8)
+    # 手前の弁
+    for k in range(n):
+        cx = k * w + w // 2
+        draw.pieslice([cx - w * 0.47, size * 0.12, cx + w * 0.47, size * 1.55], 180, 360, fill=200)
+        draw.arc([cx - w * 0.47, size * 0.12, cx + w * 0.47, size * 1.55], 180, 360, fill=255, width=10)
+        # 弁の中の脈
+        draw.arc([cx - w * 0.28, size * 0.30, cx + w * 0.28, size * 1.40], 200, 340, fill=255, width=5)
+    img = img.filter(ImageFilter.GaussianBlur(2.0))
+    height = np.asarray(img).astype(np.float32) / 255
+    base = np.array([150, 108, 42], dtype=float)
+    lit = np.array([255, 228, 152], dtype=float)
+    rgb = (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
+    Image.fromarray(rgb).save(os.path.join(OUT, "renben.png"))
+    height_to_normal(height, 3.0).save(os.path.join(OUT, "renben_normal.png"))
+
+
+# ---------------------------------------------------------------- 金瓦(黄金楼の屋根)
+
+def make_gold_tiles(size=1024, rows=13):
+    """金の丸瓦。青瓦と同じ葺きで、色だけ黄金。"""
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float32)
+    rh = size / rows
+    tw = size / 16
+    height = np.zeros((size, size), dtype=np.float32)
+    for row in range(rows + 1):
+        edge_y = row * rh
+        offset = (row % 2) * tw / 2
+        for k in range(-1, 18):
+            cx = k * tw + offset
+            d = np.sqrt((xx - cx) ** 2 + ((yy - edge_y) * 1.6) ** 2)
+            bump = np.clip(1 - d / (tw * 0.62), 0, 1) ** 1.4
+            mask = (yy <= edge_y + rh * 0.12)
+            height = np.maximum(height, np.where(mask, bump, 0))
+    base = np.array([136, 96, 34], dtype=float)
+    lit = np.array([255, 224, 140], dtype=float)
+    rgb = (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
+    Image.fromarray(rgb).save(os.path.join(OUT, "gold_tiles.png"))
+    height_to_normal(height, 2.6).save(os.path.join(OUT, "gold_tiles_normal.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
@@ -323,4 +455,8 @@ if __name__ == "__main__":
     make_shippo_panel()
     make_roof_tiles()
     make_column_gold()
+    make_karakusa()
+    make_hanabishi()
+    make_renben()
+    make_gold_tiles()
     print("textures ->", OUT)
