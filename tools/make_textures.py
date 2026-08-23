@@ -445,6 +445,175 @@ def make_gold_tiles(size=1024, rows=13):
     height_to_normal(height, 2.6).save(os.path.join(OUT, "gold_tiles_normal.png"))
 
 
+# ================================================================ 材質そのものの表情
+# (文様ではなく、金という素材の細かな描写。箔足・皺・鎚目・磨き傷)
+
+def tileable_noise(size, octaves=5, seed=0):
+    """継ぎ目が出にくいノイズ(端が巻き付くように格子を作ってから拡大)。"""
+    r = np.random.default_rng(seed)
+    acc = np.zeros((size, size))
+    for o in range(octaves):
+        n = 2 ** (o + 2)
+        layer = r.random((n, n))
+        layer = np.pad(layer, ((0, 1), (0, 1)), mode="wrap")
+        img = Image.fromarray((layer * 255).astype(np.uint8)).resize((size + 1, size + 1), Image.BICUBIC)
+        acc += (np.asarray(img)[:size, :size] / 255.0) * (0.5 ** o)
+    acc -= acc.min()
+    return acc / acc.max()
+
+
+def _wrap_draw(draw, size, fn):
+    """要素を9方向に複製して描き、タイルの継ぎ目で切れないようにする。"""
+    for dy in (-size, 0, size):
+        for dx in (-size, 0, size):
+            fn(dx, dy)
+
+
+def _gold_shade(height, base, lit):
+    base = np.array(base, dtype=float)
+    lit = np.array(lit, dtype=float)
+    return (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
+
+
+def make_kinpaku(size=1024, sheets=5):
+    """金箔押しの面。箔足(箔の継ぎ目)、箔ごとの濃淡、細かな皺と擦れ。"""
+    r = random.Random(101)
+    cloud = tileable_noise(size, octaves=6, seed=201)
+    grain = tileable_noise(size, octaves=8, seed=202)
+
+    # 箔ごとのわずかな濃淡(規則的に見えないよう、行ごとに継ぎ目をずらす)
+    tone = np.zeros((size, size), dtype=np.float32)
+    step = size / sheets
+    offs = [r.uniform(-0.22, 0.22) * step for _ in range(sheets)]
+    for i in range(sheets):
+        y0, y1 = int(i * step), int((i + 1) * step)
+        for j in range(-1, sheets + 1):
+            x0 = int(j * step + offs[i])
+            x1 = int((j + 1) * step + offs[i])
+            v = r.uniform(-1.0, 1.0)
+            xa, xb = max(0, x0), min(size, x1)
+            if xb > xa:
+                tone[y0:y1, xa:xb] = v
+
+    # 箔足: わずかに盛り上がる継ぎ目。切れ切れにして格子に見せない
+    seam_img = Image.new("L", (size, size), 0)
+    sd = ImageDraw.Draw(seam_img)
+
+    def wobble(p0, p1, amp=2.6, n=26):
+        pts = []
+        for k in range(n + 1):
+            t = k / n
+            x = p0[0] + (p1[0] - p0[0]) * t
+            y = p0[1] + (p1[1] - p0[1]) * t
+            pts.append((x + r.uniform(-amp, amp), y + r.uniform(-amp, amp)))
+        return pts
+
+    for i in range(sheets + 1):
+        y = i * step
+        for j in range(-1, sheets + 1):
+            if r.random() < 0.18:      # ところどころ継ぎ目が見えない
+                continue
+            x0 = j * step + offs[i % sheets]
+            _wrap_draw(sd, size, lambda dx, dy, x0=x0, y=y:
+                       sd.line([(px + dx, py + dy) for px, py in
+                                wobble((x0, y), (x0 + step, y))],
+                               fill=r.randint(90, 190), width=r.choice([2, 3])))
+    for i in range(sheets):
+        for j in range(-1, sheets + 1):
+            if r.random() < 0.22:
+                continue
+            x = j * step + offs[i]
+            y0 = i * step
+            _wrap_draw(sd, size, lambda dx, dy, x=x, y0=y0:
+                       sd.line([(px + dx, py + dy) for px, py in
+                                wobble((x, y0), (x, y0 + step))],
+                               fill=r.randint(90, 190), width=r.choice([2, 3])))
+    seam = np.asarray(seam_img.filter(ImageFilter.GaussianBlur(1.6))).astype(np.float32) / 255
+
+    # 箔の皺: 細いノイズの尾根を拾う
+    fine = tileable_noise(size, octaves=7, seed=203)
+    gy, gx = np.gradient(fine)
+    wrinkle = np.clip(np.sqrt(gx * gx + gy * gy) * 26 - 0.55, 0, 1) ** 1.5
+
+    # 擦れ傷
+    scr_img = Image.new("L", (size, size), 0)
+    cd = ImageDraw.Draw(scr_img)
+    for _ in range(520):
+        x, y = r.uniform(0, size), r.uniform(0, size)
+        a = r.uniform(0, math.pi)
+        L = r.uniform(size * 0.01, size * 0.09)
+        _wrap_draw(cd, size, lambda dx, dy, x=x, y=y, a=a, L=L:
+                   cd.line([(x - L * math.cos(a) / 2 + dx, y - L * math.sin(a) / 2 + dy),
+                            (x + L * math.cos(a) / 2 + dx, y + L * math.sin(a) / 2 + dy)],
+                           fill=r.randint(40, 120), width=1))
+    scratch = np.asarray(scr_img.filter(ImageFilter.GaussianBlur(0.7))).astype(np.float32) / 255
+
+    height = np.clip(0.42 + seam * 0.30 + wrinkle * 0.26 + grain * 0.10 - scratch * 0.16, 0, 1)
+    shade = np.clip(0.50 + cloud * 0.18 + tone * 0.055 + seam * 0.16
+                    + wrinkle * 0.20 - scratch * 0.14, 0, 1)
+    Image.fromarray(_gold_shade(shade, (128, 88, 28), (255, 226, 152))).save(
+        os.path.join(OUT, "kinpaku.png"))
+    height_to_normal(height, 1.6).save(os.path.join(OUT, "kinpaku_normal.png"))
+
+
+def make_tsuchime(size=1024, dimples=520):
+    """鎚目(つちめ)。金鎚で打ち出した無数のくぼみが重なる面。"""
+    r = random.Random(303)
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float32)
+    height = np.zeros((size, size), dtype=np.float32)
+    for _ in range(dimples):
+        cx, cy = r.uniform(0, size), r.uniform(0, size)
+        rad = r.uniform(size * 0.032, size * 0.062)
+        depth = r.uniform(0.55, 1.0)
+        for dx in (-size, 0, size):
+            for dy in (-size, 0, size):
+                if abs(cx + dx - size / 2) > size / 2 + rad or abs(cy + dy - size / 2) > size / 2 + rad:
+                    continue
+                d = np.sqrt((xx - cx - dx) ** 2 + (yy - cy - dy) ** 2)
+                bowl = np.clip(1 - (d / rad) ** 2, 0, 1)
+                height = np.minimum(height, -bowl * depth * 0.5) if False else \
+                    np.where(bowl > 0, np.minimum(height, -bowl * depth), height)
+    height = height - height.min()
+    height = height / max(height.max(), 1e-6)
+    # 打ち跡の縁をなめらかにして、金物らしい柔らかな起伏にする
+    height = np.asarray(Image.fromarray((height * 255).astype(np.uint8))
+                        .filter(ImageFilter.GaussianBlur(size / 220))).astype(np.float32) / 255
+    grain = tileable_noise(size, octaves=7, seed=304)
+    height = np.clip(height * 0.88 + grain * 0.12, 0, 1)
+    shade = np.clip(0.68 + (height - 0.5) * 0.15 + (grain - 0.5) * 0.05, 0, 1)
+    Image.fromarray(_gold_shade(shade, (120, 82, 26), (252, 220, 144))).save(
+        os.path.join(OUT, "tsuchime.png"))
+    height_to_normal(height, 3.0).save(os.path.join(OUT, "tsuchime_normal.png"))
+
+
+def make_migaki(size=1024):
+    """磨き金。縦方向の細かな研ぎ目と、うっすらした曇り。ほぼ平滑。"""
+    r = random.Random(505)
+    rr = np.random.default_rng(506)
+    # 縦の研ぎ目: 1次元ノイズを縦に引き伸ばす
+    line = rr.random(size)
+    brush = np.tile(line, (size, 1))
+    brush = np.asarray(Image.fromarray((brush * 255).astype(np.uint8))
+                       .filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255
+    cloud = tileable_noise(size, octaves=5, seed=507)
+    scr_img = Image.new("L", (size, size), 0)
+    cd = ImageDraw.Draw(scr_img)
+    for _ in range(260):
+        x, y = r.uniform(0, size), r.uniform(0, size)
+        a = math.pi / 2 + r.uniform(-0.10, 0.10)
+        L = r.uniform(size * 0.05, size * 0.35)
+        _wrap_draw(cd, size, lambda dx, dy, x=x, y=y, a=a, L=L:
+                   cd.line([(x - L * math.cos(a) / 2 + dx, y - L * math.sin(a) / 2 + dy),
+                            (x + L * math.cos(a) / 2 + dx, y + L * math.sin(a) / 2 + dy)],
+                           fill=r.randint(30, 110), width=1))
+    scratch = np.asarray(scr_img.filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255
+    height = np.clip(0.5 + (brush - 0.5) * 0.22 - scratch * 0.20, 0, 1)
+    shade = np.clip(0.56 + (brush - 0.5) * 0.14 + (cloud - 0.5) * 0.20 - scratch * 0.10, 0, 1)
+    Image.fromarray(_gold_shade(shade, (132, 92, 30), (255, 230, 158))).save(
+        os.path.join(OUT, "migaki.png"))
+    height_to_normal(height, 0.9).save(os.path.join(OUT, "migaki_normal.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
@@ -459,4 +628,7 @@ if __name__ == "__main__":
     make_hanabishi()
     make_renben()
     make_gold_tiles()
+    make_kinpaku()
+    make_tsuchime()
+    make_migaki()
     print("textures ->", OUT)

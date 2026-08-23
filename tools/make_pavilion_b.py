@@ -216,18 +216,21 @@ def build(path):
     gold = mat_of("gold")
     shuju = mat_of("shuju")
     hari = hari_material()
-    karakusa = textured("karakusa", "karakusa.png", normal="karakusa_normal.png",
-                        metallic=0.88, roughness=0.32, tile=(6, 2))
-    hanabishi = textured("hanabishi", "hanabishi.png", normal="hanabishi_normal.png",
-                         metallic=0.85, roughness=0.34, tile=(10, 1))
-    renben = textured("renben", "renben.png", normal="renben_normal.png",
-                      metallic=0.85, roughness=0.34, tile=(14, 1))
+    # 文様ではなく材質そのもの: 壁は金箔押し、帯と床は鎚目、扉は磨き
+    karakusa = textured("kinpaku", "kinpaku.png", normal="kinpaku_normal.png",
+                        metallic=0.92, roughness=0.38, tile=(4, 2))
+    hanabishi = textured("tsuchime", "tsuchime.png", normal="tsuchime_normal.png",
+                         metallic=0.92, roughness=0.44, tile=(7, 1))
+    renben = textured("tsuchime_low", "tsuchime.png", normal="tsuchime_normal.png",
+                      metallic=0.92, roughness=0.44, tile=(8, 1))
+    migaki = textured("migaki", "migaki.png", normal="migaki_normal.png",
+                      metallic=0.95, roughness=0.24, tile=(2, 2))
     gtiles = textured("gtiles", "gold_tiles.png", normal="gold_tiles_normal.png",
                       metallic=0.88, roughness=0.6, tile=(5, 4))
     goldcol = textured("goldcol_b", "column_gold.png", normal="column_gold_normal.png",
                        metallic=0.85, roughness=0.35, tile=(2, 1))
-    goldfloor = textured("goldfloor_b", "hanabishi.png", normal="hanabishi_normal.png",
-                         metallic=0.7, roughness=0.4, tile=(5, 5))
+    goldfloor = textured("goldfloor_b", "tsuchime.png", normal="tsuchime_normal.png",
+                         metallic=0.9, roughness=0.46, tile=(4, 4))
 
     # ---- 基壇二段(蓮弁の帯+花菱の帯)+金の框 ----
     pod1 = cyl((0, 0, 0.30), 7.6, 0.60, renben, vertices=8)
@@ -263,7 +266,7 @@ def build(path):
         gcolumn(4.9 * math.cos(th), 4.9 * math.sin(th), 1.32, 3.05, goldcol, gold)
     core = cyl((0, 0, 2.95), 3.3, 3.1, karakusa, vertices=8)
     core.rotation_euler = (0, 0, HALF)
-    doors(3.32, 1.42, 1.85, gold, goldcol)
+    doors(3.32, 1.42, 1.85, gold, migaki)
     for bz in (2.55, 4.05):
         ringpts = [(4.9 * math.cos(k * OCT), 4.9 * math.sin(k * OCT), bz) for k in range(9)]
         _poly_tube(ringpts, 0.06, gold)
