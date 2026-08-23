@@ -549,9 +549,9 @@ def make_kinpaku(size=1024, sheets=5):
     scratch = np.asarray(scr_img.filter(ImageFilter.GaussianBlur(0.7))).astype(np.float32) / 255
 
     height = np.clip(0.42 + seam * 0.30 + wrinkle * 0.26 + grain * 0.10 - scratch * 0.16, 0, 1)
-    shade = np.clip(0.50 + cloud * 0.18 + tone * 0.055 + seam * 0.16
-                    + wrinkle * 0.20 - scratch * 0.14, 0, 1)
-    Image.fromarray(_gold_shade(shade, (128, 88, 28), (255, 226, 152))).save(
+    shade = np.clip(0.60 + (cloud - 0.5) * 0.16 + tone * 0.05 + seam * 0.13
+                    + wrinkle * 0.16 - scratch * 0.11, 0, 1)
+    Image.fromarray(_gold_shade(shade, (152, 108, 38), (255, 236, 176))).save(
         os.path.join(OUT, "kinpaku.png"))
     height_to_normal(height, 1.6).save(os.path.join(OUT, "kinpaku_normal.png"))
 
@@ -581,7 +581,7 @@ def make_tsuchime(size=1024, dimples=520):
     grain = tileable_noise(size, octaves=7, seed=304)
     height = np.clip(height * 0.88 + grain * 0.12, 0, 1)
     shade = np.clip(0.68 + (height - 0.5) * 0.15 + (grain - 0.5) * 0.05, 0, 1)
-    Image.fromarray(_gold_shade(shade, (120, 82, 26), (252, 220, 144))).save(
+    Image.fromarray(_gold_shade(shade, (140, 98, 32), (255, 230, 160))).save(
         os.path.join(OUT, "tsuchime.png"))
     height_to_normal(height, 3.0).save(os.path.join(OUT, "tsuchime_normal.png"))
 

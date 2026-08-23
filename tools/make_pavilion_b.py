@@ -218,11 +218,11 @@ def build(path):
     hari = hari_material()
     # 文様ではなく材質そのもの: 壁は金箔押し、帯と床は鎚目、扉は磨き
     karakusa = textured("kinpaku", "kinpaku.png", normal="kinpaku_normal.png",
-                        metallic=0.92, roughness=0.38, tile=(4, 2))
+                        metallic=0.92, roughness=0.28, tile=(4, 2))
     hanabishi = textured("tsuchime", "tsuchime.png", normal="tsuchime_normal.png",
-                         metallic=0.92, roughness=0.44, tile=(7, 1))
+                         metallic=0.92, roughness=0.36, tile=(7, 1))
     renben = textured("tsuchime_low", "tsuchime.png", normal="tsuchime_normal.png",
-                      metallic=0.92, roughness=0.44, tile=(8, 1))
+                      metallic=0.92, roughness=0.36, tile=(8, 1))
     migaki = textured("migaki", "migaki.png", normal="migaki_normal.png",
                       metallic=0.95, roughness=0.24, tile=(2, 2))
     gtiles = textured("gtiles", "gold_tiles.png", normal="gold_tiles_normal.png",
