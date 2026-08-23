@@ -230,24 +230,29 @@ def build(path):
                          metallic=0.7, roughness=0.4, tile=(5, 5))
 
     # ---- 基壇二段(蓮弁の帯+花菱の帯)+金の框 ----
-    cyl((0, 0, 0.30), 7.6, 0.60, renben, vertices=8)
-    cyl((0, 0, 0.88), 6.9, 0.56, hanabishi, vertices=8)
+    pod1 = cyl((0, 0, 0.30), 7.6, 0.60, renben, vertices=8)
+    pod1.rotation_euler = (0, 0, HALF)
+    pod2 = cyl((0, 0, 0.88), 6.9, 0.56, hanabishi, vertices=8)
+    pod2.rotation_euler = (0, 0, HALF)
     for (R, z) in ((7.6, 0.60), (6.9, 1.16)):
-        ringpts = [(R * math.cos(k * OCT), R * math.sin(k * OCT), z) for k in range(9)]
+        ringpts = [(R * math.cos(k * OCT + HALF), R * math.sin(k * OCT + HALF), z)
+                   for k in range(9)]
         _poly_tube(ringpts, 0.045, gold)
 
     # ---- 正面(+x)の階段+手すり ----
+    # 基壇二段目の面は x=6.375(内法半径)。段は面に正対し、地面から無垢で立てる
+    rise = 1.16 / 6
     for i in range(6):
-        top = 0.19 * (i + 1)
-        outer = 6.9 + (5 - i) * 0.38
-        box_at("step", (outer + 0.19, 0, top - 0.095), (0.38, 4.2, 0.19), goldfloor)
-        box_at("stepnose", (outer + 0.37, 0, top - 0.03), (0.06, 4.2, 0.06), gold)
-    slope = math.atan2(1.14, 1.9)
+        top = rise * (i + 1)
+        inner = 6.375 + (5 - i) * 0.38
+        box_at("step", (inner + 0.19, 0, top / 2), (0.38, 4.2, top), goldfloor)
+        box_at("stepnose", (inner + 0.35, 0, top - 0.03), (0.06, 4.2, 0.06), gold)
+    slope = math.atan2(1.16, 2.28)
     for sy in (-1, 1):
         yk = sy * 2.15
-        box_at("stringer", (7.9, yk, 0.60), (2.45, 0.12, 0.22), gold, rotation=(0, slope, 0))
-        box_at("stair_rail", (7.9, yk, 1.38), (2.3, 0.07, 0.07), gold, rotation=(0, slope, 0))
-        for (px, pz) in ((6.95, 1.14), (8.9, 0.02)):
+        box_at("stringer", (7.515, yk, 0.62), (2.62, 0.12, 0.24), gold, rotation=(0, slope, 0))
+        box_at("stair_rail", (7.515, yk, 1.40), (2.45, 0.07, 0.07), gold, rotation=(0, slope, 0))
+        for (px, pz) in ((6.45, 1.16), (8.62, 0.0)):
             box_at("stair_post", (px, yk, pz + 0.40), (0.09, 0.09, 0.80), gold)
             sphere((px, yk, pz + 0.90), 0.06, gold, scale_z=1.25)
 
