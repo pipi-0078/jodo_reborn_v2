@@ -438,8 +438,8 @@ def make_gold_tiles(size=1024, rows=13):
             bump = np.clip(1 - d / (tw * 0.62), 0, 1) ** 1.4
             mask = (yy <= edge_y + rh * 0.12)
             height = np.maximum(height, np.where(mask, bump, 0))
-    base = np.array([136, 96, 34], dtype=float)
-    lit = np.array([255, 224, 140], dtype=float)
+    base = np.array([112, 74, 22], dtype=float)
+    lit = np.array([226, 178, 92], dtype=float)
     rgb = (base[None, None, :] + (lit - base)[None, None, :] * height[:, :, None]).astype(np.uint8)
     Image.fromarray(rgb).save(os.path.join(OUT, "gold_tiles.png"))
     height_to_normal(height, 2.6).save(os.path.join(OUT, "gold_tiles_normal.png"))

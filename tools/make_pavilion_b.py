@@ -223,7 +223,7 @@ def build(path):
     renben = textured("renben", "renben.png", normal="renben_normal.png",
                       metallic=0.85, roughness=0.34, tile=(14, 1))
     gtiles = textured("gtiles", "gold_tiles.png", normal="gold_tiles_normal.png",
-                      metallic=0.75, roughness=0.32, tile=(5, 4))
+                      metallic=0.88, roughness=0.46, tile=(5, 4))
     goldcol = textured("goldcol_b", "column_gold.png", normal="column_gold_normal.png",
                        metallic=0.85, roughness=0.35, tile=(2, 1))
     goldfloor = textured("goldfloor_b", "hanabishi.png", normal="hanabishi_normal.png",
