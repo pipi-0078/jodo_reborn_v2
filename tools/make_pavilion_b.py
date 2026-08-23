@@ -271,13 +271,15 @@ def build(path):
             obracket(k * OCT + HALF + t * OCT, 5.55, 4.42, gold)
     octo_roof(6.9, 0.95, 0.5, 4.66, gtiles, gold, shuju)
 
-    # ---- 二層: 縁(欄干)+列柱+核壁+連子窓+屋根 ----
+    # ---- 二層: 胴(屋根を貫いて床を受ける)+縁+列柱+核壁+連子窓+屋根 ----
+    drum1 = cyl((0, 0, 5.42), 3.45, 1.0, karakusa, vertices=8)
+    drum1.rotation_euler = (0, 0, HALF)
     cyl((0, 0, 5.90), 3.9, 0.16, goldfloor, vertices=8)
     orailing(3.75, 6.0, gold, hari, shuju)
     for k in range(8):
         th = k * OCT
         gcolumn(3.0 * math.cos(th), 3.0 * math.sin(th), 5.98, 2.25, goldcol, gold, radius=0.13)
-    core2 = cyl((0, 0, 7.2), 2.2, 2.3, karakusa, vertices=8)
+    core2 = cyl((0, 0, 7.15), 2.2, 2.4, karakusa, vertices=8)
     core2.rotation_euler = (0, 0, HALF)
     renji_ring(2.95, 7.9, 0.30, gold, hari)
     cyl((0, 0, 8.42), 3.6, 0.15, hanabishi, vertices=8)
@@ -287,7 +289,7 @@ def build(path):
     octo_roof(4.5, 0.85, 0.42, 8.50, gtiles, gold, shuju)
 
     # ---- 三層(小さな灯りの層)+屋根 ----
-    core3 = cyl((0, 0, 10.05), 1.55, 1.5, karakusa, vertices=8)
+    core3 = cyl((0, 0, 9.85), 1.55, 1.9, karakusa, vertices=8)
     core3.rotation_euler = (0, 0, HALF)
     renji_ring(1.58, 10.05, 0.55, gold, hari, slat_step=0.24)
     cyl((0, 0, 10.86), 2.25, 0.13, hanabishi, vertices=8)
