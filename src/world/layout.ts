@@ -3,7 +3,7 @@ import * as THREE from 'three/webgpu';
 // 空間の寸法定義(七重の同心円レイアウトの中心)
 export const ISLAND_RADIUS = 10; // 中島(阿弥陀如来を安置する場所)
 export const POND_INNER = ISLAND_RADIUS;
-export const POND_OUTER = 30; // 七宝池の外周
+export const POND_OUTER = 38; // 七宝池の外周
 export const WATER_LEVEL = -0.5;
 export const POND_DEPTH = -2.2;
 export const CAUSEWAY_HALF_WIDTH = 1.5; // 橋の通行帯の半幅
@@ -11,8 +11,8 @@ export const BRIDGE_RISE = 2.6; // 橋の反り高
 export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
 export const BRIDGE_HALF = 11; // 全長22mの半分
 export const ISLAND_TOP = 0.4;
-export const BANK_INNER = 26.5; // 外岸の砂斜面が池底の平場に達する半径
-export const WALK_LIMIT = 29.4; // 岸を下りて水際に立てる限界(これより先は入水)
+export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
+export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(これより先は入水)
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
 export const TREE_RINGS = [38, 48, 58, 68, 78, 88, 98];

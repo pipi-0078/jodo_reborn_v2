@@ -41,7 +41,7 @@ def height_to_normal(height, strength=2.4):
     return Image.fromarray((normal * 255).astype(np.uint8))
 
 
-def make_pond_sand(size=2048, grain_px=4):
+def make_pond_sand(size=2048, grain_px=2):
     rng = np.random.default_rng(41)
     g = size // grain_px                      # 粒格子(1セル=1粒)
 

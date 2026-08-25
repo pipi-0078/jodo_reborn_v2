@@ -7,6 +7,10 @@ import {
 // 「七宝池 八功徳水充満其中 池底純以金沙布地」
 // 池底には四宝(金・銀・瑠璃・玻璃)の砂が吹き溜まりを作って敷かれる。
 export function createPond(scene: THREE.Scene): void {
+  // 斜面と水位(-0.5m)の交点
+  const bankWaterline = POND_OUTER - (-WATER_LEVEL) * (POND_OUTER - BANK_INNER) / -POND_DEPTH;
+  const islandWaterline = ISLAND_RADIUS + 3 * (ISLAND_TOP - WATER_LEVEL) / (ISLAND_TOP - POND_DEPTH);
+
   const loader = new THREE.TextureLoader();
 
   // 繰り返し数ごとに別テクスチャとして読み込む
@@ -34,33 +38,33 @@ export function createPond(scene: THREE.Scene): void {
   // --- 池底(平場) ---
   const floorGeometry = new THREE.CircleGeometry(POND_OUTER + 1, 96);
   floorGeometry.rotateX(-Math.PI / 2);
-  const floor = new THREE.Mesh(floorGeometry, makeSand(6, 6, THREE.FrontSide, true));
+  const floor = new THREE.Mesh(floorGeometry, makeSand(8, 8, THREE.FrontSide, true));
   floor.position.y = POND_DEPTH;
   scene.add(floor);
 
   // --- 外岸: なだらかに水へ下りる砂の斜面 ---
   const bankDry = new THREE.Mesh(
-    new THREE.CylinderGeometry(POND_OUTER, 29.2, 0.5, 128, 1, true),
-    makeSand(24, 0.12, THREE.BackSide),
+    new THREE.CylinderGeometry(POND_OUTER, bankWaterline, -WATER_LEVEL, 160, 1, true),
+    makeSand(30, 0.12, THREE.BackSide),
   );
-  bankDry.position.y = -0.25;
+  bankDry.position.y = WATER_LEVEL / 2;
   scene.add(bankDry);
   const bankWet = new THREE.Mesh(
-    new THREE.CylinderGeometry(29.2, BANK_INNER, 1.7, 128, 3, true),
-    makeSand(24, 0.4, THREE.BackSide, true),
+    new THREE.CylinderGeometry(bankWaterline, BANK_INNER, WATER_LEVEL - POND_DEPTH, 160, 3, true),
+    makeSand(30, 0.4, THREE.BackSide, true),
   );
-  bankWet.position.y = -0.5 - 0.85;
+  bankWet.position.y = (WATER_LEVEL + POND_DEPTH) / 2;
   scene.add(bankWet);
 
   // --- 中島: 砂の斜面を上がった先に金の頂 ---
   const islandDry = new THREE.Mesh(
-    new THREE.CylinderGeometry(ISLAND_RADIUS, 11.04, 0.9, 96, 1, true),
+    new THREE.CylinderGeometry(ISLAND_RADIUS, islandWaterline, ISLAND_TOP - WATER_LEVEL, 96, 1, true),
     makeSand(8, 0.14),
   );
   islandDry.position.y = (ISLAND_TOP + WATER_LEVEL) / 2;
   scene.add(islandDry);
   const islandWet = new THREE.Mesh(
-    new THREE.CylinderGeometry(11.04, ISLAND_RADIUS + 3, 1.7, 96, 3, true),
+    new THREE.CylinderGeometry(islandWaterline, ISLAND_RADIUS + 3, WATER_LEVEL - POND_DEPTH, 96, 3, true),
     makeSand(8, 0.26, THREE.FrontSide, true),
   );
   islandWet.position.y = WATER_LEVEL - 0.85;
@@ -75,8 +79,7 @@ export function createPond(scene: THREE.Scene): void {
 
   // --- 八功徳水: 澄み切った水面。二重の波で穏やかに揺れる ---
   // 水面の縁は、岸と中島の斜面が水位(-0.5m)と交わる半径に合わせる
-  // 外岸: r = 30 - 0.5*3.5/2.2 = 29.2 / 中島: r = 10 + 3*(0.9/2.6) = 11.0
-  const waterGeometry = new THREE.RingGeometry(11.0, 29.25, 160, 32);
+  const waterGeometry = new THREE.RingGeometry(islandWaterline - 0.05, bankWaterline + 0.05, 192, 40);
   waterGeometry.rotateX(-Math.PI / 2);
   const waterMaterial = new THREE.MeshPhysicalNodeMaterial({
     color: 0x2b93a4, transparent: true, opacity: 0.55,
@@ -87,10 +90,10 @@ export function createPond(scene: THREE.Scene): void {
     specularIntensity: 0.4,
     depthWrite: false,
   });
-  const wave = sin(positionLocal.x.mul(0.55).add(time.mul(0.9)))
-    .mul(sin(positionLocal.z.mul(0.47).add(time.mul(0.7))))
-    .mul(0.05)
-    .add(sin(positionLocal.x.mul(2.3).add(positionLocal.z.mul(1.9)).add(time.mul(1.7))).mul(0.015));
+  const wave = sin(positionLocal.x.mul(0.24).add(time.mul(0.7)))
+    .mul(sin(positionLocal.z.mul(0.21).add(time.mul(0.55))))
+    .mul(0.16)
+    .add(sin(positionLocal.x.mul(0.9).add(positionLocal.z.mul(0.75)).add(time.mul(1.2))).mul(0.045));
   waterMaterial.positionNode = positionLocal.add(vec3(0, wave, 0));
   const fresnel = normalView.dot(positionViewDirection.negate()).saturate().oneMinus().pow(3.0);
   waterMaterial.emissiveNode = vec3(0.16, 0.42, 0.50).mul(fresnel).mul(1.3);
