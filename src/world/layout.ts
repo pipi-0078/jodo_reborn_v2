@@ -11,6 +11,8 @@ export const BRIDGE_RISE = 2.6; // 橋の反り高
 export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
 export const BRIDGE_HALF = 11; // 全長22mの半分
 export const ISLAND_TOP = 0.4;
+export const BANK_INNER = 26.5; // 外岸の砂斜面が池底の平場に達する半径
+export const WALK_LIMIT = 29.4; // 岸を下りて水際に立てる限界(これより先は入水)
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
 export const TREE_RINGS = [38, 48, 58, 68, 78, 88, 98];
@@ -25,8 +27,8 @@ export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {
   ];
 }
 
-// 四辺階道の軸上(東西南北)にいるか
-function onCauseway(x: number, z: number): boolean {
+// 四辺階道の軸上(東西南北)にいるか(橋が架かったら sampleGround で使う)
+export function onCauseway(x: number, z: number): boolean {
   return Math.abs(z) < CAUSEWAY_HALF_WIDTH || Math.abs(x) < CAUSEWAY_HALF_WIDTH;
 }
 
@@ -35,17 +37,16 @@ export interface GroundSample {
   blocked: boolean;
 }
 
-// 足元の高さと進入可否。池の水面へは降りられない(階道と中島だけ歩ける)
+// 足元の高さと進入可否。岸の砂斜面は水際まで下りられるが、水へは入れない。
+// (橋が承認されて架かったら、onCauseway による通行帯をここへ戻す)
 export function sampleGround(x: number, z: number): GroundSample {
   const r = Math.hypot(x, z);
   if (r < POND_INNER) return { y: ISLAND_TOP, blocked: false };
+  if (r < WALK_LIMIT) return { y: WATER_LEVEL, blocked: true };
   if (r < POND_OUTER) {
-    if (onCauseway(x, z)) {
-      // 橋の反り(放物線)に沿って昇降する
-      const u = THREE.MathUtils.clamp((r - BRIDGE_CENTER) / BRIDGE_HALF, -1, 1);
-      return { y: BRIDGE_RISE * (1 - u * u), blocked: false };
-    }
-    return { y: WATER_LEVEL, blocked: true };
+    // 外岸の斜面: r=POND_OUTER で地表0、内へ向かって池底へ下る
+    const y = POND_DEPTH * (POND_OUTER - r) / (POND_OUTER - BANK_INNER);
+    return { y, blocked: false };
   }
   return { y: 0, blocked: false };
 }

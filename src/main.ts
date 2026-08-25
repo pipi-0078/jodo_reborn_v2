@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
+import { createPond } from './world/pond';
+import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -15,16 +17,18 @@ async function main(): Promise<void> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
-  // 更地。アセットはギャラリーで承認を得てから、ここに据える。
+  // 骨格: 空・黄金の大地・七宝池。建物や木々はギャラリーで承認を得てから据える。
   createSky(scene, renderer);
-  createGround(scene);
+  createGround(scene, true);
+  createPond(scene);
 
   const overlay = document.getElementById('overlay')!;
-  const walker = new FirstPersonWalker(camera, document.body, overlay);
+  const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
   scene.add(walker.controls.object);
 
   // 動作検証用フック(ヘッドレステストからカメラを動かす)
   (window as unknown as { __camera?: THREE.PerspectiveCamera }).__camera = camera;
+  (window as unknown as { __scene?: THREE.Scene }).__scene = scene;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
