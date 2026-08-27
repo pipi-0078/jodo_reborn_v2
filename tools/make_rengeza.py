@@ -83,10 +83,12 @@ def build(path):
         from make_pavilion import _poly_tube
         _poly_tube(pts, 0.035, gold)
 
-    # ---- 反花: 下向きに開いて框座へ垂れる蓮弁 ----
-    gold_petal_whorl(petal_gold, 16, 116, 0.55, 0.38, 0.22, 0.64, 0.62,
+    # ---- 反花の芯: 框座と敷茄子をつなぐ胴(花びらの根元の差し込み先) ----
+    cyl((0, 0, 0.52), 0.55, 0.52, migaki, vertices=24)
+    # ---- 反花: 芯から出て框座の天端に着地する裾 ----
+    gold_petal_whorl(petal_gold, 16, 114, 0.68, 0.36, 0.12, 0.50, 0.45,
                      jitter=False, cup=0.15)
-    gold_petal_whorl(petal_gold, 16, 112, 0.46, 0.34, 0.26, 0.54, 0.70,
+    gold_petal_whorl(petal_gold, 16, 118, 0.50, 0.32, 0.12, 0.52, 0.52,
                      phase=math.pi / 16, jitter=False, cup=0.15)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
