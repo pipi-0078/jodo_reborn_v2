@@ -8,6 +8,13 @@
       "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 減面・金色マテリアル化"
     },
     {
+      "id": "rengeza",
+      "name": "黄金の蓮華座",
+      "file": "rengeza.glb",
+      "desc": "阿弥陀如来坐像の台座。框座・反花・瓔珞を垂らした敷茄子・三重の蓮弁・蓮肉の九重座風",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
       "id": "pavilion",
       "name": "七宝楼閣",
       "file": "pavilion.glb",
