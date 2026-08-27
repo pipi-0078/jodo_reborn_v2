@@ -32,28 +32,28 @@ def glow(mat, color, strength):
 
 
 def gold_petal_whorl(mat, count, open_angle, length, width, curl, radius, base_z,
-                     phase=0.0, thickness=0.022):
-    """金の蓮弁を一輪(ひとまわり)並べる。open_angle>90で反花(下向き)になる。"""
+                     phase=0.0, thickness=0.022, jitter=True):
+    """金の蓮弁を一輪(ひとまわり)並べる。open_angle>90で反花(下向き)になる。
+    jitter=False で全弁同寸・等角(重なりを均等な鱗重ねにする)。"""
     for k in range(count):
         theta = (k / count) * math.tau + phase
+        jw = rand.uniform(0.96, 1.04) if jitter else 1.0
+        jl = rand.uniform(0.96, 1.04) if jitter else 1.0
+        jc = rand.uniform(0.92, 1.08) if jitter else 1.0
+        ja = rand.uniform(-2, 2) if jitter else 0.0
         petal = build_petal(
-            length * rand.uniform(0.96, 1.04),
-            width * rand.uniform(0.96, 1.04),
-            open_angle,
-            curl * rand.uniform(0.92, 1.08),
-            cup=0.42,
-            roll=0.0,
-            round_tip=True,
+            length * jl, width * jw, open_angle, curl * jc,
+            cup=0.42, roll=0.0, round_tip=True,
         )
         petal.data.materials.append(mat)
-        # 台座の弁は厚めに、分割は増やさない(76枚で重くなりすぎないように)
+        # 台座の弁は厚めに、分割は増やさない(枚数が多く重くなりすぎないように)
         petal.modifiers["solidify"].thickness = thickness
         petal.modifiers["subsurf"].levels = 0
         petal.modifiers["subsurf"].render_levels = 0
         petal.matrix_world = (
             Matrix.Rotation(theta, 4, "Z")
             @ Matrix.Translation((0, -radius, base_z))
-            @ Matrix.Rotation(math.radians(open_angle + rand.uniform(-2, 2)), 4, "X")
+            @ Matrix.Rotation(math.radians(open_angle + ja), 4, "X")
         )
 
 
@@ -84,9 +84,9 @@ def build(path):
         _poly_tube(pts, 0.035, gold)
 
     # ---- 反花: 下向きに開いて框座へ垂れる蓮弁 ----
-    gold_petal_whorl(petal_gold, 16, 124, 0.56, 0.47, 0.30, 0.62, 0.66)
-    gold_petal_whorl(petal_gold, 16, 136, 0.52, 0.45, 0.26, 0.50, 0.70,
-                     phase=math.pi / 16)
+    gold_petal_whorl(petal_gold, 12, 118, 0.55, 0.42, 0.28, 0.66, 0.62, jitter=False)
+    gold_petal_whorl(petal_gold, 12, 134, 0.48, 0.38, 0.22, 0.52, 0.72,
+                     phase=math.pi / 12, jitter=False)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
     sphere((0, 0, 0.72), 0.58, migaki, scale_z=0.52)
