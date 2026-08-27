@@ -86,10 +86,10 @@ def build(path):
     # ---- 反花の芯: 框座と敷茄子をつなぐ胴(花びらの根元の差し込み先) ----
     cyl((0, 0, 0.52), 0.55, 0.52, migaki, vertices=24)
     # ---- 反花: 芯から出て框座の天端に着地する裾 ----
-    gold_petal_whorl(petal_gold, 16, 114, 0.68, 0.36, 0.12, 0.50, 0.45,
-                     jitter=False, cup=0.15)
-    gold_petal_whorl(petal_gold, 16, 118, 0.50, 0.32, 0.12, 0.52, 0.52,
-                     phase=math.pi / 16, jitter=False, cup=0.15)
+    gold_petal_whorl(petal_gold, 12, 111.5, 0.60, 0.42, 0.05, 0.50, 0.45,
+                     jitter=False, cup=0.18)
+    gold_petal_whorl(petal_gold, 12, 116, 0.46, 0.38, 0.05, 0.52, 0.52,
+                     phase=math.pi / 12, jitter=False, cup=0.18)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
     sphere((0, 0, 0.72), 0.58, migaki, scale_z=0.52)
