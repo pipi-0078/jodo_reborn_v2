@@ -84,8 +84,8 @@ def build(path):
         _poly_tube(pts, 0.035, gold)
 
     # ---- 反花: 下向きに開いて框座へ垂れる蓮弁 ----
-    gold_petal_whorl(petal_gold, 12, 118, 0.55, 0.42, 0.28, 0.66, 0.62, jitter=False)
-    gold_petal_whorl(petal_gold, 12, 134, 0.48, 0.38, 0.22, 0.52, 0.72,
+    gold_petal_whorl(petal_gold, 12, 118, 0.55, 0.40, 0.28, 0.66, 0.62, jitter=False)
+    gold_petal_whorl(petal_gold, 12, 120, 0.44, 0.36, 0.30, 0.52, 0.76,
                      phase=math.pi / 12, jitter=False)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
