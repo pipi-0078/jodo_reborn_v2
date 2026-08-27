@@ -32,7 +32,7 @@ def glow(mat, color, strength):
 
 
 def gold_petal_whorl(mat, count, open_angle, length, width, curl, radius, base_z,
-                     phase=0.0, thickness=0.022, jitter=True):
+                     phase=0.0, thickness=0.022, jitter=True, cup=0.42):
     """金の蓮弁を一輪(ひとまわり)並べる。open_angle>90で反花(下向き)になる。
     jitter=False で全弁同寸・等角(重なりを均等な鱗重ねにする)。"""
     for k in range(count):
@@ -43,7 +43,7 @@ def gold_petal_whorl(mat, count, open_angle, length, width, curl, radius, base_z
         ja = rand.uniform(-2, 2) if jitter else 0.0
         petal = build_petal(
             length * jl, width * jw, open_angle, curl * jc,
-            cup=0.42, roll=0.0, round_tip=True,
+            cup=cup, roll=0.0, round_tip=True,
         )
         petal.data.materials.append(mat)
         # 台座の弁は厚めに、分割は増やさない(枚数が多く重くなりすぎないように)
@@ -84,9 +84,10 @@ def build(path):
         _poly_tube(pts, 0.035, gold)
 
     # ---- 反花: 下向きに開いて框座へ垂れる蓮弁 ----
-    gold_petal_whorl(petal_gold, 12, 118, 0.55, 0.40, 0.28, 0.66, 0.62, jitter=False)
-    gold_petal_whorl(petal_gold, 12, 120, 0.44, 0.36, 0.30, 0.52, 0.76,
-                     phase=math.pi / 12, jitter=False)
+    gold_petal_whorl(petal_gold, 16, 116, 0.55, 0.38, 0.22, 0.64, 0.62,
+                     jitter=False, cup=0.15)
+    gold_petal_whorl(petal_gold, 16, 112, 0.46, 0.34, 0.26, 0.54, 0.70,
+                     phase=math.pi / 16, jitter=False, cup=0.15)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
     sphere((0, 0, 0.72), 0.58, migaki, scale_z=0.52)
