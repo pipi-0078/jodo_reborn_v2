@@ -47,15 +47,20 @@ def petal_material():
     return mat
 
 
-def build_petal(length, width, open_angle, curl, cup, roll):
-    """花びら1枚のメッシュ(頂点とUV)を作る。原点=根元、+Zへ伸びる。"""
+def build_petal(length, width, open_angle, curl, cup, roll, round_tip=False):
+    """花びら1枚のメッシュ(頂点とUV)を作る。原点=根元、+Zへ伸びる。
+    round_tip=True で先端が楕円状に丸くなる(蓮華座の厚弁用)。"""
     verts = []
     uvs_grid = []
     for i in range(PETAL_U + 1):
         t = i / PETAL_U  # 0=根元 1=先端
-        # 幅: 根元は細く、5割強の位置で最大、先端はゆるやかに尖る
-        half_width = width * 0.5 * math.sin(math.pi * min(t / 0.55, 1) * 0.5) ** 0.8 \
-            * (1 - max(0, (t - 0.55) / 0.45) ** 1.35)
+        # 幅: 根元は細く、5割強の位置で最大、先端はゆるやかに尖る(または丸く納まる)
+        if round_tip:
+            u = max(0.0, (t - 0.50) / 0.50)
+            taper = math.sqrt(max(0.0, 1 - u ** 2.4))
+        else:
+            taper = 1 - max(0, (t - 0.55) / 0.45) ** 1.35
+        half_width = width * 0.5 * math.sin(math.pi * min(t / 0.55, 1) * 0.5) ** 0.8 * taper
         # 背骨: 先端へ向けて内側(+Y=花の中心側)へ反り上がる
         spine_y = curl * (t ** 2.2) * length
         spine_z = t * length

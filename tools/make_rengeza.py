@@ -41,8 +41,9 @@ def gold_petal_whorl(mat, count, open_angle, length, width, curl, radius, base_z
             width * rand.uniform(0.96, 1.04),
             open_angle,
             curl * rand.uniform(0.92, 1.08),
-            cup=0.5,
+            cup=0.42,
             roll=0.0,
+            round_tip=True,
         )
         petal.data.materials.append(mat)
         # 台座の弁は厚めに、分割は増やさない(76枚で重くなりすぎないように)
@@ -83,8 +84,8 @@ def build(path):
         _poly_tube(pts, 0.035, gold)
 
     # ---- 反花: 下向きに開いて框座へ垂れる蓮弁 ----
-    gold_petal_whorl(petal_gold, 16, 124, 0.60, 0.42, 0.30, 0.62, 0.66)
-    gold_petal_whorl(petal_gold, 16, 136, 0.55, 0.40, 0.26, 0.50, 0.70,
+    gold_petal_whorl(petal_gold, 16, 124, 0.56, 0.47, 0.30, 0.62, 0.66)
+    gold_petal_whorl(petal_gold, 16, 136, 0.52, 0.45, 0.26, 0.50, 0.70,
                      phase=math.pi / 16)
 
     # ---- 敷茄子: 潰した珠。赤道に金帯、瓔珞の垂れ飾り ----
@@ -103,10 +104,10 @@ def build(path):
     torus((0, 0, 0.99), 0.66, 0.028, gold)
 
     # ---- 蓮弁三重: 上向きに開く椀 ----
-    gold_petal_whorl(petal_gold, 18, 74, 0.88, 0.50, 0.55, 0.72, 1.00)
-    gold_petal_whorl(petal_gold, 16, 56, 0.84, 0.48, 0.48, 0.60, 1.02,
+    gold_petal_whorl(petal_gold, 18, 74, 0.82, 0.56, 0.52, 0.72, 1.00)
+    gold_petal_whorl(petal_gold, 16, 56, 0.78, 0.54, 0.46, 0.60, 1.02,
                      phase=math.pi / 16)
-    gold_petal_whorl(petal_gold, 14, 36, 0.78, 0.44, 0.38, 0.48, 1.04,
+    gold_petal_whorl(petal_gold, 14, 36, 0.72, 0.50, 0.36, 0.48, 1.04,
                      phase=math.pi / 14)
 
     # ---- 蓮肉: 像を受ける台。縁に金の環と連珠 ----
