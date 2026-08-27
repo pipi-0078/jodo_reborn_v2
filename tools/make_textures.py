@@ -680,6 +680,44 @@ def make_hameita(size=2048, planks=12):
     height_to_normal(height, 2.6).save(os.path.join(OUT, "hameita_normal.png"))
 
 
+def make_petal_vein(size=1024):
+    """蓮華座の金弁用。根元から扇状に走る葉脈+細かな箔の皺。
+    花びらUV(u=幅0..1 / v=丈0..1、v=0が根元)に合わせて描く。"""
+    r = random.Random(909)
+    img = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(img)
+    # 葉脈: 中央一本+左右へ扇状に開く曲線。根元(下)に収束する
+    offsets = [0.0, 0.09, -0.09, 0.19, -0.19, 0.30, -0.30, 0.42, -0.42, 0.55, -0.55]
+    for i, off in enumerate(offsets):
+        pts = []
+        for k in range(60):
+            t = k / 59                      # 0=根元 1=先端
+            u = 0.5 + off * (t ** 0.75)     # 先へ行くほど開く
+            v = t
+            pts.append((u * size, (1 - v) * size))
+        w = 7 if i == 0 else (5 if i < 5 else 4)
+        val = 235 if i == 0 else r.randint(170, 210)
+        draw.line(pts, fill=val, width=w)
+        # 脈の間の細い支脈
+        if i > 0:
+            for t0 in (0.35, 0.6, 0.8):
+                u0 = 0.5 + off * (t0 ** 0.75)
+                u1 = 0.5 + off * 1.35 * ((t0 + 0.13) ** 0.75)
+                draw.line([(u0 * size, (1 - t0) * size),
+                           (u1 * size, (1 - t0 - 0.10) * size)], fill=120, width=2)
+    veins = np.asarray(img.filter(ImageFilter.GaussianBlur(1.6))).astype(np.float32) / 255
+    # 箔の皺と粒
+    fine = tileable_noise(size, octaves=7, seed=910)
+    gy, gx = np.gradient(fine)
+    wrinkle = np.clip(np.sqrt(gx * gx + gy * gy) * 30 - 0.6, 0, 1) ** 1.5
+    grain = tileable_noise(size, octaves=8, seed=911)
+    height = np.clip(0.42 + veins * 0.42 + wrinkle * 0.10 + (grain - 0.5) * 0.10, 0, 1)
+    shade = np.clip(0.56 + veins * 0.26 + wrinkle * 0.10 + (grain - 0.5) * 0.10, 0, 1)
+    Image.fromarray(_gold_shade(shade, (150, 106, 36), (255, 234, 168))).save(
+        os.path.join(OUT, "petal_vein.png"))
+    height_to_normal(height, 2.4).save(os.path.join(OUT, "petal_vein_normal.png"))
+
+
 if __name__ == "__main__":
     make_ginkgo()
     make_needle()
@@ -698,4 +736,5 @@ if __name__ == "__main__":
     make_tsuchime()
     make_migaki()
     make_hameita()
+    make_petal_vein()
     print("textures ->", OUT)

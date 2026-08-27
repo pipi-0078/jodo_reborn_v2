@@ -62,12 +62,12 @@ def build(path):
     gold = mat_of("gold")
     shuju = mat_of("shuju")
     kinpaku = textured("kinpaku_z", "kinpaku.png", normal="kinpaku_normal.png",
-                       metallic=0.92, roughness=0.30, tile=(3, 1))
+                       metallic=0.92, roughness=0.30, tile=(6, 2))
     tsuchime = textured("tsuchime_z", "tsuchime.png", normal="tsuchime_normal.png",
-                        metallic=0.92, roughness=0.42, tile=(4, 1))
+                        metallic=0.92, roughness=0.42, tile=(8, 2))
     migaki = textured("migaki_z", "migaki.png", normal="migaki_normal.png",
-                      metallic=0.95, roughness=0.22, tile=(2, 2))
-    petal_gold = textured("petal_gold", "kinpaku.png", normal="kinpaku_normal.png",
+                      metallic=0.95, roughness=0.22, tile=(4, 3))
+    petal_gold = textured("petal_gold", "petal_vein.png", normal="petal_vein_normal.png",
                           metallic=0.9, roughness=0.34, tile=(1, 1))
     glow(petal_gold, (0.95, 0.62, 0.20), 0.10)
     glow(kinpaku, (0.9, 0.62, 0.22), 0.06)
