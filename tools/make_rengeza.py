@@ -107,11 +107,11 @@ def build(path):
     torus((0, 0, 0.99), 0.66, 0.028, gold)
 
     # ---- 蓮弁三重: 上向きに開く椀 ----
-    gold_petal_whorl(petal_gold, 18, 74, 0.82, 0.56, 0.52, 0.72, 1.00)
-    gold_petal_whorl(petal_gold, 16, 56, 0.78, 0.54, 0.46, 0.60, 1.02,
-                     phase=math.pi / 16)
-    gold_petal_whorl(petal_gold, 14, 36, 0.72, 0.50, 0.36, 0.48, 1.04,
-                     phase=math.pi / 14)
+    gold_petal_whorl(petal_gold, 14, 74, 0.82, 0.50, 0.52, 0.72, 1.00, jitter=False)
+    gold_petal_whorl(petal_gold, 12, 56, 0.78, 0.46, 0.46, 0.60, 1.02,
+                     phase=math.pi / 12, jitter=False)
+    gold_petal_whorl(petal_gold, 10, 36, 0.72, 0.40, 0.36, 0.48, 1.04,
+                     phase=math.pi / 10, jitter=False)
 
     # ---- 蓮肉: 像を受ける台。縁に金の環と連珠 ----
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.86, depth=0.34,
