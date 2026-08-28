@@ -76,6 +76,7 @@ async function main(): Promise<void> {
     const center = box.getCenter(new THREE.Vector3());
     model.position.set(-center.x, -box.min.y, -center.z);
     scene.add(model);
+    (window as unknown as { __model?: unknown }).__model = model; // ヘッドレス検品用
     current = model;
 
     const radius = Math.max(size.x, size.y, size.z) / 2;
@@ -108,6 +109,7 @@ async function main(): Promise<void> {
 
   // 動作検証用フック
   (window as unknown as { __camera?: THREE.PerspectiveCamera; __show?: (id: string) => void }).__camera = camera;
+  (window as unknown as { __controls?: unknown }).__controls = controls; // ヘッドレス検品で注視点を動かす用
   (window as unknown as { __show?: (id: string) => void }).__show = (id: string) => {
     const item = items.find((i) => i.id === id);
     if (item) void show(item);
