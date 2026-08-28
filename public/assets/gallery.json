@@ -8,6 +8,13 @@
       "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 減面・金色マテリアル化"
     },
     {
+      "id": "amida_polish",
+      "name": "阿弥陀如来坐像(磨き・台座なし)",
+      "file": "amida_polish.glb",
+      "desc": "スキャン像から台座を外し、彫り跡を均して磨きの金肌に。蓮華座へ載せる本体",
+      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 台座除去・表面平滑化・磨き金マテリアル"
+    },
+    {
       "id": "rengeza",
       "name": "黄金の蓮華座",
       "file": "rengeza.glb?v=6",
