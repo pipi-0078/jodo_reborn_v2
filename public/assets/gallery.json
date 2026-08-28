@@ -15,13 +15,6 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
-      "id": "amida_b",
-      "name": "阿弥陀如来坐像(説法印・自作)",
-      "file": "amida_b.glb",
-      "desc": "完全手続き生成のオリジナル坐像。説法印を結び、磨いた黄金の面で造る",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
       "id": "pavilion",
       "name": "七宝楼閣",
       "file": "pavilion.glb",
