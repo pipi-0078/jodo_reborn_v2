@@ -88,9 +88,10 @@ def to_gold(img):
     # 部位写真ごとの露出差を吸収: 平均0.52・散らばり0.20へ正規化
     lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.20 + 0.52
     lum = np.clip(lum, 0, 1)
-    lum = clahe(lum) ** 1.05                    # 局所コントラスト+やや深めの階調
-    base = np.array([62, 40, 14], dtype=np.float32)
-    lit = np.array([255, 224, 140], dtype=np.float32)
+    lum = clahe(lum) ** 0.92                    # 局所コントラスト(暗部は沈めない)
+    # 影の底も「暗い金」まで。黒褐色(錆に見える)へは落とさない
+    base = np.array([148, 102, 38], dtype=np.float32)
+    lit = np.array([255, 232, 158], dtype=np.float32)
     out = (base[None, None] + (lit - base)[None, None] * lum[:, :, None]).astype(np.uint8)
     path = os.path.join(TMP, f"gold_{img.name}.jpg")
     from PIL import ImageFilter
