@@ -119,6 +119,11 @@ def blur(a, r):
                       .filter(ImageFilter.GaussianBlur(r))).astype(np.float32) / 255
 
 
+def blur_signed(a, r):
+    """負の値も扱えるぼかし(0.5を中心に置いてから戻す)。"""
+    return blur(np.clip(a * 2 + 0.5, 0, 1), r) * 0.5 - 0.25
+
+
 def to_gold(img, normal_img=None):
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
@@ -131,11 +136,14 @@ def to_gold(img, normal_img=None):
     lum = np.clip(lum, 0, 1)
     size = lum.shape[0]
 
-    coarse = blur(lum, size / 14)      # ムラは捨てるが、輪郭の帯は広めに残す
+    coarse = blur(lum, size / 40)      # 細い線だけ通す(染みは大きいので捨てる)
     fine = blur(lum, 1.2)              # 粒状ノイズを均した版
     band = fine - coarse               # 輪郭の帯だけ
     # 帯の中の弱い成分(残ったムラ)を切り捨て、強い線だけ通す
-    band = np.sign(band) * np.clip(np.abs(band) - 0.048, 0, None)
+    band = np.sign(band) * np.clip(np.abs(band) - 0.010, 0, None)
+    # 面で広がる濃淡(染み)を打ち消す。細線は小さなぼかしで消えるが染みは残る性質を利用
+    for r in (5.0, 12.0):
+        band = band - blur_signed(band, r)
     # 彫ってある場所だけ濃淡を通す(平らな面は均一な金のまま)
     if normal_img is not None:
         nraw = bytes(normal_img.packed_file.data) if normal_img.packed_file else None
@@ -144,10 +152,10 @@ def to_gold(img, normal_img=None):
             na = np.asarray(npil).astype(np.float32) / 255 * 2 - 1
             relief = np.sqrt(na[:, :, 0] ** 2 + na[:, :, 1] ** 2)   # 傾きの大きさ=彫り
             relief = blur(relief / max(relief.max(), 1e-6), 2.0)
-            mask = np.clip((relief - 0.06) / 0.22, 0, 1) ** 0.9
+            mask = np.clip((relief - 0.14) / 0.26, 0, 1) ** 1.3
             print(f"    relief mask: mean={mask.mean():.3f} (彫り部だけ通す)")
             band = band * mask
-    lum = np.clip(0.62 + band * 5.0, 0, 1)
+    lum = np.clip(0.66 + band * 7.0, 0, 1)
     # 仕上げに細線をもう一段立てる
     lum = np.clip(lum + (lum - blur(lum, 1.5)) * 0.7, 0, 1)
     print(f"    tex {img.name}: std={lum.std():.3f} band_std={band.std():.3f}")
