@@ -121,11 +121,12 @@ def to_gold(img):
     pil = Image.open(io.BytesIO(raw)).convert("RGB")
     arr = np.asarray(pil).astype(np.float32) / 255
     lum = arr[:, :, 0] * 0.30 + arr[:, :, 1] * 0.59 + arr[:, :, 2] * 0.11
-    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.20 + 0.52
+    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.17 + 0.60
     lum = np.clip(lum, 0, 1)
-    lum = clahe(lum) ** 0.95
-    base = np.array([120, 80, 28], dtype=np.float32)     # 深みのある金
-    lit = np.array([255, 226, 148], dtype=np.float32)
+    lum = clahe(lum) ** 0.80          # 暗部を持ち上げる(煤けを残さない)
+    # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
+    base = np.array([184, 136, 58], dtype=np.float32)
+    lit = np.array([255, 240, 176], dtype=np.float32)
     out = (base[None, None] + (lit - base)[None, None] * lum[:, :, None]).astype(np.uint8)
     path = os.path.join(TMP, f"full_gold_{img.name}.jpg")
     Image.fromarray(out).filter(
