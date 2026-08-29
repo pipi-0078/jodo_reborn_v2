@@ -89,9 +89,9 @@ def to_gold(img):
     lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.20 + 0.52
     lum = np.clip(lum, 0, 1)
     lum = clahe(lum) ** 0.92                    # 局所コントラスト(暗部は沈めない)
-    # 影の底も「暗い金」まで。黒褐色(錆に見える)へは落とさない
-    base = np.array([148, 102, 38], dtype=np.float32)
-    lit = np.array([255, 232, 158], dtype=np.float32)
+    # キンキラ仕様: 影の底も明るい金、頂部はほぼ白金の輝き
+    base = np.array([176, 128, 52], dtype=np.float32)
+    lit = np.array([255, 242, 178], dtype=np.float32)
     out = (base[None, None] + (lit - base)[None, None] * lum[:, :, None]).astype(np.uint8)
     path = os.path.join(TMP, f"gold_{img.name}.jpg")
     from PIL import ImageFilter
@@ -101,7 +101,7 @@ def to_gold(img):
     new.pack()
     return new
 
-def boost_normal(img, k=1.35):
+def boost_normal(img, k=1.55):
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
         return None
@@ -125,8 +125,10 @@ for mat in obj.data.materials:
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if not bsdf:
         continue
-    bsdf.inputs["Metallic"].default_value = 0.9
-    bsdf.inputs["Roughness"].default_value = 0.35
+    bsdf.inputs["Metallic"].default_value = 0.95
+    bsdf.inputs["Roughness"].default_value = 0.28
+    bsdf.inputs["Emission Color"].default_value = (1.0, 0.76, 0.32, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = 0.22
     for link in list(mat.node_tree.links):
         if link.to_node == bsdf and link.to_socket.name == "Base Color" \
                 and link.from_node.type == "TEX_IMAGE":
