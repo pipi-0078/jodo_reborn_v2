@@ -144,10 +144,12 @@ def to_gold(img, normal_img=None):
             na = np.asarray(npil).astype(np.float32) / 255 * 2 - 1
             relief = np.sqrt(na[:, :, 0] ** 2 + na[:, :, 1] ** 2)   # 傾きの大きさ=彫り
             relief = blur(relief / max(relief.max(), 1e-6), 2.0)
-            mask = np.clip((relief - 0.10) / 0.35, 0, 1) ** 1.2
+            mask = np.clip((relief - 0.06) / 0.22, 0, 1) ** 0.9
             print(f"    relief mask: mean={mask.mean():.3f} (彫り部だけ通す)")
             band = band * mask
-    lum = np.clip(0.60 + band * 4.5, 0, 1)
+    lum = np.clip(0.62 + band * 5.0, 0, 1)
+    # 仕上げに細線をもう一段立てる
+    lum = np.clip(lum + (lum - blur(lum, 1.5)) * 0.7, 0, 1)
     print(f"    tex {img.name}: std={lum.std():.3f} band_std={band.std():.3f}")
     # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
     base = np.array([176, 122, 34], dtype=np.float32)
@@ -205,9 +207,9 @@ for mat in body.data.materials:
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if not bsdf:
         continue
-    bsdf.inputs["Metallic"].default_value = 0.68   # 輪郭が見える範囲で金属感を戻す
+    bsdf.inputs["Metallic"].default_value = 0.42   # 金箔押しの木彫: 色(彫りの陰影)を主役に   # 輪郭が見える範囲で金属感を戻す
     bsdf.inputs["Emission Color"].default_value = (1.0, 0.76, 0.32, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = 0.14
+    bsdf.inputs["Emission Strength"].default_value = 0.07
     # 同じマテリアルの法線マップを先に押さえる(彫り位置のマスクに使う)
     nrm_img = None
     for n in mat.node_tree.nodes:
