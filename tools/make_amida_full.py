@@ -121,19 +121,22 @@ def to_gold(img):
     pil = Image.open(io.BytesIO(raw)).convert("RGB")
     arr = np.asarray(pil).astype(np.float32) / 255
     lum = arr[:, :, 0] * 0.30 + arr[:, :, 1] * 0.59 + arr[:, :, 2] * 0.11
-    # 周波数で分ける: 大きなムラ(汚れ・照明差)は捨て、細い線(目・耳・唇・螺髪)は残す
+    # バンドパス: ムラ(低周波)も粒状ノイズ(超高周波)も捨て、輪郭の帯だけ残す
     lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.20 + 0.5
     lum = np.clip(lum, 0, 1)
     size = lum.shape[0]
-    low = np.asarray(Image.fromarray((lum * 255).astype(np.uint8))
-                     .filter(ImageFilter.GaussianBlur(size / 26))).astype(np.float32) / 255
-    high = lum - low                       # 輪郭だけの成分
-    detail = np.clip(0.66 + high * 3.2, 0, 1)   # 平らな金 + 強調した輪郭
-    # ごく細い線をさらに立てる(二段目の高域)
-    low2 = np.asarray(Image.fromarray((detail * 255).astype(np.uint8))
-                      .filter(ImageFilter.GaussianBlur(2.0))).astype(np.float32) / 255
-    lum = np.clip(detail + (detail - low2) * 1.4, 0, 1)
-    print(f"    tex {img.name}: std={lum.std():.3f} min={lum.min():.2f} max={lum.max():.2f}")
+
+    def blur(a, r):
+        return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
+                          .filter(ImageFilter.GaussianBlur(r))).astype(np.float32) / 255
+
+    coarse = blur(lum, size / 12)      # 大きなムラ(捨てる)
+    fine = blur(lum, 1.2)              # 粒状ノイズを均した版
+    band = fine - coarse               # 輪郭の帯だけ
+    # 帯の中の弱い成分(残ったムラ)を切り捨て、強い線だけ通す
+    band = np.sign(band) * np.clip(np.abs(band) - 0.012, 0, None)
+    lum = np.clip(0.68 + band * 3.4, 0, 1)
+    print(f"    tex {img.name}: std={lum.std():.3f} band_std={band.std():.3f}")
     # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
     base = np.array([206, 158, 72], dtype=np.float32)
     lit = np.array([255, 238, 172], dtype=np.float32)
