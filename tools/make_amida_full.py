@@ -114,7 +114,12 @@ def clahe(lum, tiles=8, clip=2.4):
     return v.astype(np.float32)
 
 
-def to_gold(img):
+def blur(a, r):
+    return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(r))).astype(np.float32) / 255
+
+
+def to_gold(img, normal_img=None):
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
         return None
@@ -126,20 +131,27 @@ def to_gold(img):
     lum = np.clip(lum, 0, 1)
     size = lum.shape[0]
 
-    def blur(a, r):
-        return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
-                          .filter(ImageFilter.GaussianBlur(r))).astype(np.float32) / 255
-
-    coarse = blur(lum, size / 12)      # 大きなムラ(捨てる)
+    coarse = blur(lum, size / 14)      # ムラは捨てるが、輪郭の帯は広めに残す
     fine = blur(lum, 1.2)              # 粒状ノイズを均した版
     band = fine - coarse               # 輪郭の帯だけ
     # 帯の中の弱い成分(残ったムラ)を切り捨て、強い線だけ通す
-    band = np.sign(band) * np.clip(np.abs(band) - 0.012, 0, None)
-    lum = np.clip(0.68 + band * 3.4, 0, 1)
+    band = np.sign(band) * np.clip(np.abs(band) - 0.048, 0, None)
+    # 彫ってある場所だけ濃淡を通す(平らな面は均一な金のまま)
+    if normal_img is not None:
+        nraw = bytes(normal_img.packed_file.data) if normal_img.packed_file else None
+        if nraw:
+            npil = Image.open(io.BytesIO(nraw)).convert("RGB").resize(lum.shape[::-1])
+            na = np.asarray(npil).astype(np.float32) / 255 * 2 - 1
+            relief = np.sqrt(na[:, :, 0] ** 2 + na[:, :, 1] ** 2)   # 傾きの大きさ=彫り
+            relief = blur(relief / max(relief.max(), 1e-6), 2.0)
+            mask = np.clip((relief - 0.10) / 0.35, 0, 1) ** 1.2
+            print(f"    relief mask: mean={mask.mean():.3f} (彫り部だけ通す)")
+            band = band * mask
+    lum = np.clip(0.60 + band * 4.5, 0, 1)
     print(f"    tex {img.name}: std={lum.std():.3f} band_std={band.std():.3f}")
     # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
-    base = np.array([206, 158, 72], dtype=np.float32)
-    lit = np.array([255, 238, 172], dtype=np.float32)
+    base = np.array([176, 122, 34], dtype=np.float32)
+    lit = np.array([255, 214, 116], dtype=np.float32)
     out = (base[None, None] + (lit - base)[None, None] * lum[:, :, None]).astype(np.uint8)
     path = os.path.join(TMP, f"full_gold_{img.name}.jpg")
     Image.fromarray(out).filter(
@@ -149,7 +161,7 @@ def to_gold(img):
     return new
 
 
-def boost_normal(img, k=2.0):
+def boost_normal(img, k=2.4):
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
         return None
@@ -177,7 +189,7 @@ def make_rough_map():
         acc += np.asarray(Image.fromarray((layer * 255).astype(np.uint8))
                           .resize((513, 513), Image.BICUBIC))[:512, :512] / 255 * 0.5 ** o
     acc = (acc - acc.min()) / (acc.max() - acc.min())
-    rough = (0.32 + acc * 0.07) * 255       # 0.32〜0.39 の控えめなムラ
+    rough = (0.33 + acc * 0.04) * 255       # 0.33〜0.37 のごく控えめなムラ
     path = os.path.join(TMP, "full_rough.png")
     Image.fromarray(rough.astype(np.uint8)).save(path)
     img = bpy.data.images.load(path)
@@ -193,19 +205,27 @@ for mat in body.data.materials:
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if not bsdf:
         continue
-    bsdf.inputs["Metallic"].default_value = 0.95
+    bsdf.inputs["Metallic"].default_value = 0.68   # 輪郭が見える範囲で金属感を戻す
     bsdf.inputs["Emission Color"].default_value = (1.0, 0.76, 0.32, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = 0.08
+    bsdf.inputs["Emission Strength"].default_value = 0.14
+    # 同じマテリアルの法線マップを先に押さえる(彫り位置のマスクに使う)
+    nrm_img = None
+    for n in mat.node_tree.nodes:
+        if n.type == "NORMAL_MAP":
+            for lk in mat.node_tree.links:
+                if lk.to_node == n and lk.from_node.type == "TEX_IMAGE":
+                    nrm_img = lk.from_node.image
+    # ベースカラー: 彫り位置だけ輪郭を通した金のテクスチャを張る
+    for lk in list(mat.node_tree.links):
+        if lk.to_node == bsdf and lk.to_socket.name == "Base Color" \
+                and lk.from_node.type == "TEX_IMAGE":
+            gimg = to_gold(lk.from_node.image, nrm_img)
+            if gimg:
+                lk.from_node.image = gimg
+                print("gilded:", mat.name)
     rnode = mat.node_tree.nodes.new("ShaderNodeTexImage")
     rnode.image = rough_img
     mat.node_tree.links.new(rnode.outputs["Color"], bsdf.inputs["Roughness"])
-    for link in list(mat.node_tree.links):
-        if link.to_node == bsdf and link.to_socket.name == "Base Color" \
-                and link.from_node.type == "TEX_IMAGE":
-            g = to_gold(link.from_node.image)
-            if g:
-                link.from_node.image = g
-                print("gilded:", mat.name)
     for n in mat.node_tree.nodes:
         if n.type == "NORMAL_MAP":
             for lk in mat.node_tree.links:
@@ -230,19 +250,20 @@ except Exception:
 # ---- キャビティ(凹みの陰)を頂点色へ焼き込む ----
 # 目の窪み・口の線・螺髪の谷など、形状の谷を暗くして顔立ちを立てる。
 # 写真由来ではないのでムラにならない(Blender定番の Dirty Vertex Colors)
-if not body.data.color_attributes:
+BAKE_CAVITY = False   # 減面後の粗い頂点では斑になるため既定で無効
+if BAKE_CAVITY and not body.data.color_attributes:
     body.data.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
-bpy.ops.paint.vertex_color_dirt(blur_strength=1.0, blur_iterations=2,
-                                clean_angle=math.pi, dirt_angle=0.0,
-                                dirt_only=True, normalize=True)
-col = body.data.color_attributes[0]
-vals = np.empty(len(col.data) * 4, dtype=np.float32)
-col.data.foreach_get("color", vals)
-vals = vals.reshape(-1, 4)
-# 谷の暗さを0.55までに留める(黒く汚れて見えないように)
-vals[:, :3] = 0.42 + np.clip(vals[:, :3], 0, 1) * 0.58
-col.data.foreach_set("color", vals.reshape(-1))
-print("cavity shading baked (min", round(float(vals[:, :3].min()), 3), ")")
+if BAKE_CAVITY:
+    bpy.ops.paint.vertex_color_dirt(blur_strength=1.0, blur_iterations=2,
+                                    clean_angle=math.pi, dirt_angle=0.0,
+                                    dirt_only=True, normalize=True)
+for col in (body.data.color_attributes[0],) if BAKE_CAVITY else ():
+    vals = np.empty(len(col.data) * 4, dtype=np.float32)
+    col.data.foreach_get("color", vals)
+    vals = vals.reshape(-1, 4)
+    vals[:, :3] = 0.42 + np.clip(vals[:, :3], 0, 1) * 0.58
+    col.data.foreach_set("color", vals.reshape(-1))
+    print("cavity shading baked (min", round(float(vals[:, :3].min()), 3), ")")
 
 # ---- 配置: 膝張=蓮肉径、蓮肉の天端に着座、正面+X ----
 lo = mathutils.Vector((1e9,) * 3)
