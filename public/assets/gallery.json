@@ -15,6 +15,13 @@
       "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 台座除去・表面平滑化・磨き金マテリアル"
     },
     {
+      "id": "amida_full",
+      "name": "阿弥陀如来坐像・蓮華座付き(定印)",
+      "file": "amida_full.glb",
+      "desc": "スキャン原型を金箔仕上げにし、黄金の蓮華座と古典比率(膝張=蓮肉径)で合成。中島安置の本命",
+      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 台座差替・金箔リテクスチャ・減面 / 蓮華座: 本プロジェクト"
+    },
+    {
       "id": "rengeza",
       "name": "黄金の蓮華座",
       "file": "rengeza.glb?v=6",
