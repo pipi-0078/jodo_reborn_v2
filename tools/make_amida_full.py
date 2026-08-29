@@ -136,7 +136,7 @@ def to_gold(img):
     return new
 
 
-def boost_normal(img, k=1.45):
+def boost_normal(img, k=2.0):
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
         return None
@@ -214,6 +214,23 @@ try:
 except Exception:
     bpy.ops.object.shade_smooth()
 
+# ---- キャビティ(凹みの陰)を頂点色へ焼き込む ----
+# 目の窪み・口の線・螺髪の谷など、形状の谷を暗くして顔立ちを立てる。
+# 写真由来ではないのでムラにならない(Blender定番の Dirty Vertex Colors)
+if not body.data.color_attributes:
+    body.data.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
+bpy.ops.paint.vertex_color_dirt(blur_strength=1.0, blur_iterations=2,
+                                clean_angle=math.pi, dirt_angle=0.0,
+                                dirt_only=True, normalize=True)
+col = body.data.color_attributes[0]
+vals = np.empty(len(col.data) * 4, dtype=np.float32)
+col.data.foreach_get("color", vals)
+vals = vals.reshape(-1, 4)
+# 谷の暗さを0.55までに留める(黒く汚れて見えないように)
+vals[:, :3] = 0.55 + np.clip(vals[:, :3], 0, 1) * 0.45
+col.data.foreach_set("color", vals.reshape(-1))
+print("cavity shading baked (min", round(float(vals[:, :3].min()), 3), ")")
+
 # ---- 配置: 膝張=蓮肉径、蓮肉の天端に着座、正面+X ----
 lo = mathutils.Vector((1e9,) * 3)
 hi = mathutils.Vector((-1e9,) * 3)
@@ -231,7 +248,11 @@ print(f"total height: {top:.2f} m (knee span {(hi.y - lo.y) * BODY_SCALE:.2f})")
 body["credit"] = ("Base: Amitabha statue scan by Atsushi Nakabayashi (Sketchfab, "
                   "CC-BY-SA-4.0). Modified: pedestal removed, gold-leaf retexture, "
                   "decimated, composed with procedural lotus pedestal.")
-bpy.ops.export_scene.gltf(filepath=OUT, export_apply=True, export_extras=True)
+try:
+    bpy.ops.export_scene.gltf(filepath=OUT, export_apply=True, export_extras=True,
+                              export_vertex_color="ACTIVE")
+except TypeError:
+    bpy.ops.export_scene.gltf(filepath=OUT, export_apply=True, export_extras=True)
 tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons)
            for o in (body, pedestal))
 print(f"exported amida_full.glb ({tris} tris)")
