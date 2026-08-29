@@ -121,12 +121,12 @@ def to_gold(img):
     pil = Image.open(io.BytesIO(raw)).convert("RGB")
     arr = np.asarray(pil).astype(np.float32) / 255
     lum = arr[:, :, 0] * 0.30 + arr[:, :, 1] * 0.59 + arr[:, :, 2] * 0.11
-    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.17 + 0.60
+    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.07 + 0.66
     lum = np.clip(lum, 0, 1)
-    lum = clahe(lum) ** 0.80          # 暗部を持ち上げる(煤けを残さない)
+    lum = clahe(lum, clip=1.3) ** 0.85   # 局所差は最小限に(ムラを出さない)
     # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
-    base = np.array([184, 136, 58], dtype=np.float32)
-    lit = np.array([255, 240, 176], dtype=np.float32)
+    base = np.array([206, 158, 72], dtype=np.float32)
+    lit = np.array([255, 238, 172], dtype=np.float32)
     out = (base[None, None] + (lit - base)[None, None] * lum[:, :, None]).astype(np.uint8)
     path = os.path.join(TMP, f"full_gold_{img.name}.jpg")
     Image.fromarray(out).filter(
@@ -164,7 +164,7 @@ def make_rough_map():
         acc += np.asarray(Image.fromarray((layer * 255).astype(np.uint8))
                           .resize((513, 513), Image.BICUBIC))[:512, :512] / 255 * 0.5 ** o
     acc = (acc - acc.min()) / (acc.max() - acc.min())
-    rough = (0.30 + acc * 0.16) * 255       # 0.30〜0.46 のムラ
+    rough = (0.32 + acc * 0.07) * 255       # 0.32〜0.39 の控えめなムラ
     path = os.path.join(TMP, "full_rough.png")
     Image.fromarray(rough.astype(np.uint8)).save(path)
     img = bpy.data.images.load(path)
