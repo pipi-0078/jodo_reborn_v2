@@ -121,9 +121,19 @@ def to_gold(img):
     pil = Image.open(io.BytesIO(raw)).convert("RGB")
     arr = np.asarray(pil).astype(np.float32) / 255
     lum = arr[:, :, 0] * 0.30 + arr[:, :, 1] * 0.59 + arr[:, :, 2] * 0.11
-    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.07 + 0.66
+    # 周波数で分ける: 大きなムラ(汚れ・照明差)は捨て、細い線(目・耳・唇・螺髪)は残す
+    lum = (lum - lum.mean()) / max(lum.std(), 1e-6) * 0.20 + 0.5
     lum = np.clip(lum, 0, 1)
-    lum = clahe(lum, clip=1.3) ** 0.85   # 局所差は最小限に(ムラを出さない)
+    size = lum.shape[0]
+    low = np.asarray(Image.fromarray((lum * 255).astype(np.uint8))
+                     .filter(ImageFilter.GaussianBlur(size / 26))).astype(np.float32) / 255
+    high = lum - low                       # 輪郭だけの成分
+    detail = np.clip(0.66 + high * 3.2, 0, 1)   # 平らな金 + 強調した輪郭
+    # ごく細い線をさらに立てる(二段目の高域)
+    low2 = np.asarray(Image.fromarray((detail * 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(2.0))).astype(np.float32) / 255
+    lum = np.clip(detail + (detail - low2) * 1.4, 0, 1)
+    print(f"    tex {img.name}: std={lum.std():.3f} min={lum.min():.2f} max={lum.max():.2f}")
     # 影の底も磨いた金。金箔のムラは粗さ側(rough map)で表現する
     base = np.array([206, 158, 72], dtype=np.float32)
     lit = np.array([255, 238, 172], dtype=np.float32)
@@ -227,7 +237,7 @@ vals = np.empty(len(col.data) * 4, dtype=np.float32)
 col.data.foreach_get("color", vals)
 vals = vals.reshape(-1, 4)
 # 谷の暗さを0.55までに留める(黒く汚れて見えないように)
-vals[:, :3] = 0.55 + np.clip(vals[:, :3], 0, 1) * 0.45
+vals[:, :3] = 0.42 + np.clip(vals[:, :3], 0, 1) * 0.58
 col.data.foreach_set("color", vals.reshape(-1))
 print("cavity shading baked (min", round(float(vals[:, :3].min()), 3), ")")
 
