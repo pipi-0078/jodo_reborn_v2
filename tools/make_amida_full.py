@@ -229,21 +229,36 @@ for mat in body.data.materials:
         if lk.to_node == bsdf:
             mat.node_tree.links.remove(lk)
     bsdf.inputs["Base Color"].default_value = (*PED_GOLD, 1.0)
-    bsdf.inputs["Metallic"].default_value = 0.90
-    bsdf.inputs["Roughness"].default_value = 0.30
+    bsdf.inputs["Metallic"].default_value = 0.72
+    bsdf.inputs["Roughness"].default_value = 0.52
     bsdf.inputs["Emission Color"].default_value = (0.45, 0.30, 0.08, 1.0)
     bsdf.inputs["Emission Strength"].default_value = 0.18
     print("solid gold:", mat.name)
 
+for mat in pedestal.data.materials:
+    if not mat or not mat.use_nodes:
+        continue
+    b2 = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+    if not b2:
+        continue
+    for lk in list(mat.node_tree.links):
+        if lk.to_node == b2:
+            mat.node_tree.links.remove(lk)
+    b2.inputs["Base Color"].default_value = (*PED_GOLD, 1.0)
+    b2.inputs["Metallic"].default_value = 0.72
+    b2.inputs["Roughness"].default_value = 0.52
+    b2.inputs["Emission Color"].default_value = (0.45, 0.30, 0.08, 1.0)
+    b2.inputs["Emission Strength"].default_value = 0.18
+
 # ---- 減面してWeb向けに ----
 dec = body.modifiers.new("dec", "DECIMATE")
-dec.ratio = 0.45
+dec.ratio = 0.85   # 目や口の細い彫りを潰さない範囲に留める
 bpy.ops.object.select_all(action="DESELECT")
 body.select_set(True)
 bpy.context.view_layer.objects.active = body
 bpy.ops.object.modifier_apply(modifier="dec")
 try:
-    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(18))
 except Exception:
     bpy.ops.object.shade_smooth()
 
