@@ -216,95 +216,24 @@ def make_rough_map():
     return img
 
 
-# 台座(rengeza)とまったく同じ金の単色。写真テクスチャは使わない。
-# 彫りの陰影は法線マップ(凹凸)だけで出す ＝ ムラも汚れも原理的に発生しない
+# 台座(rengeza)とまったく同じ金の単色。テクスチャは一切使わない。
 PED_GOLD = (0.85, 0.62, 0.20)          # make_pavilion.py の "gold" と同値
-PED_METAL, PED_ROUGH = 0.90, 0.30
-PED_EMIT, PED_EMIT_STR = (0.45, 0.30, 0.08), 0.18
-
 for mat in body.data.materials:
     if not mat or not mat.use_nodes:
         continue
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if not bsdf:
         continue
-    # ベースカラーの画像リンクを外して単色に
+    # 画像への接続をすべて切る(ベースカラー・粗さ・法線・発光)
     for lk in list(mat.node_tree.links):
-        if lk.to_node == bsdf and lk.to_socket.name in ("Base Color", "Roughness"):
+        if lk.to_node == bsdf:
             mat.node_tree.links.remove(lk)
     bsdf.inputs["Base Color"].default_value = (*PED_GOLD, 1.0)
-    bsdf.inputs["Metallic"].default_value = PED_METAL
-    bsdf.inputs["Roughness"].default_value = PED_ROUGH
-    bsdf.inputs["Emission Color"].default_value = (*PED_EMIT, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = PED_EMIT_STR
-    # 法線マップは残す(彫りの陰影の担い手)。強度を全開にする
-    for n in mat.node_tree.nodes:
-        if n.type == "NORMAL_MAP":
-            n.inputs["Strength"].default_value = 1.0
-            for lk in mat.node_tree.links:
-                if lk.to_node == n and lk.from_node.type == "TEX_IMAGE":
-                    nb = boost_normal(lk.from_node.image)
-                    if nb:
-                        nb.colorspace_settings.name = "Non-Color"
-                        lk.from_node.image = nb
+    bsdf.inputs["Metallic"].default_value = 0.90
+    bsdf.inputs["Roughness"].default_value = 0.30
+    bsdf.inputs["Emission Color"].default_value = (0.45, 0.30, 0.08, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = 0.18
     print("solid gold:", mat.name)
-
-# ---- アルカイックスマイル: 形状は壊さず、陰影だけで柔らかさを出す ----
-# (頂点を動かす変形は顔が崩れたため取りやめ。位置検出のみ残す)
-me0 = body.data
-nv0 = len(me0.vertices)
-P = np.empty(nv0 * 3, dtype=np.float32); me0.vertices.foreach_get("co", P)
-P = P.reshape(-1, 3)
-zmax, zmin = P[:, 2].max(), P[:, 2].min()
-head = P[:, 2] > zmax - 0.34 * (zmax - zmin)
-cand = head & (np.abs(P[:, 0]) < 0.05)
-nose_i = np.where(cand)[0][np.argmin(P[cand][:, 1])]
-nose = P[nose_i]
-head_h = zmax - P[head][:, 2].min()
-print(f"nose z={nose[2]:.3f} head_h={head_h:.3f} (変形なし)")
-
-# ---- 形状から「谷の陰影」を計算して焼く(減面前の高精細メッシュで) ----
-# 各頂点で、隣接頂点が法線のどちら側にあるかを測る。
-# 谷(凹み)なら隣は法線側=正 → 暗くする。目の窪み・口の合わせ目・耳の縁が出る。
-# 写真は一切使わないのでムラや汚れは生じない。
-me = body.data
-nv = len(me.vertices)
-pos = np.empty(nv * 3, dtype=np.float32); me.vertices.foreach_get("co", pos)
-pos = pos.reshape(-1, 3)
-nrm = np.empty(nv * 3, dtype=np.float32); me.vertices.foreach_get("normal", nrm)
-nrm = nrm.reshape(-1, 3)
-ne = len(me.edges)
-ev = np.empty(ne * 2, dtype=np.int32); me.edges.foreach_get("vertices", ev)
-ev = ev.reshape(-1, 2)
-a, b = ev[:, 0], ev[:, 1]
-d = pos[b] - pos[a]
-dl = np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
-dn = d / dl
-acc = np.zeros(nv, dtype=np.float32); cnt = np.zeros(nv, dtype=np.float32)
-np.add.at(acc, a, (dn * nrm[a]).sum(1)); np.add.at(cnt, a, 1.0)
-np.add.at(acc, b, (-dn * nrm[b]).sum(1)); np.add.at(cnt, b, 1.0)
-conc = acc / np.maximum(cnt, 1)          # 正=谷 / 負=山
-print(f"concavity: p5={np.percentile(conc,5):.3f} p50={np.percentile(conc,50):.3f} p95={np.percentile(conc,95):.3f}")
-
-valley = np.clip(conc / 0.10, 0, 1) ** 0.8       # 谷の深さ 0..1
-ridge = np.clip(-conc / 0.10, 0, 1) ** 0.8       # 山の高さ 0..1
-strength = np.full(nv, 0.75, dtype=np.float32)
-# 眼窩(鼻先のやや上)は影を弱めて険しさを消す
-eye_z = nose[2] + head_h * 0.10
-eye_band = np.exp(-((pos[:, 2] - eye_z) / (head_h * 0.10)) ** 2) * (pos[:, 2] > zmin)
-strength = strength - eye_band * 0.30
-shade = np.clip(1.0 - valley * strength + ridge * 0.18, 0, 1.2)
-print(f"shade: min={shade.min():.2f} mean={shade.mean():.2f} 谷率={float((valley>0.3).mean()):.2f}")
-
-if not me.color_attributes:
-    me.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
-col = me.color_attributes[0]
-loop_v = np.empty(len(me.loops), dtype=np.int32)
-me.loops.foreach_get("vertex_index", loop_v)
-c = np.clip(shade[loop_v], 0, 1)
-vals = np.stack([c, c, c, np.ones_like(c)], axis=1)
-col.data.foreach_set("color", vals.reshape(-1))
-print("cavity baked from geometry")
 
 # ---- 減面してWeb向けに ----
 dec = body.modifiers.new("dec", "DECIMATE")
@@ -355,7 +284,7 @@ body["credit"] = ("Base: Amitabha statue scan by Atsushi Nakabayashi (Sketchfab,
                   "decimated, composed with procedural lotus pedestal.")
 try:
     bpy.ops.export_scene.gltf(filepath=OUT, export_apply=True, export_extras=True,
-                              export_vertex_color="ACTIVE")
+                              export_vertex_color="NONE")
 except TypeError:
     bpy.ops.export_scene.gltf(filepath=OUT, export_apply=True, export_extras=True)
 tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons)
