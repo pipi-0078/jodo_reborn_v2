@@ -1,5 +1,4 @@
 import * as THREE from 'three/webgpu';
-import { N8AONode, createN8AOScenePass } from 'n8ao-webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSky } from './world/sky';
@@ -116,49 +115,15 @@ async function main(): Promise<void> {
     if (item) void show(item);
   };
 
-  // 陰影(N8AO): 単色の金は形が読めないため、描画時に凹みへ陰を落とす。
-  // マテリアルもテクスチャも変えずに、目・鼻・口・衣文の輪郭が立つ。
-  // https://github.com/andrewslabmd/n8ao-webgpu (Three.js WebGPU/TSL版)
-  let post: THREE.PostProcessing | null = null;
-  let ao: N8AONode | null = null;
-  try {
-    const scenePass = createN8AOScenePass(scene, camera);
-    ao = new N8AONode({
-      beautyNode: scenePass.getTextureNode('output'),
-      depthNode: scenePass.getTextureNode('depth'),
-      normalNode: scenePass.getTextureNode('normal'),
-      beautyTexture: scenePass.getTexture('output'),
-      depthTexture: scenePass.getTexture('depth'),
-      normalTexture: scenePass.getTexture('normal'),
-      scenePassNode: scenePass,
-      scene,
-      camera,
-    });
-    ao.configuration.aoRadius = 48;     // 画面基準: ピクセル単位
-    ao.configuration.intensity = 5.0;   // 陰の濃さ
-    ao.configuration.halfRes = false;
-    ao.configuration.screenSpaceRadius = true;   // 画面基準の半径(モデルの寸法に依らない)
-    ao.setQualityMode('High');
-
-    post = new THREE.PostProcessing(renderer);
-    // 場面の描画側で既にトーンマッピング済みなので、出力側では二重に掛けない
-    post.outputColorTransform = false;
-    post.outputNode = ao;
-  } catch (error) {
-    console.warn('N8AOを初期化できませんでした。通常描画にします:', error);
-  }
-
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    ao?.setSize(window.innerWidth, window.innerHeight);
   });
 
   renderer.setAnimationLoop(() => {
     controls.update();
-    if (post) post.render();
-    else renderer.render(scene, camera);
+    renderer.render(scene, camera);
   });
 }
 

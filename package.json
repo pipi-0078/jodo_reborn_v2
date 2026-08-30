@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "n8ao-webgpu": "^0.1.0",
     "three": "^0.185.1"
   },
   "devDependencies": {
