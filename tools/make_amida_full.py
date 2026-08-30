@@ -208,34 +208,28 @@ def make_rough_map():
     return img
 
 
-rough_img = make_rough_map()
+# 台座(rengeza)とまったく同じ金の単色。写真テクスチャは使わない。
+# 彫りの陰影は法線マップ(凹凸)だけで出す ＝ ムラも汚れも原理的に発生しない
+PED_GOLD = (0.85, 0.62, 0.20)          # make_pavilion.py の "gold" と同値
+PED_METAL, PED_ROUGH = 0.90, 0.30
+PED_EMIT, PED_EMIT_STR = (0.45, 0.30, 0.08), 0.18
+
 for mat in body.data.materials:
     if not mat or not mat.use_nodes:
         continue
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if not bsdf:
         continue
-    bsdf.inputs["Metallic"].default_value = 0.45   # 金箔押しの木彫: 色(彫りの陰影)を主役に   # 輪郭が見える範囲で金属感を戻す
-    bsdf.inputs["Emission Color"].default_value = (1.0, 0.74, 0.30, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = 0.09
-    # 同じマテリアルの法線マップを先に押さえる(彫り位置のマスクに使う)
-    nrm_img = None
-    for n in mat.node_tree.nodes:
-        if n.type == "NORMAL_MAP":
-            for lk in mat.node_tree.links:
-                if lk.to_node == n and lk.from_node.type == "TEX_IMAGE":
-                    nrm_img = lk.from_node.image
-    # ベースカラー: 彫り位置だけ輪郭を通した金のテクスチャを張る
+    # ベースカラーの画像リンクを外して単色に
     for lk in list(mat.node_tree.links):
-        if lk.to_node == bsdf and lk.to_socket.name == "Base Color" \
-                and lk.from_node.type == "TEX_IMAGE":
-            gimg = to_gold(lk.from_node.image, nrm_img)
-            if gimg:
-                lk.from_node.image = gimg
-                print("gilded:", mat.name)
-    rnode = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    rnode.image = rough_img
-    mat.node_tree.links.new(rnode.outputs["Color"], bsdf.inputs["Roughness"])
+        if lk.to_node == bsdf and lk.to_socket.name in ("Base Color", "Roughness"):
+            mat.node_tree.links.remove(lk)
+    bsdf.inputs["Base Color"].default_value = (*PED_GOLD, 1.0)
+    bsdf.inputs["Metallic"].default_value = PED_METAL
+    bsdf.inputs["Roughness"].default_value = PED_ROUGH
+    bsdf.inputs["Emission Color"].default_value = (*PED_EMIT, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = PED_EMIT_STR
+    # 法線マップは残す(彫りの陰影の担い手)
     for n in mat.node_tree.nodes:
         if n.type == "NORMAL_MAP":
             for lk in mat.node_tree.links:
@@ -244,6 +238,7 @@ for mat in body.data.materials:
                     if nb:
                         nb.colorspace_settings.name = "Non-Color"
                         lk.from_node.image = nb
+    print("solid gold:", mat.name)
 
 # ---- 減面してWeb向けに ----
 dec = body.modifiers.new("dec", "DECIMATE")
