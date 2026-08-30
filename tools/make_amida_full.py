@@ -171,19 +171,27 @@ def to_gold(img, normal_img=None):
     return new
 
 
-def boost_normal(img, k=2.4):
+def boost_normal(img, k=3.0, detail=1.1):
+    """彫りの凹凸を強める。傾きの増幅に加え、細部の起伏を上乗せして
+    目・鼻・口・耳の稜線をはっきり出す(色には一切触れない)。"""
     raw = bytes(img.packed_file.data) if img.packed_file else None
     if not raw:
         return None
     pil = Image.open(io.BytesIO(raw)).convert("RGB")
     a = np.asarray(pil).astype(np.float32) / 255 * 2 - 1
+    # スキャンのざらつきを先に均してから、細部の起伏を上乗せする
+    for ch in (0, 1):
+        v = blur(np.clip(a[:, :, ch] * 0.5 + 0.5, 0, 1), 1.1) * 2 - 1
+        lo = blur(np.clip(v * 0.5 + 0.5, 0, 1), 4.0) * 2 - 1
+        a[:, :, ch] = v + (v - lo) * detail
     a[:, :, 0] *= k
     a[:, :, 1] *= k
+    a[:, :, 2] = np.maximum(a[:, :, 2], 0.25)
     n = np.sqrt((a * a).sum(axis=2, keepdims=True))
     a = a / np.maximum(n, 1e-6)
     out = ((a + 1) / 2 * 255).astype(np.uint8)
     path = os.path.join(TMP, f"full_nrm_{img.name}.jpg")
-    Image.fromarray(out).save(path, quality=90)
+    Image.fromarray(out).save(path, quality=95)
     new = bpy.data.images.load(path)
     new.pack()
     return new
