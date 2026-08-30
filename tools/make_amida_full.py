@@ -171,7 +171,7 @@ def to_gold(img, normal_img=None):
     return new
 
 
-def boost_normal(img, k=3.0, detail=1.1):
+def boost_normal(img, k=1.35, detail=0.7):
     """彫りの凹凸を強める。傾きの増幅に加え、細部の起伏を上乗せして
     目・鼻・口・耳の稜線をはっきり出す(色には一切触れない)。"""
     raw = bytes(img.packed_file.data) if img.packed_file else None
@@ -237,9 +237,10 @@ for mat in body.data.materials:
     bsdf.inputs["Roughness"].default_value = PED_ROUGH
     bsdf.inputs["Emission Color"].default_value = (*PED_EMIT, 1.0)
     bsdf.inputs["Emission Strength"].default_value = PED_EMIT_STR
-    # 法線マップは残す(彫りの陰影の担い手)
+    # 法線マップは残す(彫りの陰影の担い手)。強度を全開にする
     for n in mat.node_tree.nodes:
         if n.type == "NORMAL_MAP":
+            n.inputs["Strength"].default_value = 1.0
             for lk in mat.node_tree.links:
                 if lk.to_node == n and lk.from_node.type == "TEX_IMAGE":
                     nb = boost_normal(lk.from_node.image)
