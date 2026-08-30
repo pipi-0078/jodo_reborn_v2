@@ -249,44 +249,19 @@ for mat in body.data.materials:
                         lk.from_node.image = nb
     print("solid gold:", mat.name)
 
-# ---- アルカイックスマイル: 口角を持ち上げ、眼窩の影をやわらげる ----
-# 顔は -Y 方向を向く(4方位検証で確認済み)。頂点座標から鼻先と口の位置を自動検出する。
+# ---- アルカイックスマイル: 形状は壊さず、陰影だけで柔らかさを出す ----
+# (頂点を動かす変形は顔が崩れたため取りやめ。位置検出のみ残す)
 me0 = body.data
 nv0 = len(me0.vertices)
 P = np.empty(nv0 * 3, dtype=np.float32); me0.vertices.foreach_get("co", P)
 P = P.reshape(-1, 3)
 zmax, zmin = P[:, 2].max(), P[:, 2].min()
-head = P[:, 2] > zmax - 0.34 * (zmax - zmin)          # 頭部の帯
-cand = head & (np.abs(P[:, 0]) < 0.05)                 # 正中線付近
-nose_i = np.where(cand)[0][np.argmin(P[cand][:, 1])]   # 最も前(-Y)に出た点=鼻先
+head = P[:, 2] > zmax - 0.34 * (zmax - zmin)
+cand = head & (np.abs(P[:, 0]) < 0.05)
+nose_i = np.where(cand)[0][np.argmin(P[cand][:, 1])]
 nose = P[nose_i]
-print(f"nose tip: x={nose[0]:.3f} y={nose[1]:.3f} z={nose[2]:.3f}")
-
-# 鼻先の下、正中線付近で「谷」が最も強い高さ=口の合わせ目
-# 頭の高さ(顎から頭頂)を測り、そこからの比率で口の位置を決める
 head_h = zmax - P[head][:, 2].min()
-mouth_z = nose[2] - head_h * 0.115          # 鼻先の下、頭高の約1割
-face_w = head_h * 0.40                      # 顔の幅の目安
-print(f"head_h={head_h:.3f} mouth z={mouth_z:.3f} (nose z={nose[2]:.3f})")
-
-# 口角を持ち上げる: 中央は動かさず、左右の端ほど上へ。前へもわずかに膨らませる
-dx = np.abs(P[:, 0] - nose[0])
-# 口角: 中央から外へ広がるほど強く持ち上げる(顔幅の1/4〜2/3の帯)
-w_x = np.clip((dx - face_w * 0.10) / (face_w * 0.30), 0, 1) \
-    * np.clip((face_w * 0.85 - dx) / (face_w * 0.30), 0, 1)
-w_z = np.exp(-((P[:, 2] - mouth_z) / (head_h * 0.055)) ** 2)
-w_y = np.clip((nose[1] + head_h * 0.20 - P[:, 1]) / (head_h * 0.18), 0, 1)
-w = w_x * w_z * w_y * head
-P[:, 2] += w * head_h * 0.075            # 口角を上へ
-P[:, 1] -= w * head_h * 0.026            # わずかに前へ(頬の張り)
-# 頬もほんの少し持ち上げて、微笑みを自然につなぐ
-wc = np.clip((dx - face_w * 0.30) / (face_w * 0.35), 0, 1) \
-    * np.exp(-((P[:, 2] - (mouth_z + head_h * 0.10)) / (head_h * 0.11)) ** 2) * w_y * head
-P[:, 2] += wc * head_h * 0.024
-P[:, 1] -= wc * head_h * 0.012
-me0.vertices.foreach_set("co", P.reshape(-1))
-me0.update()
-print(f"archaic smile applied to {int((w > 0.05).sum())} verts")
+print(f"nose z={nose[2]:.3f} head_h={head_h:.3f} (変形なし)")
 
 # ---- 形状から「谷の陰影」を計算して焼く(減面前の高精細メッシュで) ----
 # 各頂点で、隣接頂点が法線のどちら側にあるかを測る。
@@ -317,7 +292,7 @@ strength = np.full(nv, 0.75, dtype=np.float32)
 # 眼窩(鼻先のやや上)は影を弱めて険しさを消す
 eye_z = nose[2] + head_h * 0.10
 eye_band = np.exp(-((pos[:, 2] - eye_z) / (head_h * 0.10)) ** 2) * (pos[:, 2] > zmin)
-strength = strength - eye_band * 0.42
+strength = strength - eye_band * 0.30
 shade = np.clip(1.0 - valley * strength + ridge * 0.18, 0, 1.2)
 print(f"shade: min={shade.min():.2f} mean={shade.mean():.2f} 谷率={float((valley>0.3).mean()):.2f}")
 
