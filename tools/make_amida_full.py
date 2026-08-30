@@ -171,7 +171,7 @@ def to_gold(img, normal_img=None):
     return new
 
 
-def boost_normal(img, k=1.35, detail=0.7):
+def boost_normal(img, k=1.0, detail=0.0):
     """彫りの凹凸を強める。傾きの増幅に加え、細部の起伏を上乗せして
     目・鼻・口・耳の稜線をはっきり出す(色には一切触れない)。"""
     raw = bytes(img.packed_file.data) if img.packed_file else None
@@ -248,6 +248,44 @@ for mat in body.data.materials:
                         nb.colorspace_settings.name = "Non-Color"
                         lk.from_node.image = nb
     print("solid gold:", mat.name)
+
+# ---- 形状から「谷の陰影」を計算して焼く(減面前の高精細メッシュで) ----
+# 各頂点で、隣接頂点が法線のどちら側にあるかを測る。
+# 谷(凹み)なら隣は法線側=正 → 暗くする。目の窪み・口の合わせ目・耳の縁が出る。
+# 写真は一切使わないのでムラや汚れは生じない。
+me = body.data
+nv = len(me.vertices)
+pos = np.empty(nv * 3, dtype=np.float32); me.vertices.foreach_get("co", pos)
+pos = pos.reshape(-1, 3)
+nrm = np.empty(nv * 3, dtype=np.float32); me.vertices.foreach_get("normal", nrm)
+nrm = nrm.reshape(-1, 3)
+ne = len(me.edges)
+ev = np.empty(ne * 2, dtype=np.int32); me.edges.foreach_get("vertices", ev)
+ev = ev.reshape(-1, 2)
+a, b = ev[:, 0], ev[:, 1]
+d = pos[b] - pos[a]
+dl = np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
+dn = d / dl
+acc = np.zeros(nv, dtype=np.float32); cnt = np.zeros(nv, dtype=np.float32)
+np.add.at(acc, a, (dn * nrm[a]).sum(1)); np.add.at(cnt, a, 1.0)
+np.add.at(acc, b, (-dn * nrm[b]).sum(1)); np.add.at(cnt, b, 1.0)
+conc = acc / np.maximum(cnt, 1)          # 正=谷 / 負=山
+print(f"concavity: p5={np.percentile(conc,5):.3f} p50={np.percentile(conc,50):.3f} p95={np.percentile(conc,95):.3f}")
+
+valley = np.clip(conc / 0.10, 0, 1) ** 0.8       # 谷の深さ 0..1
+ridge = np.clip(-conc / 0.10, 0, 1) ** 0.8       # 山の高さ 0..1
+shade = np.clip(1.0 - valley * 0.75 + ridge * 0.18, 0, 1.2)
+print(f"shade: min={shade.min():.2f} mean={shade.mean():.2f} 谷率={float((valley>0.3).mean()):.2f}")
+
+if not me.color_attributes:
+    me.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
+col = me.color_attributes[0]
+loop_v = np.empty(len(me.loops), dtype=np.int32)
+me.loops.foreach_get("vertex_index", loop_v)
+c = np.clip(shade[loop_v], 0, 1)
+vals = np.stack([c, c, c, np.ones_like(c)], axis=1)
+col.data.foreach_set("color", vals.reshape(-1))
+print("cavity baked from geometry")
 
 # ---- 減面してWeb向けに ----
 dec = body.modifiers.new("dec", "DECIMATE")
