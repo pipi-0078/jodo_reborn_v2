@@ -229,6 +229,24 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
   instance(scene, lod, outer, goldFoliage('foliage'));
 }
 
+// 放射状に薄れる光の輪のテクスチャ
+function makeHaloTexture(): THREE.Texture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 // 「池中蓮華大如車輪 青色青光 黄色黄光 赤色赤光 白色白光」
 async function placeLotuses(scene: THREE.Scene): Promise<void> {
   const [bloom, bud] = await Promise.all([loadTemplate('lotus.glb'), loadTemplate('lotus_bud.glb')]);
@@ -247,31 +265,55 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
     return { x: rMin + 6, z: rMin + 6 };
   };
 
+  // 花弁は自らの色でやさしく光る(青色青光・黄色黄光・赤色赤光・白色白光)
   const petalTint = (tint: number) => (material: THREE.Material) => {
     if (material.name !== 'petal') return material;
     const petal = (material as THREE.MeshStandardMaterial).clone();
     petal.color.set(tint);
-    petal.emissive.set(tint).multiplyScalar(0.18); // それぞれの色で内から光る
+    petal.emissive.set(tint).multiplyScalar(0.42);
     return petal;
   };
 
-  // 満開: 四色×13株。車輪ほどの大きさ(直径1.1〜1.5m)。東岸の近くには手前の主役として大輪を四色一株ずつ
+  // 水面に落ちる光の輪(加算合成の放射グラデーション)
+  const haloTexture = makeHaloTexture();
+  const haloGeometry = new THREE.CircleGeometry(1, 40);
+  haloGeometry.rotateX(-Math.PI / 2);
+  const halo = (tint: number, matrices: THREE.Matrix4[], radiusOf: (i: number) => number) => {
+    const material = new THREE.MeshBasicMaterial({
+      map: haloTexture, color: tint, transparent: true, opacity: 0.5,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const mesh = new THREE.InstancedMesh(haloGeometry, material, matrices.length);
+    const position = new THREE.Vector3();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    matrices.forEach((m, i) => {
+      m.decompose(position, quaternion, scale);
+      mesh.setMatrixAt(i, compose(position.x, WATER_LEVEL + 0.03, position.z, 0, radiusOf(i)));
+    });
+    scene.add(mesh);
+  };
+
+  // 満開: 四色×13株。車輪ほどの大きさ(直径0.8〜1.1m)。東岸の手前には四色一株ずつやや大きめに
   LOTUS_TINTS.forEach((tint) => {
     const matrices: THREE.Matrix4[] = [];
+    const scales: number[] = [];
     for (let i = 0; i < 13; i++) {
       const giant = i === 12;
       const p = giant ? spot(29, bankWaterline - 3, 0, Math.PI / 3) : spot(POND_INNER + 3.5, bankWaterline - 2.5);
-      const scale = giant ? 4.0 + random() * 0.6 : 2.4 + random() * 1.0;
+      const scale = giant ? 2.7 + random() * 0.3 : 1.8 + random() * 0.7;
       matrices.push(compose(p.x, WATER_LEVEL - 0.03 * scale, p.z, random() * Math.PI * 2, scale));
+      scales.push(scale);
     }
     instance(scene, bloom, matrices, petalTint(tint));
+    halo(tint, matrices, (i) => scales[i] * 1.35);
   });
 
   // 蕾: 茎を水中に下ろして水面から立ち上げる
   const buds: THREE.Matrix4[] = [];
   for (let i = 0; i < 14; i++) {
     const p = spot(POND_INNER + 3.5, bankWaterline - 2.5);
-    buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 2.4 + random() * 1.2));
+    buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 1.7 + random() * 0.8));
   }
   instance(scene, bud, buds, petalTint(BUD_TINT));
 }
