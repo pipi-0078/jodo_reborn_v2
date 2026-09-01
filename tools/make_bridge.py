@@ -254,7 +254,7 @@ def build_bridge(path):
 if __name__ == "__main__":
     configure(8.0, 1.1, 2.4)
     build_bridge(os.path.join(OUT_DIR, "bridge.glb"))
-    # 池の四方に架ける長橋(中島r=10 → 岸r=30 を跨ぐ)
-    configure(22.0, 2.6, 3.0)
+    # 池の四方に架ける長橋(中島r=9.5 → 岸r=38.5 を跨ぐ・全長29m)
+    configure(29.0, 3.2, 3.0)
     build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"))
     print("done", file=sys.stderr)

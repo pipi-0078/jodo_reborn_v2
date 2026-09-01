@@ -7,15 +7,20 @@ export const POND_OUTER = 38; // 七宝池の外周
 export const WATER_LEVEL = -0.5;
 export const POND_DEPTH = -2.2;
 export const CAUSEWAY_HALF_WIDTH = 1.5; // 橋の通行帯の半幅
-export const BRIDGE_RISE = 2.6; // 橋の反り高
+export const BRIDGE_RISE = 3.2; // 橋の反り高
 export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
-export const BRIDGE_HALF = 11; // 全長22mの半分
+export const BRIDGE_HALF = 14.5; // 全長29mの半分(中島r=9.5 → 岸r=38.5)
+export const BRIDGE_DECK = 0.09; // デッキ板の厚み(反りの弧の上に載る)
 export const ISLAND_TOP = 0.4;
 export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
 export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(これより先は入水)
 
 // 七重行樹のリング半径(欄楯はその内側に添える)
-export const TREE_RINGS = [38, 48, 58, 68, 78, 88, 98];
+export const TREE_RINGS = [44, 54, 64, 74, 84, 94, 104];
+
+// 楼閣の据え付け(岸の外、四隅の斜め方向)
+export const PAVILION_RADIUS = 52;
+export const PAVILION_CLEARANCE = 15; // 楼閣の周囲で木を植えない半径
 
 // 四宝のマテリアル(金・銀・瑠璃・玻璃)
 export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {
@@ -27,7 +32,7 @@ export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {
   ];
 }
 
-// 四辺階道の軸上(東西南北)にいるか(橋が架かったら sampleGround で使う)
+// 四辺階道の軸上(東西南北)にいるか
 export function onCauseway(x: number, z: number): boolean {
   return Math.abs(z) < CAUSEWAY_HALF_WIDTH || Math.abs(x) < CAUSEWAY_HALF_WIDTH;
 }
@@ -37,11 +42,18 @@ export interface GroundSample {
   blocked: boolean;
 }
 
-// 足元の高さと進入可否。岸の砂斜面は水際まで下りられるが、水へは入れない。
-// (橋が承認されて架かったら、onCauseway による通行帯をここへ戻す)
+// 橋の上の足元高さ。中島側の袂(r=9.5)は島の高さ0.4、岸側の袂(r=38.5)は0に着く
+export function bridgeHeight(r: number): number {
+  const u = THREE.MathUtils.clamp((r - BRIDGE_CENTER) / BRIDGE_HALF, -1, 1);
+  const foot = THREE.MathUtils.lerp(ISLAND_TOP, 0, (u + 1) / 2);
+  return foot + BRIDGE_DECK + BRIDGE_RISE * (1 - u * u);
+}
+
+// 足元の高さと進入可否。中島・四方の反橋・岸の砂斜面は歩けるが、水へは入れない。
 export function sampleGround(x: number, z: number): GroundSample {
   const r = Math.hypot(x, z);
   if (r < POND_INNER) return { y: ISLAND_TOP, blocked: false };
+  if (r < POND_OUTER + 0.6 && onCauseway(x, z)) return { y: bridgeHeight(r), blocked: false };
   if (r < WALK_LIMIT) return { y: WATER_LEVEL, blocked: true };
   if (r < POND_OUTER) {
     // 外岸の斜面: r=POND_OUTER で地表0、内へ向かって池底へ下る

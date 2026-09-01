@@ -82,6 +82,13 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
+      "id": "bridge_long",
+      "name": "金の反橋(長橋・全長29m)",
+      "file": "bridge_long.glb",
+      "desc": "七宝池の四方に架ける長橋。中島(r=9.5)と岸(r=38.5)を結ぶ。反り高3.2m・幅3m",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
       "id": "tree_meiboku",
       "name": "名木(tree-gen試作)",
       "file": "tree_meiboku.glb",

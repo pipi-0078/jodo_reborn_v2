@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
 import { createPond } from './world/pond';
+import { createProps } from './world/props';
 import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -17,10 +18,11 @@ async function main(): Promise<void> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
-  // 骨格: 空・黄金の大地・七宝池。建物や木々はギャラリーで承認を得てから据える。
+  // 空・黄金の大地・七宝池の骨格に、ギャラリーで承認済みのアセットを据える(如来は別途)
   createSky(scene, renderer);
   createGround(scene, true);
   createPond(scene);
+  await createProps(scene);
 
   const overlay = document.getElementById('overlay')!;
   const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
