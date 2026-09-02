@@ -28,12 +28,12 @@ UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
 USHNISHA_HEIGHT = 0.03  # 肉髻(二段目)の高さ(m)
 USHNISHA_RADIUS = 0.052  # 肉髻の半径(m)
 USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、m)
-HAIR_THICKNESS = 0.011  # 地髪の厚み(生え際で段差になる、m)
+HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
-SIDEBURN_DROP = 0.03  # 耳の上端からもみあげの下端までの距離(m)
-SIDEBURN_WIDTH = 0.014  # もみあげの幅(耳の前端からの距離、m)  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
-BEAD_RADIUS = 0.0044  # 螺髪の粒(身長1.57m基準)。間隔の 0.56 倍で隣と触れ合う
+SIDEBURN_DROP = 0.028  # 耳の上端からもみあげの尖った下端までの距離(m)
+SIDEBURN_WIDTH = 0.022  # もみあげの最大幅(耳の前端から頬側へ、m)
 BEAD_SPACING = 0.0078
+BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
@@ -492,23 +492,33 @@ def add_head_features(body, mesh, eyes):
     def hairline_z(x):
         return hair_z0 - 0.5 * (x * x) / max(head_half, 1e-3) - 0.005 * math.exp(-(x / 0.012) ** 2)   # 深い弧、中央にわずかな切れ込み
     front_y = ear_y - 0.01                                  # 耳より前を「額側」とみなす
-    sideburn_z = ear_top - SIDEBURN_DROP                    # もみあげの下端
+    sideburn_z = ear_top - SIDEBURN_DROP                    # もみあげの下端(尖った先)
     ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
-    burn_y = ear_front_y - SIDEBURN_WIDTH                   # もみあげはここから耳まで(細い帯)
+    burn_top = ear_top + 0.035                               # もみあげが生え際から分かれる高さ
+
+    def sideburn_width(z):
+        """高さ z でのもみあげの幅(耳の前端から頬側へ)。上で生え際に溶け、中ほどで最も広く、下端で尖る。"""
+        if z > burn_top or z < sideburn_z:
+            return 0.0
+        t = (burn_top - z) / (burn_top - sideburn_z)
+        return SIDEBURN_WIDTH * math.sin(math.pi * t) ** 0.8
+
+    def in_sideburn(v):
+        return abs(v.co.x) > 0.045 and v.co.y < ear_front_y + 0.002 and v.co.y > ear_front_y - sideburn_width(v.co.z)
+
     candidates = set(hair_verts)
     for v in mesh.vertices:
-        if v.co.y < front_y and v.co.z < top.z and v.co.z > min(hairline_z(v.co.x), sideburn_z):
+        if v.co.y < front_y and v.co.z < top.z and (v.co.z > hairline_z(v.co.x) or in_sideburn(v)):
             candidates.add(v.index)
     hair_verts = set()
     for i in candidates:
         v = mesh.vertices[i]
-        if any((v.co - q).length < 0.008 for q in ear_pts):
+        if any((v.co - q).length < 0.007 for q in ear_pts):
             continue                                        # 耳の周囲
-        in_burn = v.co.y >= burn_y and abs(v.co.x) > 0.04   # 耳のすぐ前(もみあげ)〜耳の上・後ろ
-        if v.co.y < front_y and not in_burn and v.co.z < hairline_z(v.co.x):
-            continue                                        # 額〜こめかみ: 生え際の弧より下は肌
-        if in_burn and v.co.y < ear_y + 0.03 and v.co.z < sideburn_z:
-            continue                                        # もみあげ: 下端より下は肌
+        if v.co.y < front_y and v.co.z < hairline_z(v.co.x) and not in_sideburn(v):
+            continue                                        # 額〜こめかみ: 生え際の弧より下は肌(もみあげを除く)
+        if v.co.y >= front_y and v.co.y < ear_y + 0.03 and v.co.z < ear_top and abs(v.co.x) > 0.04:
+            continue                                        # 耳の真上〜後ろ: 耳の上端より下は肌
         hair_verts.add(i)
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
     # 地髪の下地: 髪の領域を法線方向へ厚く盛り、生え際で段差(帽子の縁のような厚み)を作る。
@@ -636,6 +646,66 @@ def place_rahotsu(body, mesh, hair_verts, apex):
         if free(q):
             placed.append((q, n))
             grid.setdefault((int(q.x // cell), int(q.y // cell), int(q.z // cell)), []).append(q)
+
+    # 間隔を均す: 近すぎる粒同士を押し離し、面へ戻す。空いた所へ粒を足す。これを数回
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    face_ids = {f.index for f in scalp_faces}
+    pts = [q for q, _ in placed]
+    nrms = [n for _, n in placed]
+    for round_ in range(5):
+        # 反発
+        grid = {}
+        for i, q in enumerate(pts):
+            grid.setdefault((int(q.x // cell), int(q.y // cell), int(q.z // cell)), []).append(i)
+        moves = [Vector() for _ in pts]
+        for i, q in enumerate(pts):
+            cx, cy, cz = int(q.x // cell), int(q.y // cell), int(q.z // cell)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        for j in grid.get((cx + dx, cy + dy, cz + dz), ()):
+                            if j <= i:
+                                continue
+                            d = pts[j] - q
+                            L = d.length
+                            if 1e-6 < L < spacing:
+                                push = d.normalized() * ((spacing - L) * 0.5)
+                                moves[i] -= push
+                                moves[j] += push
+        for i in range(len(pts)):
+            q = pts[i] + moves[i]
+            ok, loc, nrm, fi = body.closest_point_on_mesh(q, depsgraph=depsgraph)
+            if ok and fi in face_ids:
+                pts[i], nrms[i] = loc.copy(), nrm.copy()
+        # 隙間に足す
+        grid = {}
+        for i, q in enumerate(pts):
+            grid.setdefault((int(q.x // cell), int(q.y // cell), int(q.z // cell)), []).append(i)
+        added = 0
+        for q, n in samples:
+            cx, cy, cz = int(q.x // cell), int(q.y // cell), int(q.z // cell)
+            near = False
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        for j in grid.get((cx + dx, cy + dy, cz + dz), ()):
+                            if (q - pts[j]).length < spacing * 0.9:
+                                near = True
+                                break
+                        if near:
+                            break
+                    if near:
+                        break
+                if near:
+                    break
+            if not near:
+                pts.append(q)
+                nrms.append(n)
+                grid.setdefault((cx, cy, cz), []).append(len(pts) - 1)
+                added += 1
+        log(f"  rahotsu relax round {round_}: {len(pts)} (+{added})")
+    placed = list(zip(pts, nrms))
 
     knob = spiral_knob_mesh()
     bm = bmesh.new()
