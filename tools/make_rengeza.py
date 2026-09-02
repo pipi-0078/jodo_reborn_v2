@@ -30,7 +30,7 @@ from make_trees import reset_scene, triangle_count  # noqa: E402
 from make_pavilion import cyl, sphere, torus, textured, mat_of, _poly_tube  # noqa: E402
 
 PETAL_U = 30   # 長さ方向の分割
-PETAL_V = 14   # 幅方向の分割
+PETAL_V = 22   # 幅方向の分割(子弁の際を出すため細かく)
 DAIS_R = 0.80  # 蓮肉の半径
 DAIS_TOP = 1.44
 
@@ -88,15 +88,17 @@ def build_gold_petal(length, width, curl, cup, roll, flick=0.04, relief=True,
             if relief and hw > 1e-6:
                 h = 0.0
                 d = abs(x) - child_hw                        # 子弁の縁からの距離(内が負)
-                plate = 1.0 - smoothstep(-0.012, 0.012, d) if child_hw > 0 else 0.0
-                h += 0.0100 * plate                                          # 子弁の面
-                h += 0.0060 * plate * math.exp(-(x / (0.09 * width)) ** 2)   # 子弁の稜線
+                plate = 1.0 - smoothstep(-0.010, 0.010, d) if child_hw > 0 else 0.0
+                groove = math.exp(-((d - 0.022) / 0.012) ** 2) if child_hw > 0 else 0.0
+                h += 0.0180 * plate                                          # 子弁の面
+                h += 0.0080 * plate * math.exp(-(x / (0.09 * width)) ** 2)   # 子弁の稜線
                 h += 0.0040 * (1 - plate) * math.exp(-(x / (0.07 * width)) ** 2) \
                     * smoothstep(0.02, 0.25, t)                              # 本弁の稜線
+                h -= 0.0070 * groove                                          # 子弁の外側の彫り溝
                 h *= 1.0 - smoothstep(0.90, 1.0, t)                          # 先端で消える
                 y += relief_side * h                                         # 見える面へ盛る
                 if child_hw > 0:
-                    shade -= 0.30 * math.exp(-(d / 0.012) ** 2)              # 浮彫の際の陰
+                    shade -= 0.45 * groove + 0.20 * math.exp(-(d / 0.012) ** 2)   # 溝と際の陰
             # 鱗重ねの捻り
             xr, yr = x * cr - y * sr, x * sr + y * cr
             verts.append(Vector((xr, yr, spine_z)))
@@ -451,11 +453,11 @@ def build(path):
     rows = [
         ("外",  gold_petal_whorl(petal_gold, 78, 0.84, 0.72, 1.00, curl=0.50, cup=0.30,
                                  target_w=0.50, label="外")),
-        ("二",  gold_petal_whorl(petal_gold, 62, 0.78, 0.66, 1.04, curl=0.34, cup=0.30,
+        ("二",  gold_petal_whorl(petal_gold, 62, 0.78, 0.64, 1.06, curl=0.34, cup=0.20,
                                  target_w=0.50, phase=math.pi / 14, label="二")),
-        ("三",  gold_petal_whorl(petal_gold, 48, 0.68, 0.62, 1.08, curl=0.22, cup=0.20,
+        ("三",  gold_petal_whorl(petal_gold, 48, 0.68, 0.58, 1.08, curl=0.22, cup=0.20,
                                  target_w=0.48, label="三")),
-        ("内",  gold_petal_whorl(petal_gold, 30, 0.56, 0.60, 1.12, curl=0.15, cup=0.22,
+        ("内",  gold_petal_whorl(petal_gold, 30, 0.56, 0.58, 1.12, curl=0.15, cup=0.22,
                                  target_w=0.48, phase=math.pi / 11, flick=0.03, label="内")),
     ]
     for label, objs in rows:
