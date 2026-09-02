@@ -23,8 +23,8 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
-BEAD_RADIUS = 0.0085  # 螺髪の粒(身長1.57m基準)
-BEAD_SPACING = 0.0155
+BEAD_RADIUS = 0.0072  # 螺髪の粒(身長1.57m基準)
+BEAD_SPACING = 0.0135
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
@@ -42,7 +42,11 @@ FACE_TARGETS = {
     "chin-width-incr": 0.25, "chin-prominent-decr": 0.2,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
-    "l-eye-height2-decr": 0.75, "r-eye-height2-decr": 0.75,   # 半眼
+    "l-eye-height2-decr": 0.6, "r-eye-height2-decr": 0.6,   # 半眼
+    "l-eye-eyefold-down": 0.5, "r-eye-eyefold-down": 0.5, "l-eye-eyefold-concave": 0.3, "r-eye-eyefold-concave": 0.3,
+    "eyebrows-trans-forward": 0.35,
+    "mouth-cupidsbow-incr": 0.4, "mouth-lowerlip-volume-incr": 0.3, "mouth-upperlip-height-incr": 0.15,
+    "nose-point-width-incr": 0.2, "nose-scale-vert-incr": 0.15, "nose-flaring-incr": 0.15,
     "l-eye-corner1-down": 0.2, "r-eye-corner1-down": 0.2,
     "mouth-angles-up": 0.35, "mouth-scale-horiz-decr": 0.15, "mouth-upperlip-volume-decr": 0.2,
     "chin-height-decr": 0.15,
@@ -238,48 +242,139 @@ def add_head_features(body, mesh, eyes):
     top = max(scalp, key=lambda p: p.z)
     apex = Vector((0, top.y + 0.01, top.z - 0.015))
     created.append(add_sphere("Amida_Ushnisha", apex, 0.052, scale=(1.0, 1.05, 0.9)))
-    # 螺髪: 頭皮の頂点ごとに小さな粒(重なりすぎないよう間引く)
     # 頭皮の下地: 頭皮の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
     for v in mesh.vertices:
         if any(g.group == scalp_idx for g in v.groups):
-            v.co += v.normal * 0.005
-    # 頭皮の面上に一様に散らす(面積比で面を選び、間隔以内に既存の粒があれば捨てる)
-    import random
-    rng = random.Random(7)
-    scalp_faces = [f for f in mesh.polygons if all(any(g.group == scalp_idx for g in mesh.vertices[i].groups) for i in f.vertices)]
-    areas = [f.area for f in scalp_faces]
-    placed = []
-    for _ in range(6000):
-        f = rng.choices(scalp_faces, weights=areas)[0]
-        vs = [mesh.vertices[i].co for i in f.vertices]
-        a, b_ = rng.random(), rng.random()
-        if a + b_ > 1:
-            a, b_ = 1 - a, 1 - b_
-        q = vs[0] + (vs[1] - vs[0]) * a + (vs[2] - vs[0]) * b_
-        if q.z < top.z - 0.2:
-            continue
-        if all((q - r).length > BEAD_SPACING for r in placed):
-            placed.append(q.copy())
-    # 肉髻の表面にも
-    for _ in range(400):
-        d = Vector((rng.gauss(0, 1), rng.gauss(0, 1), abs(rng.gauss(0, 1)))).normalized()
-        q = apex + Vector((d.x * 0.052, d.y * 0.055, d.z * 0.047))
-        if all((q - r).length > BEAD_SPACING for r in placed):
-            placed.append(q)
-    beads = []
-    for i, p in enumerate(placed):
-        beads.append(add_sphere(f"rahotsu_{i}", p, BEAD_RADIUS, segments=10, rings=7))
-    log("  rahotsu:", len(placed))
-    bpy.ops.object.select_all(action="DESELECT")
-    for b in beads:
-        b.select_set(True)
-    bpy.context.view_layer.objects.active = beads[0]
-    bpy.ops.object.join()
-    hair = bpy.context.active_object
-    hair.name = "Amida_Hair"
+            v.co += v.normal * 0.004
+    mesh.update()
+    hair = place_rahotsu(body, mesh, scalp_idx, apex)
     created.append(hair)
     return created
 
+
+
+
+# ---------------------------------------------------------------- 螺髪
+def spiral_knob_mesh():
+    """右巻きの渦を刻んだ粒(半球より少し高い)。頂点座標は半径1、+Z が先端。"""
+    import bmesh
+    bm = bmesh.new()
+    segs, rings = 10, 6
+    grid = []
+    for i in range(rings + 1):
+        ph = math.pi * 0.62 * i / rings          # 0(先端)〜 約112°(裾)
+        row = []
+        for j in range(segs):
+            th = 2 * math.pi * j / segs
+            groove = 0.5 + 0.5 * math.cos(th * 1 + ph * 6.0)   # 渦の溝(下るほど回る)
+            r = 1.0 - 0.16 * groove ** 2 * min(1.0, ph / 0.5)
+            x = r * math.sin(ph) * math.cos(th)
+            y = r * math.sin(ph) * math.sin(th)
+            z = r * math.cos(ph) * 1.15
+            row.append(bm.verts.new((x, y, z)))
+        grid.append(row)
+    for i in range(rings):
+        for j in range(segs):
+            a, b = grid[i][j], grid[i][(j + 1) % segs]
+            c, d = grid[i + 1][(j + 1) % segs], grid[i + 1][j]
+            if i == 0:
+                pass
+            bm.faces.new((a, b, c, d))
+    # 先端を閉じる
+    tip = bm.verts.new((0, 0, 1.18))
+    for j in range(segs):
+        bm.faces.new((tip, grid[0][(j + 1) % segs], grid[0][j]))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    me = bpy.data.meshes.new("knob")
+    bm.to_mesh(me)
+    bm.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    return me
+
+
+def place_rahotsu(body, mesh, scalp_idx, apex):
+    """頭皮と肉髻の面に、緯線に沿った列で渦巻きの粒を据える。"""
+    import bmesh
+    scalp_verts = {v.index for v in mesh.vertices if any(g.group == scalp_idx for g in v.groups)}
+    scalp_faces = {f.index for f in mesh.polygons if all(i in scalp_verts for i in f.vertices)}
+    pts = [mesh.vertices[i].co for i in scalp_verts]
+    center = sum(pts, Vector()) / len(pts)
+    center.z -= 0.03
+    radius = sum((p - center).length for p in pts) / len(pts)
+    spacing = BEAD_SPACING
+    placed = []   # (location, normal)
+    # 頭皮: 頭の中心から放射状にレイを飛ばし、頭皮の面に当たった所へ置く
+    n_rings = int(math.pi * 0.7 * radius / spacing) + 1
+    for k in range(n_rings + 1):
+        ph = math.pi * 0.7 * k / n_rings
+        n = max(1, round(2 * math.pi * radius * math.sin(ph) / spacing))
+        for j in range(n):
+            th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
+            d = Vector((math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)))
+            hit, loc, nrm, fi = body.ray_cast(center, d)
+            if hit and fi in scalp_faces and all((loc - q).length > spacing * 0.8 for q, _ in placed):
+                placed.append((loc.copy(), nrm.copy()))
+    # 肉髻(球)にも同じ列で
+    rx, ry, rz = 0.052, 0.0546, 0.0468
+    n_rings2 = int(math.pi * 0.55 * rx / spacing) + 1
+    for k in range(n_rings2 + 1):
+        ph = math.pi * 0.55 * k / n_rings2
+        n = max(1, round(2 * math.pi * rx * math.sin(ph) / spacing))
+        for j in range(n):
+            th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
+            d = Vector((math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)))
+            loc = apex + Vector((d.x * rx, d.y * ry, d.z * rz))
+            if all((loc - q).length > spacing * 0.8 for q, _ in placed):
+                placed.append((loc, d))
+    knob = spiral_knob_mesh()
+    bm = bmesh.new()
+    for loc, nrm in placed:
+        rot = nrm.to_track_quat("Z", "Y").to_matrix().to_4x4()
+        mat = Matrix.Translation(loc - nrm * 0.0015) @ rot @ Matrix.Scale(BEAD_RADIUS, 4)
+        tmp = bmesh.new()
+        tmp.from_mesh(knob)
+        bmesh.ops.transform(tmp, matrix=mat, verts=tmp.verts)
+        tmp_me = bpy.data.meshes.new("k")
+        tmp.to_mesh(tmp_me)
+        tmp.free()
+        bm.from_mesh(tmp_me)
+        bpy.data.meshes.remove(tmp_me)
+    me = bpy.data.meshes.new("Amida_Hair")
+    bm.to_mesh(me)
+    bm.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    hair = bpy.data.objects.new("Amida_Hair", me)
+    bpy.context.collection.objects.link(hair)
+    log("  rahotsu:", len(placed), "tris", len(me.polygons) * 2)
+    return hair
+
+
+# ---------------------------------------------------------------- 陰影(くぼみを暗く)
+def cavity_colors(obj, strength, floor=0.45):
+    """頂点色でくぼみを暗くし、金属の面でも輪郭が読めるようにする。"""
+    import bmesh
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    values = []
+    for v in bm.verts:
+        nbrs = [e.other_vert(v) for e in v.link_edges]
+        if not nbrs:
+            values.append(1.0)
+            continue
+        avg = sum((n.co for n in nbrs), Vector()) / len(nbrs)
+        edge = sum(((n.co - v.co).length for n in nbrs)) / len(nbrs)
+        c = (avg - v.co).dot(v.normal) / max(edge, 1e-6)   # >0 でくぼみ
+        values.append(max(floor, 1.0 - max(0.0, c) * strength))
+    bm.free()
+    attr = me.color_attributes.new("Color", "FLOAT_COLOR", "POINT")
+    for i, val in enumerate(values):
+        attr.data[i].color = (val, val, val, 1.0)
+    me.color_attributes.active_color = attr
+    return attr
 
 
 # ---------------------------------------------------------------- 衣
@@ -484,6 +579,9 @@ def build(stage, matte=False):
     log("targets applied:", len(applied), applied[:6])
 
     arm = HumanService.add_builtin_rig(human, "default")
+    sub = human.modifiers.new("sub", "SUBSURF")
+    sub.levels = 1
+    sub.render_levels = 1
 
     def pose_all(hand_lift):
         bpy.context.view_layer.objects.active = arm
@@ -557,6 +655,9 @@ def build(stage, matte=False):
         if obj.type == "MESH" and not obj.data.materials:
             obj.data.materials.append(mat)
     for obj in bpy.context.scene.objects:
+        if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
+            cavity_colors(obj, strength=2.2 if obj.name == "Amida_Body" else 1.4)
+    for obj in bpy.context.scene.objects:
         if obj.type != "MESH":
             continue
         pts = [obj.matrix_world @ v.co for v in obj.data.vertices]
@@ -566,7 +667,7 @@ def build(stage, matte=False):
     bpy.ops.object.select_all(action="SELECT")
     bpy.context.view_layer.objects.active = body
     bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB", use_selection=True, export_apply=True,
-                              export_yup=True)
+                              export_yup=True, export_vertex_color="ACTIVE", export_all_vertex_colors=False)
     log("->", OUT, os.path.getsize(OUT) // 1024, "KB")
 
 
