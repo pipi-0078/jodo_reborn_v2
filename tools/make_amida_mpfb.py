@@ -24,7 +24,8 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
-HAIRLINE_DROP = 0.02  # 生え際を素体より額側へ下げる幅(m、身長1.57m基準)
+USHNISHA_HEIGHT = 0.035  # 肉髻の盛り上がり(m)
+HAIRLINE_HEIGHT = 0.045  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
 BEAD_RADIUS = 0.0068  # 螺髪の粒(身長1.57m基準)
 BEAD_SPACING = 0.0125
 
@@ -38,7 +39,7 @@ MACRO = {
 # 相好(定朝様: 円満な面相・伏し目・長い耳朶)。値は 0..1
 FACE_TARGETS = {
     # 美男子系・アジア系。頬骨は浅く、口角を上げて微笑む。目はリグの瞼ボーンで閉じる
-    "head-oval": 0.35, "head-scale-vert-incr": 0.3, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
+    "head-oval": 0.35, "head-scale-vert-incr": 0.15, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
     "forehead-temple-incr": 0.3, "forehead-nubian-decr": 0.4, "forehead-scale-vert-decr": 0.35,
     "l-cheek-bones-decr": 0.6, "r-cheek-bones-decr": 0.6,          # 頬骨は浅く
     "l-cheek-volume-incr": 0.2, "r-cheek-volume-incr": 0.2,
@@ -53,7 +54,7 @@ FACE_TARGETS = {
     "nose-nostrils-width-decr": 0.5, "nose-flaring-decr": 0.5, "nose-point-width-decr": 0.3,
     "mouth-angles-up": 0.7, "mouth-scale-horiz-decr": 0.1,           # 口角を上げて微笑む
     "mouth-upperlip-volume-decr": 0.35, "mouth-lowerlip-volume-decr": 0.2, "mouth-dimples-in": 0.3,
-    "neck-scale-vert-decr": 0.3, "neck-scale-horiz-incr": 0.15,
+    "neck-scale-vert-decr": 0.5, "neck-scale-horiz-incr": 0.2,
 }
 
 
@@ -243,7 +244,7 @@ def add_sphere(name, center, radius, scale=(1, 1, 1), segments=24, rings=16):
     return obj
 
 
-def stretch_earlobes(body, mesh, factor=1.9):
+def stretch_earlobes(body, mesh, factor=1.55):
     """耳の中心より下の頂点を下へ引き伸ばし、長い耳朶にする。"""
     idx = body.vertex_groups["ears"].index
     for side_sign in (1, -1):
@@ -256,7 +257,8 @@ def stretch_earlobes(body, mesh, factor=1.9):
             if v.co.z < zc:
                 t = (zc - v.co.z) / max(zc - zmin, 1e-6)
                 v.co.z -= (zc - zmin) * (factor - 1) * t * t
-                v.co.x += side_sign * 0.004 * t  # わずかに外へ
+                v.co.x += side_sign * 0.003 * t          # わずかに外へ
+                v.co.y += -0.004 * t * t                  # 耳朶を前へ厚く
     mesh.update()
 
 
@@ -456,16 +458,44 @@ def add_head_features(body, mesh, eyes):
     scalp = [mesh.vertices[i].co for i in hair_verts]
     top = max(scalp, key=lambda p: p.z)
     apex = Vector((0, top.y + 0.01, top.z - 0.015))
-    created.append(add_sphere("Amida_Ushnisha", apex, 0.052, scale=(1.0, 1.05, 0.9)))
-    # 生え際を額の側へ下げる: 前面の生え際から HAIRLINE_DROP 以内の頂点を髪の領域に加える
+    # 頭頂を滑らかに盛り上げる(肉髻)。頂点から 8cm 以内をなだらかに持ち上げる
+    for i in hair_verts:
+        v = mesh.vertices[i]
+        d = (Vector((v.co.x, v.co.y, 0)) - Vector((apex.x, apex.y, 0))).length
+        if d < 0.08 and v.co.z > apex.z - 0.06:
+            w = (1 - d / 0.08) ** 2
+            v.co += v.normal * (USHNISHA_HEIGHT * w * (v.co.z - (apex.z - 0.06)) / 0.06)
+    mesh.update()
+    top = max((mesh.vertices[i].co for i in hair_verts), key=lambda p: p.z)
+    apex = Vector((0, top.y, top.z))
+    # 髪の領域を整える:
+    #  - 耳とその周囲(1.2cm)は髪にしない。耳の上端より下の側頭部も髪にしない
+    #  - 額側は滑らかな弧の生え際で切る(中央が最も低く、こめかみへ向かって上がる)
+    ear_idx = body.vertex_groups["ears"].index
+    ear_pts = [v.co.copy() for v in mesh.vertices if any(g.group == ear_idx for g in v.groups)]
+    ear_top = max(p.z for p in ear_pts)
+    ear_y = sum(p.y for p in ear_pts) / len(ear_pts)
     brow_z = mid.z + 0.03
-    front_edge = [mesh.vertices[i].co for i in hair_verts
-                  if mesh.vertices[i].co.y < top.y - 0.03 and mesh.vertices[i].co.z < top.z - 0.02]
+    hair_z0 = brow_z + HAIRLINE_HEIGHT                     # 中央の生え際の高さ
+    head_half = max(abs(v.co.x) for v in mesh.vertices if brow_z < v.co.z < top.z)
+    def hairline_z(x):
+        return hair_z0 + 0.10 * (x * x) / max(head_half, 1e-3)   # 両側でわずかに上がる弧
+    front_y = ear_y - 0.01                                  # 耳より前を「額側」とみなす
+    candidates = set(hair_verts)
     for v in mesh.vertices:
-        if v.index in hair_verts or v.co.z < brow_z + 0.035 or v.co.y > top.y - 0.03:
-            continue
-        if any((v.co - q).length < HAIRLINE_DROP for q in front_edge):
-            hair_verts.add(v.index)
+        if v.co.y < front_y and hairline_z(v.co.x) < v.co.z < top.z:
+            candidates.add(v.index)
+    hair_verts = set()
+    for i in candidates:
+        v = mesh.vertices[i]
+        if v.co.y < front_y and v.co.z < hairline_z(v.co.x):
+            continue                                        # 額: 生え際より下は肌
+        if v.co.y < ear_y + 0.025 and v.co.z < ear_top + 0.002 and abs(v.co.x) > 0.04:
+            continue                                        # 耳の前〜真上: 耳の上端より下は肌
+        if any((v.co - q).length < 0.008 for q in ear_pts):
+            continue                                        # 耳の周囲
+        hair_verts.add(i)
+    log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
     # 頭皮の下地: 髪の領域の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
     for i in hair_verts:
         v = mesh.vertices[i]
@@ -576,9 +606,9 @@ def place_rahotsu(body, mesh, hair_verts, apex):
     n_hair = len(placed)
 
     # 2) 頭皮: 頭の中心から放射状にレイを飛ばし、頭皮の面に当たった所へ(列は互い違い)
-    n_rings = int(math.pi * 0.7 * radius / spacing) + 1
+    n_rings = int(math.pi * 0.72 * radius / spacing) + 1
     for k in range(n_rings + 1):
-        ph = math.pi * 0.7 * k / n_rings
+        ph = math.pi * 0.72 * k / n_rings
         n = max(1, round(2 * math.pi * radius * math.sin(ph) / spacing))
         for j in range(n):
             th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
@@ -586,23 +616,25 @@ def place_rahotsu(body, mesh, hair_verts, apex):
             hit, loc, nrm, fi = body.ray_cast(center, d)
             if hit and fi in scalp_faces and free(loc):
                 placed.append((loc.copy(), nrm.copy()))
-    # 3) 肉髻(球)にも同じ列で(少し密に、面のすぐ外に)
-    rx, ry, rz = 0.052, 0.0546, 0.0468
-    sp2 = spacing * 0.9
-    n_rings2 = int(math.pi * 0.6 * rx / sp2) + 1
-    for k in range(n_rings2 + 1):
-        ph = math.pi * 0.6 * k / n_rings2
-        n = max(1, round(2 * math.pi * rx * math.sin(ph) / sp2))
-        for j in range(n):
-            th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
-            d = Vector((math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)))
-            loc = apex + Vector((d.x * rx, d.y * ry, d.z * rz)) + d * 0.0025
-            if free(loc, 0.75):
-                placed.append((loc, d))
+    # 4) 列で埋まらなかった隙間を、髪の面の上のランダム点で埋める
+    import random
+    rng = random.Random(5)
+    faces = [mesh.polygons[i] for i in scalp_faces]
+    areas = [f.area for f in faces]
+    n_before = len(placed)
+    for _ in range(9000):
+        f = rng.choices(faces, weights=areas)[0]
+        vs = [mesh.vertices[i].co for i in f.vertices]
+        a_, b_ = rng.random(), rng.random()
+        if a_ + b_ > 1:
+            a_, b_ = 1 - a_, 1 - b_
+        q = vs[0] + (vs[1] - vs[0]) * a_ + (vs[2] - vs[0]) * b_
+        if free(q, 0.86):
+            placed.append((q.copy(), f.normal.copy()))
+    log("  rahotsu gap fill:", len(placed) - n_before)
 
     knob = spiral_knob_mesh()
     bm = bmesh.new()
-    import random
     rng = random.Random(11)
     for loc, nrm in placed:
         rot = nrm.to_track_quat("Z", "Y").to_matrix().to_4x4()
