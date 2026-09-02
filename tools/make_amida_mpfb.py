@@ -36,6 +36,7 @@ SIDEBURN_TIP_R = 0.012  # もみあげの先端の丸み(半径、m)
 SIDEBURN_TOP_W = 0.036  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
 EYE_LINE_R = 0.0011  # 目の合わせ目の線の太さ(半径、m)
+EAR_MARGIN = 0.009  # 耳の輪郭と髪の隙間(m)
 RIM_RADIUS = 0.0022  # 生え際の縁取りの線の太さ(半径、m)
 RIM_SMOOTH = 8  # 縁取りの曲線をならす回数
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
@@ -513,6 +514,8 @@ def add_head_features(body, mesh, eyes):
     z_top = hairline_z(face_half)                            # こめかみで額の弧と接続する高さ
     z_tip = ear_top - SIDEBURN_DROP                          # もみあげの尖った先
     ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
+    ear_back_y = max(p.y for p in ear_pts)                  # 耳の後端
+    ear_bottom_z = min(p.z for p in ear_pts)                # 耳朶の下端
     z_mid = ear_top - 0.02                                   # ここから下が先端へ細くなる(耳の穴のあたり)
     w_top = SIDEBURN_TOP_W                                   # こめかみの生え際: 耳の前端からこれだけ前
     w_mid = SIDEBURN_WIDTH                                   # ふくらみの最大幅
@@ -532,8 +535,6 @@ def add_head_features(body, mesh, eyes):
     def side_hair(v):
         if abs(v.co.x) < face_half or v.co.z <= z_tip:
             return False
-        if v.co.z < ear_top and v.co.y > ear_front_y - 0.003:
-            return False                                    # 耳の下・耳の高さの耳より後ろは髪にしない
         if v.co.z >= z_top:
             return True                                     # こめかみの線より上は全部髪
         return v.co.y > ear_front_y - burn_w(v.co.z)
@@ -545,16 +546,14 @@ def add_head_features(body, mesh, eyes):
     hair_verts = set()
     for i in candidates:
         v = mesh.vertices[i]
-        if any((v.co - q).length < 0.007 for q in ear_pts):
-            continue                                        # 耳の周囲
+        if any((v.co - q).length < EAR_MARGIN for q in ear_pts):
+            continue                                        # 耳の周囲(輪郭に沿って一定の隙間)
         if v.co.y < front_y and abs(v.co.x) < face_half and v.co.z < hairline_z(v.co.x):
             continue                                        # 額: 生え際の弧より下は肌
         if v.co.y < front_y and abs(v.co.x) >= face_half and not side_hair(v):
             continue                                        # 側頭部: 生え際の線より前は肌
-        if v.co.y >= front_y and v.co.y < ear_y + 0.03 and v.co.z < ear_top and abs(v.co.x) > 0.04:
-            continue                                        # 耳の真上〜後ろ: 耳の上端より下は肌
-        if abs(v.co.x) > 0.04 and v.co.z < ear_top and v.co.y > ear_front_y - 0.003 and v.co.y < ear_y + 0.03:
-            continue                                        # 耳の下: 肌
+        if abs(v.co.x) > 0.04 and v.co.y > ear_front_y - 0.003 and v.co.y < ear_back_y + 0.012 and v.co.z < ear_bottom_z + 0.004:
+            continue                                        # 耳の下: 肌(耳の後ろは耳の輪郭に沿って髪が回る)
         hair_verts.add(i)
     log(f"  sideburn: z_top {z_top:.3f} z_mid {z_mid:.3f} z_tip {z_tip:.3f}")
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
