@@ -23,39 +23,35 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
+UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
 BEAD_RADIUS = 0.0072  # 螺髪の粒(身長1.57m基準)
 BEAD_SPACING = 0.0135
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
-    "gender": 0.64, "age": 0.55, "muscle": 0.45, "weight": 0.56, "proportions": 0.5, "height": 0.5,
+    "gender": 0.65, "age": 0.5, "muscle": 0.45, "weight": 0.56, "proportions": 0.5, "height": 0.5,
     "cupsize": 0.0, "firmness": 0.5,
     "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
 }
 
 # 相好(定朝様: 円満な面相・伏し目・長い耳朶)。値は 0..1
 FACE_TARGETS = {
-    # 中宮寺 菩薩半跏像を範に: 長めの卵形の面、高い額、細く高い弧の眉から続く通った鼻筋、
-    # 伏せた長い目(瞼の折り目は作らない)、小さく薄い唇の口角だけを上げる
-    "head-oval": 0.5, "head-round": 0.0, "head-scale-vert-incr": 0.4, "head-scale-horiz-incr": 0.4, "head-scale-depth-incr": 0.35,
-    "head-fat-incr": 0.0, "forehead-scale-vert-incr": 0.25, "forehead-temple-incr": 0.4, "forehead-nubian-decr": 0.5,
-    "l-cheek-volume-incr": 0.2, "r-cheek-volume-incr": 0.2, "l-cheek-bones-incr": 0.15, "r-cheek-bones-incr": 0.15,
-    "chin-prominent-incr": 0.1, "chin-bones-incr": 0.2, "chin-width-incr": 0.2, "chin-cleft-decr": 0.4, "chin-triangle": 0.15,
+    # 美男子系・アジア系。頬骨は浅く、口角を上げて微笑む。目はリグの瞼ボーンで閉じる
+    "head-oval": 0.35, "head-scale-vert-incr": 0.3, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
+    "forehead-temple-incr": 0.3, "forehead-nubian-decr": 0.4,
+    "l-cheek-bones-decr": 0.6, "r-cheek-bones-decr": 0.6,          # 頬骨は浅く
+    "l-cheek-volume-incr": 0.2, "r-cheek-volume-incr": 0.2,
+    "chin-bones-incr": 0.15, "chin-prominent-incr": 0.1, "chin-cleft-decr": 0.4, "chin-width-incr": 0.1,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
-    "l-eye-height2-decr": 1.0, "r-eye-height2-decr": 1.0,            # 半眼(細い線)
-    "l-eye-height1-decr": 1.0, "r-eye-height1-decr": 1.0, "l-eye-height3-decr": 1.0, "r-eye-height3-decr": 1.0,
-    "l-eye-epicanthus-in": 0.4, "r-eye-epicanthus-in": 0.4, "l-eye-push1-in": 0.1, "r-eye-push1-in": 0.1,
-    "l-eye-scale-incr": 0.35, "r-eye-scale-incr": 0.35,               # 目を長く
-    "l-eye-trans-out": 0.3, "r-eye-trans-out": 0.3,
-    "l-eye-corner2-up": 0.1, "r-eye-corner2-up": 0.1,
+    "l-eye-scale-incr": 0.2, "r-eye-scale-incr": 0.2,
+    "l-eye-epicanthus-in": 0.4, "r-eye-epicanthus-in": 0.4,
     "l-eye-bag-decr": 0.5, "r-eye-bag-decr": 0.5,
-    "eyebrows-angle-up": 0.3, "eyebrows-trans-up": 0.1, "eyebrows-trans-forward": 0.2,
-    "nose-greek-incr": 0.45, "nose-hump-decr": 0.4, "nose-scale-horiz-decr": 0.3, "nose-scale-vert-incr": 0.12, "nose-base-up": 0.1,
-    "nose-nostrils-width-decr": 0.5, "nose-point-width-decr": 0.3, "nose-flaring-decr": 0.5, "nose-volume-decr": 0.1,
-    "mouth-scale-horiz-decr": 0.15, "mouth-angles-up": 0.55,
-    "mouth-upperlip-volume-decr": 0.4, "mouth-lowerlip-volume-decr": 0.25, "mouth-cupidsbow-incr": 0.2, "mouth-trans-backward": 0.1,
-    "mouth-dimples-in": 0.3, "mouth-laugh-lines-in": 0.1,
+    "eyebrows-angle-up": 0.25, "eyebrows-trans-forward": 0.1,
+    "nose-greek-incr": 0.4, "nose-hump-decr": 0.4, "nose-scale-horiz-decr": 0.35,
+    "nose-nostrils-width-decr": 0.5, "nose-flaring-decr": 0.5, "nose-point-width-decr": 0.3,
+    "mouth-angles-up": 0.7, "mouth-scale-horiz-decr": 0.1,           # 口角を上げて微笑む
+    "mouth-upperlip-volume-decr": 0.35, "mouth-lowerlip-volume-decr": 0.2, "mouth-dimples-in": 0.3,
     "neck-scale-vert-decr": 0.3, "neck-scale-horiz-incr": 0.15,
 }
 
@@ -188,6 +184,39 @@ def measure_lap(human):
     return floor, lap
 
 
+def lid_z(human, bone_name):
+    """瞼ボーンに強く付いている頂点の z の範囲(評価後メッシュ)。"""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    me = human.evaluated_get(depsgraph).data
+    gi = human.vertex_groups[bone_name].index
+    zs = [v.co.z for v in me.vertices if any(g.group == gi and g.weight > 0.5 for g in v.groups)]
+    return min(zs), max(zs)
+
+
+def close_eyes_with_rig(arm, human):
+    """上瞼のボーンを下ろし、下瞼をわずかに上げて目を閉じる(瞼の形は素体のまま)。"""
+    for side in ("L", "R"):
+        upper = arm.pose.bones[f"orbicularis03.{side}"]
+        lower = arm.pose.bones[f"orbicularis04.{side}"]
+        upper.rotation_mode = lower.rotation_mode = "XYZ"
+        lo_rest = lid_z(human, f"orbicularis04.{side}")[1]
+        # 下瞼: 上がる向きを試して決める
+        best = (0.0, lo_rest)
+        for deg in (8, -8):
+            lower.rotation_euler.x = math.radians(deg)
+            bpy.context.view_layer.update()
+            top = lid_z(human, f"orbicularis04.{side}")[1]
+            if top > best[1]:
+                best = (deg, top)
+        lower.rotation_euler.x = math.radians(best[0])
+        # 上瞼: 下瞼に重なるまで下ろす(固定角。瞼の縁が下瞼の上端より 4mm 下に来る)
+        deg = UPPER_LID_DEG
+        upper.rotation_euler.x = math.radians(deg)
+        bpy.context.view_layer.update()
+        log(f"  eyelids {side}: upper edge z {lid_z(human, f'orbicularis03.{side}')[0]:.4f}, lower top z {best[1]:.4f}")
+        log(f"  eyelids {side}: upper {deg} deg, lower {best[0]} deg")
+
+
 def pose_head(arm):
     rotate_bone(arm, "neck01", (1, 0, 0), 3)
     rotate_bone(arm, "head", (1, 0, 0), 5)  # わずかに伏せる
@@ -248,13 +277,34 @@ def soften_face(body, mesh, factor=0.5, iterations=3):
 
 
 def close_eyes(body, mesh, eyes):
-    """目の領域(瞼の縁・隙間・眼窩)を面ごと取り去り、穴を眼球の丸みを持つ一枚の瞼で塞ぐ。
-    その上で上瞼を下瞼にわずかに被せ、段差の柔らかい影だけを閉じ目の線にする。"""
+    """目の領域を面ごと取り去って塞ぎ、細かく割ってから、頂点位置を解析的な面
+    (眼球の丸み → 外周で顔の面へ溶ける)に置き換える。合わせ目は細い溝一本、上瞼はやわらかいふくらみ。"""
     import bmesh
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+
+    def smoothstep(e0, e1, x):
+        t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))
+        return t * t * (3 - 2 * t)
+
+    # 外周の輪の高さ(方向ごと)を、編集前の顔からレイキャストで取っておく
+    tables = {}
+    for side, (c, r) in eyes.items():
+        R = r * 1.9
+        table = []
+        for k in range(72):
+            th = 2 * math.pi * k / 72
+            origin = Vector((c.x + R * math.cos(th), c.y - r * 4, c.z + R * math.sin(th)))
+            hit, loc, _, _ = body.ray_cast(origin, Vector((0, 1, 0)), distance=r * 8, depsgraph=depsgraph)
+            table.append(loc.y if hit else c.y - r)
+        tables[side] = table
+
     bm = bmesh.new()
     bm.from_mesh(mesh)
-    bm.verts.ensure_lookup_table()
     for side, (c, r) in eyes.items():
+        R, R_ball, a = r * 1.9, r * 1.08, r * 1.55
+        table = tables[side]
+
         def inside(v):
             return (v.co - c).length < r * 1.7 and v.co.y < c.y + r * 0.5
         doomed = [f for f in bm.faces if all(inside(v) for v in f.verts)]
@@ -263,78 +313,110 @@ def close_eyes(body, mesh, eyes):
         bmesh.ops.delete(bm, geom=loose, context="VERTS")
         rim = [v for v in bm.verts if v.is_boundary and (v.co - c).length < r * 2.2]
         rim_edges = list({e for v in rim for e in v.link_edges if e.is_boundary})
-        # 穴の縁のジグザグ(瞼の内縁と外縁が交互に並ぶ)を縁に沿って均す
-        for _ in range(10):
-            moves = {}
-            for v in rim:
-                nbrs = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
-                if len(nbrs) >= 2:
-                    moves[v] = (v.co * 0.4 + sum((n.co for n in nbrs), Vector()) * 0.3)
-            for v, co in moves.items():
-                v.co = co
         filled = bmesh.ops.holes_fill(bm, edges=rim_edges, sides=0)["faces"]
         tri = bmesh.ops.triangulate(bm, faces=filled)["faces"]
-        inner_edges = list({e for f in tri for e in f.edges if not e.is_boundary and all(fe in tri for fe in e.link_faces)})
-        res = bmesh.ops.subdivide_edges(bm, edges=inner_edges, cuts=4, use_grid_fill=True)
-        patch = {v for f in tri if f.is_valid for v in f.verts}
-        patch |= {g for g in res["geom_inner"] if isinstance(g, bmesh.types.BMVert)}
-        patch |= {g for g in res["geom_split"] if isinstance(g, bmesh.types.BMVert)}
-        patch = [v for v in patch if v.is_valid and v not in rim]
-        region = [v for v in bm.verts if v.is_valid and (v.co - c).length < r * 2.1]
-        # 球面へ投影 → 均す、を繰り返して、縁となじんだ滑らかな瞼の面にする
-        for k in range(6):
-            for v in patch:
-                d = v.co - c
-                v.co = c + d.normalized() * (r * 1.07)
-            for _ in range(4):
-                bmesh.ops.smooth_vert(bm, verts=patch, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-            for _ in range(2):
-                bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        for _ in range(8):
-            bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        log("  eye", side, "removed faces", len(doomed), "patch verts", len(patch), "region", len(region))
+        inner_edges = list({e for f in tri for e in f.edges if all(fe in tri for fe in e.link_faces)})
+        bmesh.ops.subdivide_edges(bm, edges=inner_edges, cuts=3, use_grid_fill=True)
+        # 目のまわり一帯をもう一段細かく割る(溝を刻める密度にする)
+        region_edges = [e for e in bm.edges if all((v.co - c).length < r * 2.05 and v.co.y < c.y + r * 0.6 for v in e.verts)]
+        bmesh.ops.subdivide_edges(bm, edges=region_edges, cuts=1, use_grid_fill=True)
+
+        # 頂点を解析的な面へ。球の前面は外周の面より 2.5mm だけ前に出す(閉じた瞼のわずかな丸み)
+        y_front = sum(table) / len(table) - 0.0025
+        cy_ball = y_front + R_ball
+        rho_cap = R_ball * 0.8
+        moved = 0
+        for v in bm.verts:
+            if not v.is_valid:
+                continue
+            x, z = v.co.x - c.x, v.co.z - c.z
+            rho = math.hypot(x, z)
+            if rho >= R or v.co.y > c.y + r * 0.6:
+                continue
+            th = math.atan2(z, x) % (2 * math.pi)
+            k = th / (2 * math.pi) * 72
+            k0, f = int(k) % 72, k - int(k)
+            y_border = table[k0] * (1 - f) + table[(k0 + 1) % 72] * f
+            rc = min(rho, rho_cap)
+            y_ball = cy_ball - math.sqrt(R_ball * R_ball - rc * rc)
+            w = 1.0 - smoothstep(rho_cap * 0.75, R, rho)
+            y = w * y_ball + (1 - w) * y_border
+            # 合わせ目の溝と上瞼のふくらみ
+            tl = x / a
+            line = -0.10 * r * tl * tl
+            dz = z - line
+            taper = max(0.0, 1 - tl * tl) ** 0.6
+            groove = -0.0011 * max(0.0, 1 - abs(dz) / 0.0016)
+            u = dz / (r * 0.55)
+            swell = 0.0016 * math.sin(math.pi * u) ** 1.2 if 0 < u < 1 else 0.0
+            n = Vector((x, -math.sqrt(max(1e-6, R_ball * R_ball - rc * rc)), z)).normalized()
+            v.co = Vector((c.x + x, y, c.z + z)) + n * (taper * (groove + swell))
+            moved += 1
+        log("  eye", side, "faces removed", len(doomed), "verts reshaped", moved)
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
 
 
-
 def build_eyelids(body, eyes):
-    """閉じた瞼を、顔の面に沿わせた構造化パッチとして作る。
-    上瞼と下瞼は一本の線(瞼の合わせ目)で接し、上瞼の縁だけがわずかに厚く、下瞼に被さる。"""
+    """閉じた目を、目のまわり一帯を覆う一枚の解析的なパッチとして作る。
+    内側は眼球の丸み(球面)、外周は顔の面(外周の輪だけをレイキャストで取る)へ滑らかに溶かす。
+    合わせ目は細い V 字の溝を一本、上瞼はそのすぐ上のやわらかいふくらみで示す。"""
     import bmesh
     bpy.context.view_layer.update()
     depsgraph = bpy.context.evaluated_depsgraph_get()
     bm = bmesh.new()
-    for side, (c, r) in eyes.items():
-        a = r * 1.45                      # 目の半幅
-        b_up, b_lo = r * 0.62, r * 0.42   # 上瞼・下瞼の高さ
-        nx, nv = 48, 7
 
-        def surface(x, z):
+    def smoothstep(e0, e1, x):
+        t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))
+        return t * t * (3 - 2 * t)
+
+    for side, (c, r) in eyes.items():
+        a = r * 1.55            # 合わせ目の線の半長
+        R = r * 1.9             # パッチの半径(この外周で顔の面に溶ける)
+        R_ball = r * 1.08       # 瞼の下の丸み
+        nx, nv = 64, 14
+
+        def skin_y(x, z):
             origin = Vector((c.x + x, c.y - r * 4, c.z + z))
-            hit, loc, nrm, _ = body.ray_cast(origin, Vector((0, 1, 0)), distance=r * 8, depsgraph=depsgraph)
-            return (loc, nrm) if hit else (Vector((c.x + x, c.y - r, c.z + z)), Vector((0, -1, 0)))
+            hit, loc, _, _ = body.ray_cast(origin, Vector((0, 1, 0)), distance=r * 8, depsgraph=depsgraph)
+            return loc.y if hit else c.y - r
+
+        def point(x, z, h):
+            rho = math.hypot(x, z)
+            theta = math.atan2(z, x)
+            y_border = skin_y(R * math.cos(theta), R * math.sin(theta))
+            inside = rho < R_ball * 0.999
+            y_ball = c.y - math.sqrt(R_ball * R_ball - x * x - z * z) if inside else c.y
+            # 球面の縁(rho=R_ball)から外周までは、球面の接線方向へなだらかに続ける
+            y_tang = c.y + (rho - R_ball) * 0.35 if not inside else y_ball
+            w = 1.0 - smoothstep(R_ball * 0.9, R, rho)
+            y = w * min(y_ball, y_tang) + (1 - w) * y_border
+            y = min(y, skin_y(x, z) - 0.0004)                    # 肌(鼻筋など)より奥へは入らない
+            n = Vector((x, -math.sqrt(max(1e-6, R_ball * R_ball - x * x - z * z)), z)).normalized() if inside else Vector((0, -1, 0))
+            return Vector((c.x + x, y, c.z + z)) + n * h
 
         for upper in (True, False):
-            b = b_up if upper else b_lo
             grid = []
             for i in range(nx + 1):
                 t = -1 + 2 * i / nx
-                x = a * t
-                axis = -0.005 * r / 0.015 * t * t * 0.6      # 合わせ目の線: 目尻へ向かってわずかに下がる
-                span = b * (1 - t * t) ** (0.75 if upper else 0.85)
+                x = R * t
+                tl = x / a                                        # 線に沿った位置(-1..1 が線の範囲)
+                line = -0.10 * r * tl * tl                        # 合わせ目: 両端でわずかに下がる長い弧
+                border = math.sqrt(max(1e-6, R * R - x * x))
                 row = []
                 for j in range(nv + 1):
                     v = j / nv
-                    z = axis + (span * v if upper else -span * v)
-                    loc, nrm = surface(x, z)
-                    edge_w = (1 - abs(t) ** 4)
+                    z = line + (border - line) * v if upper else line - (border + line) * v
+                    taper = max(0.0, 1 - tl * tl) ** 0.6          # 目頭・目尻で消える
+                    groove = -0.0012 * max(0.0, 1 - v / 0.10)     # 合わせ目の細い溝
                     if upper:
-                        h = (0.0022 * (1 - v) ** 0.5 + 0.0008) * edge_w * (1 - v ** 6)
+                        u = v / 0.55
+                        swell = 0.0016 * math.sin(math.pi * min(1.0, u)) ** 1.2 if u < 1 else 0.0
                     else:
-                        h = (0.0006 * (1 - v) ** 0.5 + 0.0004) * edge_w * (1 - v ** 6)
-                    row.append(bm.verts.new(loc + nrm * h))
+                        swell = 0.0
+                    h = taper * (groove + swell)
+                    row.append(bm.verts.new(point(x, z, h)))
                 grid.append(row)
             for i in range(nx):
                 for j in range(nv):
@@ -344,7 +426,7 @@ def build_eyelids(body, eyes):
                             bm.faces.new(quad if upper else tuple(reversed(quad)))
                         except ValueError:
                             pass
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     me = bpy.data.meshes.new("Amida_Eyelids")
     bm.to_mesh(me)
@@ -359,10 +441,10 @@ def build_eyelids(body, eyes):
 
 def add_head_features(body, mesh, eyes):
     """閉じた目・白毫・肉髻・螺髪。"""
-    soften_face(body, mesh)
     stretch_earlobes(body, mesh)
-    close_eyes(body, mesh, eyes)
-    created = [build_eyelids(body, eyes)]
+    created = []
+    for side, (c, r) in eyes.items():
+        created.append(add_sphere(f"Amida_Eye_{side.upper()}", c + Vector((0, 0.002, 0)), r * 0.97))
     # 白毫: 眉間。両目の中点から前へ出し、眉間の肌の上に半分埋める
     mid = (eyes["l"][0] + eyes["r"][0]) / 2
     front = min(v.co.y for v in mesh.vertices if abs(v.co.x) < 0.01 and abs(v.co.z - (mid.z + 0.03)) < 0.008)
@@ -731,6 +813,7 @@ def build(stage, matte=False):
         log(f"  floor z {floor_z:.3f}, lap top z {lap_z:.3f} (above floor {lap_z - floor_z:.3f}), hand lift {hand_lift:.3f}")
         pose_arms_dhyana(arm, lap_z + hand_lift)
         pose_head(arm)
+        close_eyes_with_rig(arm, human)
         bpy.ops.object.mode_set(mode="OBJECT")
         for n in ("wrist.L", "wrist.R", "foot.L", "foot.R"):
             log(f"  {n:12s} tail", [round(v, 3) for v in arm.pose.bones[n].tail])
