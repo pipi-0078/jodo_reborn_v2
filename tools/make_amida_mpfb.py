@@ -160,7 +160,7 @@ def pose_arms_dhyana(arm, lap_z):
         rotate_bone(arm, ua, (1, 0, 0), -14)          # わずかに前へ
         # 前腕を腹の前へ。手首が中心線の手前で交差し、右手が下・左手が上(指先は反対側へ)
         hand_z = lap_z + ROBE_OFFSET + (0.062 if side == "L" else 0.03)    # 右手の甲が衣に載り、左手はその上
-        wrist_target = Vector((-s * 0.04, -0.245, hand_z))
+        wrist_target = Vector((s * 0.06, -0.245, hand_z))       # 手首は自分の側、指先は反対側へ → 掌の中心が正中線に重なる
         elbow = arm.pose.bones[f"lowerarm01.{side}"].head
         # lowerarm01 の先は lowerarm02→wrist と続くので、肘→手首の距離ぶんだけ伸ばした方向を狙う
         target = wrist_target - elbow
@@ -185,7 +185,7 @@ def pose_arms_dhyana(arm, lap_z):
     # 合わせる点は、重ねた手の中央の少し上
     bpy.context.view_layer.update()
     wl, wr = arm.pose.bones["wrist.L"].head, arm.pose.bones["wrist.R"].head
-    meet = Vector((0.0, (wl.y + wr.y) / 2 + 0.025, max(wl.z, wr.z) + 0.03))
+    meet = Vector((0.0, (wl.y + wr.y) / 2 + 0.02, max(wl.z, wr.z) + 0.022))
     for side in ("L", "R"):
         for joint in ("finger1-1", "finger1-2", "finger1-3"):
             pb = arm.pose.bones[f"{joint}.{side}"]
@@ -1015,7 +1015,10 @@ def tube_along(name, body, points, radius, depsgraph):
     import bmesh
     proj, nrm = [], []
     for q in points:
-        ok, loc, nr, _ = body.closest_point_on_mesh(q, depsgraph=depsgraph)
+        # 前方から +y へレイを飛ばして最初に当たる面(胸)に据える。手や前腕へ飛ばない
+        ok, loc, nr, _ = body.ray_cast(Vector((q.x, -0.6, q.z)), Vector((0, 1, 0)), distance=1.0, depsgraph=depsgraph)
+        if not ok:
+            ok, loc, nr, _ = body.closest_point_on_mesh(q, depsgraph=depsgraph)
         proj.append(loc.copy() if ok else Vector(q))
         nrm.append(nr.copy() if ok else Vector((0, -1, 0)))
     out = bmesh.new()
@@ -1325,8 +1328,9 @@ def robe_folds(robe):
     me.update()
 
 
-def rim_tubes(name, obj, radius, min_len=12, depsgraph=None):
-    """メッシュの境界(穴・切り口)の輪ごとに、ならした曲線へ管を掃引して縁(ヘム)にする。"""
+def rim_tubes(name, obj, radius, min_len=12, depsgraph=None, floor_only=True):
+    """メッシュの境界(穴・切り口)の輪ごとに、ならした曲線へ管を掃引して縁(ヘム)にする。
+    floor_only: 床に接する裾の輪だけに管を付ける(襟や手の穴の縁は縄になるので付けない)。"""
     import bmesh
     bm = bmesh.new()
     bm.from_mesh(obj.data)
@@ -1351,7 +1355,10 @@ def rim_tubes(name, obj, radius, min_len=12, depsgraph=None):
             loop.append(cur)
             seen.add(cur)
         if len(loop) >= min_len:
-            loops.append([bm.verts[i].co.copy() for i in loop])
+            pts = [bm.verts[i].co.copy() for i in loop]
+            if floor_only and min(p.z for p in pts) > 0.05:
+                continue
+            loops.append(pts)
     bm.free()
     out = bmesh.new()
     for pts in loops:
@@ -1444,9 +1451,11 @@ def build_robe(body, mesh):
         kd.insert(p, i)
     kd.balance()
 
+    hand_top = max(p.z for p in hand_points)
+
     def over_hand(v):
         co, _, dist = kd.find(v.co)
-        return dist < ROBE_OFFSET + 0.016 and v.co.z > co.z - 0.006
+        return dist < ROBE_OFFSET + 0.016 and v.co.z > co.z - 0.006 and v.co.z < hand_top + 0.02
     doomed = [v for v in bm.verts if above(v) or over_hand(v)]
     bmesh.ops.delete(bm, geom=doomed, context="VERTS")
     for _ in range(12):
@@ -1463,18 +1472,35 @@ def build_robe(body, mesh):
     bm.to_mesh(robe.data)
     bm.free()
     hem = rim_tubes("Amida_RobeHem", robe, ROBE_HEM_R)
-    bpy.context.view_layer.update()
-    dg = bpy.context.evaluated_depsgraph_get()
-    pts = []
-    for i in range(41):
-        t = i / 40
-        x = 0.16 - 0.34 * t
-        z = 0.60 - 0.17 * t - 0.025 * math.sin(math.pi * t)     # 右脇の下(手の上)で止める
-        pts.append(Vector((x, -0.35, z)))
-    tube_along("Amida_OuterEdge", robe, pts, ROBE_HEM_R * 1.15, dg)
+    # 襟と手まわりの切り口は、縄ではなく折り返した縁(厚み)で表す: 境界に近いほど厚く
+    hemw = robe.vertex_groups.new(name="hemw")
+    bm = bmesh.new()
+    bm.from_mesh(robe.data)
+    bm.verts.ensure_lookup_table()
+    weight = {}
+    frontier = []
+    for v in bm.verts:
+        if v.is_boundary and v.co.z > 0.05:
+            w = 1.0 if v.co.z > NECK_Z - 0.2 else 0.55        # 襟は厚く、手の穴は控えめ
+            weight[v.index] = w
+            frontier.append(v)
+    for ring, fall in ((1, 0.6), (2, 0.25)):
+        nxt = []
+        for v in frontier:
+            for e in v.link_edges:
+                o = e.other_vert(v)
+                if o.index not in weight:
+                    weight[o.index] = weight[v.index] * fall
+                    nxt.append(o)
+        frontier = nxt
+    bm.free()
+    for idx, w in weight.items():
+        hemw.add([idx], w, "REPLACE")
     solid = robe.modifiers.new("solid", "SOLIDIFY")
-    solid.thickness = 0.008
-    solid.offset = -1.0
+    solid.thickness = 0.022
+    solid.offset = 0.0
+    solid.vertex_group = "hemw"
+    solid.thickness_vertex_group = 0.35          # 境界から離れた布は 0.022*0.35 ≒ 0.008
     apply_modifier(robe, solid)
     for poly in robe.data.polygons:
         poly.use_smooth = True
