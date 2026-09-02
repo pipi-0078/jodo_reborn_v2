@@ -40,6 +40,18 @@
   <a id="back" href="./">世界へ →</a>
   <div id="loading">読み込み中</div>
   <div id="caption"><div class="name"></div><div class="desc"></div><div class="credit"></div></div>
+  <script>
+    // GitHub Pagesは古いHTMLを10分ほどキャッシュする。その間に新しいデプロイが入ると
+    // HTMLが指すJSファイル名が消えていて、画面(ギャラリーの一覧など)が出なくなる。
+    // 読み込みに失敗したときだけ、一度だけ問い合わせをやり直す。
+    window.addEventListener('error', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
+      if (sessionStorage.getItem('reloadedForStaleHtml')) return;
+      sessionStorage.setItem('reloadedForStaleHtml', '1');
+      location.replace(location.pathname + '?r=' + Date.now());
+    }, true);
+  </script>
   <script type="module" src="/src/gallery.ts"></script>
 </body>
 </html>

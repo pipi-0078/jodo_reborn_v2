@@ -30,6 +30,18 @@
     <p>移動:W A S D ／ 見回す:マウス ／ 退出:ESC</p>
     <p><a href="gallery.html" style="color:#e8c37a">アセットギャラリーを見る →</a></p>
   </div>
+  <script>
+    // GitHub Pagesは古いHTMLを10分ほどキャッシュする。その間に新しいデプロイが入ると
+    // HTMLが指すJSファイル名が消えていて、画面(ギャラリーの一覧など)が出なくなる。
+    // 読み込みに失敗したときだけ、一度だけ問い合わせをやり直す。
+    window.addEventListener('error', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
+      if (sessionStorage.getItem('reloadedForStaleHtml')) return;
+      sessionStorage.setItem('reloadedForStaleHtml', '1');
+      location.replace(location.pathname + '?r=' + Date.now());
+    }, true);
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
