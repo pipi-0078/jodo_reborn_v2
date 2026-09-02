@@ -248,22 +248,32 @@ def soften_face(body, mesh, factor=0.5, iterations=3):
 
 
 def close_eyes(body, mesh, eyes):
-    """瞼の隙間を眼球面で埋めて閉じた目にする(眼球は置かない)。
-    眼球の半径より内側にある頂点(瞼の内縁・眼窩)を球面まで押し出し、周囲をなじませる。"""
+    """目の領域を瞼だけの滑らかな面にする。
+    瞼の縁・隙間・眼窩をまとめて強く平滑化し、眼球の丸みまで膨らませ、閉じ目の線を細い溝で刻む。"""
     import bmesh
     bm = bmesh.new()
     bm.from_mesh(mesh)
     for side, (c, r) in eyes.items():
-        pushed = []
-        for v in bm.verts:
+        region = [v for v in bm.verts if (v.co - c).length < r * 1.75 and v.co.y < c.y + r * 0.45]
+        for _ in range(14):
+            bmesh.ops.smooth_vert(bm, verts=region, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        for v in region:
             d = v.co - c
-            if d.length < r * 1.04 and v.co.y < c.y + r * 0.2:
-                v.co = c + d.normalized() * (r * 1.04)
-                pushed.append(v)
-        around = [v for v in bm.verts if (v.co - c).length < r * 2.2]
-        for _ in range(3):
-            bmesh.ops.smooth_vert(bm, verts=around, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        log("  eye", side, "closed: pushed", len(pushed), "smoothed", len(around))
+            if d.length < r * 1.07:
+                v.co = c + d.normalized() * (r * 1.07)
+        for _ in range(4):
+            bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        # 閉じ目の線: 目頭から目尻へ、端でわずかに下がる弧に沿って細い溝
+        zc = c.z - 0.002
+        for v in region:
+            t = (v.co.x - c.x) / (r * 1.25)
+            if abs(t) > 1.0:
+                continue
+            line = zc - 0.003 * t * t
+            w = max(0.0, 1.0 - abs(v.co.z - line) / 0.0028)
+            if w > 0:
+                v.co += (c - v.co).normalized() * (0.0016 * w)
+        log("  eye", side, "lid region verts", len(region))
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
