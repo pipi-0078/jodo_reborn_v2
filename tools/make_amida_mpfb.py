@@ -32,7 +32,7 @@ HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
 SIDEBURN_DROP = 0.048  # 耳の上端からもみあげの尖った下端までの距離(m)
 SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、m)
-SIDEBURN_TOP_W = 0.028  # こめかみの生え際の、耳の前端からの前方距離(m)
+SIDEBURN_TOP_W = 0.036  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
