@@ -248,32 +248,62 @@ def soften_face(body, mesh, factor=0.5, iterations=3):
 
 
 def close_eyes(body, mesh, eyes):
-    """目の領域を瞼だけの滑らかな面にする。
-    瞼の縁・隙間・眼窩をまとめて強く平滑化し、眼球の丸みまで膨らませ、閉じ目の線を細い溝で刻む。"""
+    """目の領域(瞼の縁・隙間・眼窩)を面ごと取り去り、穴を眼球の丸みを持つ一枚の瞼で塞ぐ。
+    その上で上瞼を下瞼にわずかに被せ、段差の柔らかい影だけを閉じ目の線にする。"""
     import bmesh
     bm = bmesh.new()
     bm.from_mesh(mesh)
+    bm.verts.ensure_lookup_table()
     for side, (c, r) in eyes.items():
-        region = [v for v in bm.verts if (v.co - c).length < r * 1.75 and v.co.y < c.y + r * 0.45]
-        for _ in range(14):
-            bmesh.ops.smooth_vert(bm, verts=region, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        for v in region:
-            d = v.co - c
-            if d.length < r * 1.07:
+        def inside(v):
+            return (v.co - c).length < r * 1.7 and v.co.y < c.y + r * 0.5
+        doomed = [f for f in bm.faces if all(inside(v) for v in f.verts)]
+        bmesh.ops.delete(bm, geom=doomed, context="FACES")
+        loose = [v for v in bm.verts if not v.link_faces and inside(v)]
+        bmesh.ops.delete(bm, geom=loose, context="VERTS")
+        rim = [v for v in bm.verts if v.is_boundary and (v.co - c).length < r * 2.2]
+        rim_edges = list({e for v in rim for e in v.link_edges if e.is_boundary})
+        # 穴の縁のジグザグ(瞼の内縁と外縁が交互に並ぶ)を縁に沿って均す
+        for _ in range(10):
+            moves = {}
+            for v in rim:
+                nbrs = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+                if len(nbrs) >= 2:
+                    moves[v] = (v.co * 0.4 + sum((n.co for n in nbrs), Vector()) * 0.3)
+            for v, co in moves.items():
+                v.co = co
+        filled = bmesh.ops.holes_fill(bm, edges=rim_edges, sides=0)["faces"]
+        tri = bmesh.ops.triangulate(bm, faces=filled)["faces"]
+        inner_edges = list({e for f in tri for e in f.edges if not e.is_boundary and all(fe in tri for fe in e.link_faces)})
+        res = bmesh.ops.subdivide_edges(bm, edges=inner_edges, cuts=4, use_grid_fill=True)
+        patch = {v for f in tri if f.is_valid for v in f.verts}
+        patch |= {g for g in res["geom_inner"] if isinstance(g, bmesh.types.BMVert)}
+        patch |= {g for g in res["geom_split"] if isinstance(g, bmesh.types.BMVert)}
+        patch = [v for v in patch if v.is_valid and v not in rim]
+        region = [v for v in bm.verts if v.is_valid and (v.co - c).length < r * 2.1]
+        # 球面へ投影 → 均す、を繰り返して、縁となじんだ滑らかな瞼の面にする
+        for k in range(6):
+            for v in patch:
+                d = v.co - c
                 v.co = c + d.normalized() * (r * 1.07)
-        for _ in range(4):
+            for _ in range(4):
+                bmesh.ops.smooth_vert(bm, verts=patch, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+            for _ in range(2):
+                bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        for _ in range(8):
             bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        # 閉じ目の線: 目頭から目尻へ、端でわずかに下がる弧に沿って細い溝
+        # 閉じ目: 上瞼を下瞼にわずかに被せて段差(柔らかい影)だけを作る
         zc = c.z - 0.002
         for v in region:
             t = (v.co.x - c.x) / (r * 1.25)
             if abs(t) > 1.0:
                 continue
             line = zc - 0.003 * t * t
-            w = max(0.0, 1.0 - abs(v.co.z - line) / 0.0028)
-            if w > 0:
-                v.co += (c - v.co).normalized() * (0.0016 * w)
-        log("  eye", side, "lid region verts", len(region))
+            h = v.co.z - line
+            if h > 0:
+                w = 1.0 if h < 0.004 else max(0.0, 1.0 - (h - 0.004) / 0.010)
+                v.co += (v.co - c).normalized() * (0.002 * w * (1.0 - abs(t) ** 3))
+        log("  eye", side, "removed faces", len(doomed), "patch verts", len(patch), "region", len(region))
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
@@ -405,7 +435,7 @@ def place_rahotsu(body, mesh, scalp_idx, apex):
 
 
 # ---------------------------------------------------------------- 陰影(くぼみを暗く)
-def cavity_colors(obj, strength, floor=0.45):
+def cavity_colors(obj, strength, floor=0.45, protect=()):
     """頂点色でくぼみを暗くし、金属の面でも輪郭が読めるようにする。"""
     import bmesh
     me = obj.data
@@ -421,7 +451,11 @@ def cavity_colors(obj, strength, floor=0.45):
         avg = sum((n.co for n in nbrs), Vector()) / len(nbrs)
         edge = sum(((n.co - v.co).length for n in nbrs)) / len(nbrs)
         c = (avg - v.co).dot(v.normal) / max(edge, 1e-6)   # >0 でくぼみ
-        values.append(max(floor, 1.0 - max(0.0, c) * strength))
+        k = strength
+        for pc, pr in protect:
+            if (v.co - pc).length < pr:
+                k = strength * 0.25
+        values.append(max(floor, 1.0 - max(0.0, c) * k))
     bm.free()
     attr = me.color_attributes.new("Color", "FLOAT_COLOR", "POINT")
     for i, val in enumerate(values):
@@ -709,7 +743,8 @@ def build(stage, matte=False):
             obj.data.materials.append(mat)
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
-            cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4)
+            cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4,
+                          protect=[(c, r * 2.0) for c, r in eyes.values()] if obj.name == "Amida_Body" else ())
     for obj in bpy.context.scene.objects:
         if obj.type != "MESH":
             continue
