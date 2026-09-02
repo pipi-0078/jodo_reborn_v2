@@ -24,7 +24,7 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 HAIR_COLOR = (0.012, 0.016, 0.03)  # 螺髪: 紺青がかった黒漆
-UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
+UPPER_LID_DEG = -34  # 上瞼ボーンの回転(閉じ目。深く重ねて合わせ目の影を出す)
 USHNISHA_HEIGHT = 0.03  # 肉髻(二段目)の高さ(m)
 USHNISHA_RADIUS = 0.052  # 肉髻の半径(m)
 USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、m)
@@ -35,6 +35,7 @@ SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、
 SIDEBURN_TIP_R = 0.012  # もみあげの先端の丸み(半径、m)
 SIDEBURN_TOP_W = 0.036  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
+EYE_LINE_R = 0.0011  # 目の合わせ目の線の太さ(半径、m)
 RIM_RADIUS = 0.0022  # 生え際の縁取りの線の太さ(半径、m)
 RIM_SMOOTH = 8  # 縁取りの曲線をならす回数
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
@@ -214,7 +215,7 @@ def close_eyes_with_rig(arm, human):
         lo_rest = lid_z(human, f"orbicularis04.{side}")[1]
         # 下瞼: 上がる向きを試して決める
         best = (0.0, lo_rest)
-        for deg in (8, -8):
+        for deg in (11, -11):
             lower.rotation_euler.x = math.radians(deg)
             bpy.context.view_layer.update()
             top = lid_z(human, f"orbicularis04.{side}")[1]
@@ -580,6 +581,7 @@ def add_head_features(body, mesh, eyes):
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
     created.append(hairline_rim(body, mesh, hair_verts))
+    created.append(eye_lines(body, mesh))
     return created, hair_verts
 
 
@@ -864,6 +866,69 @@ def hairline_rim(body, mesh, hair_verts):
     return obj
 
 
+
+def eye_lines(body, mesh):
+    """閉じた目の合わせ目に沿って、細い暗い線(管)を敷いて目の縁をはっきりさせる。
+    上瞼ボーンに強く付く頂点のうち、横位置ごとの最下点をたどって曲線にする。"""
+    import bmesh
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    out = bmesh.new()
+    for side in ("L", "R"):
+        gi = body.vertex_groups[f"orbicularis03.{side}"].index
+        pts = [v.co.copy() for v in mesh.vertices if any(g.group == gi and g.weight > 0.4 for g in v.groups)]
+        if len(pts) < 6:
+            continue
+        xs = [p.x for p in pts]
+        x0, x1 = min(xs), max(xs)
+        nb = 14
+        line = []
+        for b in range(nb):
+            lo = x0 + (x1 - x0) * b / nb
+            hi = x0 + (x1 - x0) * (b + 1) / nb
+            cell = [p for p in pts if lo <= p.x < hi]
+            if cell:
+                line.append(min(cell, key=lambda p: p.z))
+        # ならして肌へ投影
+        for _ in range(3):
+            line = [line[0]] + [(line[i - 1] + line[i] * 2 + line[i + 1]) / 4 for i in range(1, len(line) - 1)] + [line[-1]]
+        proj, nrm = [], []
+        for q in line:
+            ok, loc, nr, _ = body.closest_point_on_mesh(q, depsgraph=depsgraph)
+            proj.append(loc.copy() if ok else q)
+            nrm.append(nr.copy() if ok else Vector((0, -1, 0)))
+        n = len(proj)
+        segs = 6
+        rings = []
+        for i in range(n):
+            t = (proj[min(i + 1, n - 1)] - proj[max(i - 1, 0)]).normalized()
+            up = nrm[i]
+            sd = t.cross(up).normalized()
+            up = sd.cross(t).normalized()
+            taper = 1.0 - (abs(i - (n - 1) / 2) / ((n - 1) / 2)) ** 3      # 目頭・目尻で細く
+            r = EYE_LINE_R * (0.35 + 0.65 * taper)
+            center = proj[i] - up * (r * 0.4)                             # 半分ほど肌に埋める(彫った線)
+            ring = [out.verts.new(center + sd * (r * math.cos(2 * math.pi * k / segs)) + up * (r * math.sin(2 * math.pi * k / segs)))
+                    for k in range(segs)]
+            rings.append(ring)
+        for i in range(n - 1):
+            for k in range(segs):
+                try:
+                    out.faces.new((rings[i][k], rings[i + 1][k], rings[i + 1][(k + 1) % segs], rings[i][(k + 1) % segs]))
+                except ValueError:
+                    pass
+    bmesh.ops.recalc_face_normals(out, faces=out.faces)
+    me = bpy.data.meshes.new("Amida_EyeLines")
+    out.to_mesh(me)
+    out.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new("Amida_EyeLines", me)
+    bpy.context.collection.objects.link(obj)
+    log("  eye lines verts", len(me.vertices))
+    return obj
+
+
 # ---------------------------------------------------------------- 陰影(くぼみを暗く)
 def cavity_colors(obj, strength, floor=0.45, protect=()):
     """頂点色でくぼみを暗くし、金属の面でも輪郭が読めるようにする。"""
@@ -884,7 +949,7 @@ def cavity_colors(obj, strength, floor=0.45, protect=()):
         k = strength
         for pc, pr in protect:
             if (v.co - pc).length < pr:
-                k = strength * 0.25
+                k = strength * 0.8
         values.append(max(floor, 1.0 - max(0.0, c) * k))
     bm.free()
     attr = me.color_attributes.new("Color", "FLOAT_COLOR", "POINT")
@@ -1180,9 +1245,20 @@ def build(stage, matte=False):
     for poly in baked.polygons:
         if all(i in hair_verts for i in poly.vertices):
             poly.material_index = 1
+    line_mat = bpy.data.materials.new("AmidaLine")
+    line_mat.use_nodes = True
+    lb = line_mat.node_tree.nodes["Principled BSDF"]
+    lb.inputs["Base Color"].default_value = (0.20, 0.13, 0.05, 1)
+    lb.inputs["Metallic"].default_value = 0.5
+    lb.inputs["Roughness"].default_value = 0.6
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and not obj.data.materials:
-            obj.data.materials.append(hair_mat if obj.name.startswith(("Amida_Hair", "Amida_SideburnTip")) else mat)
+            if obj.name.startswith(("Amida_Hair", "Amida_SideburnTip")):
+                obj.data.materials.append(hair_mat)
+            elif obj.name == "Amida_EyeLines":
+                obj.data.materials.append(line_mat)
+            else:
+                obj.data.materials.append(mat)
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
             cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4,
