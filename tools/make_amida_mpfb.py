@@ -247,13 +247,34 @@ def soften_face(body, mesh, factor=0.5, iterations=3):
     log("  softened face verts", len(verts))
 
 
+def close_eyes(body, mesh, eyes):
+    """瞼の隙間を眼球面で埋めて閉じた目にする(眼球は置かない)。
+    眼球の半径より内側にある頂点(瞼の内縁・眼窩)を球面まで押し出し、周囲をなじませる。"""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    for side, (c, r) in eyes.items():
+        pushed = []
+        for v in bm.verts:
+            d = v.co - c
+            if d.length < r * 1.04 and v.co.y < c.y + r * 0.2:
+                v.co = c + d.normalized() * (r * 1.04)
+                pushed.append(v)
+        around = [v for v in bm.verts if (v.co - c).length < r * 2.2]
+        for _ in range(3):
+            bmesh.ops.smooth_vert(bm, verts=around, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        log("  eye", side, "closed: pushed", len(pushed), "smoothed", len(around))
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+
+
 def add_head_features(body, mesh, eyes):
-    """目(半眼の奥を埋める球)・白毫・肉髻・螺髪。"""
+    """閉じた目・白毫・肉髻・螺髪。"""
     soften_face(body, mesh)
     stretch_earlobes(body, mesh)
+    close_eyes(body, mesh, eyes)
     created = []
-    for side, (c, r) in eyes.items():
-        created.append(add_sphere(f"Amida_Eye_{side.upper()}", c + Vector((0, 0.004, 0)), r * 0.95))
     # 白毫: 眉間。両目の中点から前へ出し、眉間の肌の上に半分埋める
     mid = (eyes["l"][0] + eyes["r"][0]) / 2
     front = min(v.co.y for v in mesh.vertices if abs(v.co.x) < 0.01 and abs(v.co.z - (mid.z + 0.03)) < 0.008)
