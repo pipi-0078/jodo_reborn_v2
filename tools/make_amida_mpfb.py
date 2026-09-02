@@ -292,21 +292,69 @@ def close_eyes(body, mesh, eyes):
                 bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
         for _ in range(8):
             bmesh.ops.smooth_vert(bm, verts=region, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        # 閉じ目: 上瞼を下瞼にわずかに被せて段差(柔らかい影)だけを作る
-        zc = c.z - 0.002
-        for v in region:
-            t = (v.co.x - c.x) / (r * 1.25)
-            if abs(t) > 1.0:
-                continue
-            line = zc - 0.003 * t * t
-            h = v.co.z - line
-            if h > 0:
-                w = 1.0 if h < 0.004 else max(0.0, 1.0 - (h - 0.004) / 0.010)
-                v.co += (v.co - c).normalized() * (0.002 * w * (1.0 - abs(t) ** 3))
         log("  eye", side, "removed faces", len(doomed), "patch verts", len(patch), "region", len(region))
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
+
+
+
+def build_eyelids(body, eyes):
+    """閉じた瞼を、顔の面に沿わせた構造化パッチとして作る。
+    上瞼と下瞼は一本の線(瞼の合わせ目)で接し、上瞼の縁だけがわずかに厚く、下瞼に被さる。"""
+    import bmesh
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    bm = bmesh.new()
+    for side, (c, r) in eyes.items():
+        a = r * 1.45                      # 目の半幅
+        b_up, b_lo = r * 0.62, r * 0.42   # 上瞼・下瞼の高さ
+        nx, nv = 48, 7
+
+        def surface(x, z):
+            origin = Vector((c.x + x, c.y - r * 4, c.z + z))
+            hit, loc, nrm, _ = body.ray_cast(origin, Vector((0, 1, 0)), distance=r * 8, depsgraph=depsgraph)
+            return (loc, nrm) if hit else (Vector((c.x + x, c.y - r, c.z + z)), Vector((0, -1, 0)))
+
+        for upper in (True, False):
+            b = b_up if upper else b_lo
+            grid = []
+            for i in range(nx + 1):
+                t = -1 + 2 * i / nx
+                x = a * t
+                axis = -0.005 * r / 0.015 * t * t * 0.6      # 合わせ目の線: 目尻へ向かってわずかに下がる
+                span = b * (1 - t * t) ** (0.75 if upper else 0.85)
+                row = []
+                for j in range(nv + 1):
+                    v = j / nv
+                    z = axis + (span * v if upper else -span * v)
+                    loc, nrm = surface(x, z)
+                    edge_w = (1 - abs(t) ** 4)
+                    if upper:
+                        h = (0.0022 * (1 - v) ** 0.5 + 0.0008) * edge_w * (1 - v ** 6)
+                    else:
+                        h = (0.0006 * (1 - v) ** 0.5 + 0.0004) * edge_w * (1 - v ** 6)
+                    row.append(bm.verts.new(loc + nrm * h))
+                grid.append(row)
+            for i in range(nx):
+                for j in range(nv):
+                    quad = (grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1])
+                    if len(set(quad)) == 4:
+                        try:
+                            bm.faces.new(quad if upper else tuple(reversed(quad)))
+                        except ValueError:
+                            pass
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("Amida_Eyelids")
+    bm.to_mesh(me)
+    bm.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new("Amida_Eyelids", me)
+    bpy.context.collection.objects.link(obj)
+    log("  eyelids verts", len(me.vertices))
+    return obj
 
 
 def add_head_features(body, mesh, eyes):
@@ -314,7 +362,7 @@ def add_head_features(body, mesh, eyes):
     soften_face(body, mesh)
     stretch_earlobes(body, mesh)
     close_eyes(body, mesh, eyes)
-    created = []
+    created = [build_eyelids(body, eyes)]
     # 白毫: 眉間。両目の中点から前へ出し、眉間の肌の上に半分埋める
     mid = (eyes["l"][0] + eyes["r"][0]) / 2
     front = min(v.co.y for v in mesh.vertices if abs(v.co.x) < 0.01 and abs(v.co.z - (mid.z + 0.03)) < 0.008)
