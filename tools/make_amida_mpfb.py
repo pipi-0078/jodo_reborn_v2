@@ -970,7 +970,13 @@ def cavity_colors(obj, strength, floor=0.45, protect=()):
 
 # ---------------------------------------------------------------- 衣
 NECK_Z = 0.60          # 衣の上端(首の付け根)。接地後の座標
-ROBE_OFFSET = 0.018    # 体との隙間
+ROBE_OFFSET = 0.015    # 体との隙間(布の厚みぶん)
+ROBE_UPPER_Z0 = 0.30   # 上半身の衣(体の面をふくらませる)の下端
+ROBE_LOWER_Z1 = 0.42   # 下半身の衣(凸包を落とす)に含める頂点の上端(前腕の下から下)
+ROBE_DRAPE_LIMIT = 0.05  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
+ROBE_VOXEL = 0.006     # 一体化するボクセルの大きさ
+ROBE_HEM_R = 0.004     # 衿・袖口の縁(ヘム)の太さ(半径)
+FOLD_AMP = 0.0026      # 衣文の高さ
 
 
 def hand_group_indices(body):
@@ -1034,79 +1040,262 @@ def apply_modifier(obj, mod):
     bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
+def arm_group_indices(body, prefixes=("wrist", "finger", "metacarpal")):
+    return [g.index for g in body.vertex_groups if g.name.split(".")[0].startswith(prefixes)]
+
+
+def weight_of(v, groups, threshold=0.3):
+    return any(g.group in groups and g.weight > threshold for g in v.groups)
+
+
+def robe_upper(body, mesh):
+    """上半身(肩・胸・背・腕)の衣: 体の面を複製して外へ 1.5cm ふくらませ、なめらかにする。
+    首から上と手は含めない。肌の細部(乳首・へそ等)は平滑化で消す。"""
+    import bmesh
+    hands = set(arm_group_indices(body))
+    keep = set()
+    for v in mesh.vertices:
+        if v.co.z > ROBE_UPPER_Z0 and v.co.z < NECK_Z and not weight_of(v, hands):
+            keep.add(v.index)
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.verts.ensure_lookup_table()
+    doomed = [f for f in bm.faces if not all(v.index in keep for v in f.verts)]
+    bmesh.ops.delete(bm, geom=doomed, context="FACES")
+    loose = [v for v in bm.verts if not v.link_faces]
+    bmesh.ops.delete(bm, geom=loose, context="VERTS")
+    def rng(tag):
+        zs = [v.co.z for v in bm.verts]
+        ys = [v.co.y for v in bm.verts]
+        log(f"    upper {tag}: n={len(bm.verts)} y {min(ys):.3f}..{max(ys):.3f} z {min(zs):.3f}..{max(zs):.3f}")
+    rng("after delete")
+    for _ in range(12):
+        bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    rng("after smooth")
+    bm.normal_update()
+    for v in bm.verts:
+        v.co += v.normal * ROBE_OFFSET
+    rng("after offset")
+    me = bpy.data.meshes.new("robe_upper")
+    bm.to_mesh(me)
+    bm.free()
+    obj = bpy.data.objects.new("robe_upper", me)
+    bpy.context.collection.objects.link(obj)
+    # 厚みを付けて閉じた殻に(ボクセル再メッシュで結合するため)。モディファイアの方が尖りが出ない
+    solid = obj.modifiers.new("solid", "SOLIDIFY")
+    solid.thickness = ROBE_OFFSET * 1.6
+    solid.offset = -1.0
+    solid.use_even_offset = False
+    solid.use_quality_normals = True
+    apply_modifier(obj, solid)
+    return obj
+
+
+def robe_lower(body, mesh):
+    """下半身(組んだ脚・膝・前腕の下)の衣: 前腕から下の頂点の凸包を体へ落として、
+    膝の間や前腕の下に張る布(袖の垂れと膝前の衣)をつくる。"""
+    import bmesh
+    hands = set(arm_group_indices(body))
+    pts = [v.co.copy() for v in mesh.vertices if v.co.z < ROBE_LOWER_Z1 and not weight_of(v, hands)]
+    target_mesh = mesh.copy()
+    target = bpy.data.objects.new("robe_target", target_mesh)
+    bpy.context.collection.objects.link(target)
+    tb = bmesh.new()
+    tb.from_mesh(target_mesh)
+    doomed = [v for v in tb.verts if v.co.z > NECK_Z or weight_of(mesh.vertices[v.index], hands)]
+    bmesh.ops.delete(tb, geom=doomed, context="VERTS")
+    tb.to_mesh(target_mesh)
+    tb.free()
+
+    bm = bmesh.new()
+    for p in pts:
+        bm.verts.new(p)
+    bm.verts.ensure_lookup_table()
+    res = bmesh.ops.convex_hull(bm, input=bm.verts)
+    doomed = {g for g in res["geom_unused"] + res["geom_interior"] if isinstance(g, bmesh.types.BMVert)}
+    bmesh.ops.delete(bm, geom=list(doomed), context="VERTS")
+    me = bpy.data.meshes.new("robe_lower")
+    bm.to_mesh(me)
+    bm.free()
+    obj = bpy.data.objects.new("robe_lower", me)
+    bpy.context.collection.objects.link(obj)
+    sub = obj.modifiers.new("sub", "SUBSURF")
+    sub.subdivision_type = "SIMPLE"
+    sub.levels = 3
+    apply_modifier(obj, sub)
+    tri = obj.modifiers.new("tri", "TRIANGULATE")
+    apply_modifier(obj, tri)
+    grp = obj.vertex_groups.new(name="free")
+    grp.add([v.index for v in obj.data.vertices if v.co.z > 0.012], 1.0, "REPLACE")
+    m = obj.modifiers.new("proj", "SHRINKWRAP")
+    m.target = target
+    m.wrap_method = "PROJECT"
+    m.use_negative_direction = True
+    m.use_positive_direction = False
+    m.project_limit = ROBE_DRAPE_LIMIT
+    m.offset = ROBE_OFFSET
+    m.vertex_group = "free"
+    apply_modifier(obj, m)
+    for factor, it in ((0.5, 12), (0.4, 6)):
+        sm = obj.modifiers.new("smooth", "SMOOTH")
+        sm.factor = factor
+        sm.iterations = it
+        sm.vertex_group = "free"
+        apply_modifier(obj, sm)
+        w = obj.modifiers.new("wrap", "SHRINKWRAP")
+        w.target = target
+        w.wrap_method = "NEAREST_SURFACEPOINT"
+        w.wrap_mode = "OUTSIDE"
+        w.offset = ROBE_OFFSET
+        w.vertex_group = "free"
+        apply_modifier(obj, w)
+    for v in obj.data.vertices:
+        if v.co.z < 0.012:
+            v.co.z = 0.0
+    bpy.data.objects.remove(target, do_unlink=True)
+    return obj
+
+
+def robe_folds(robe):
+    """衣文(ひだ)。定朝様の浅く整った襞を、部位ごとの向きで法線方向の変位として刻む。"""
+    me = robe.data
+    me.calc_normals_split() if hasattr(me, "calc_normals_split") else None
+
+    def smoothstep(e0, e1, x):
+        t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))
+        return t * t * (3 - 2 * t)
+
+    def ridge(phase):
+        return (0.5 + 0.5 * math.sin(phase)) ** 1.3 - 0.4      # 山はやや締まり谷は広く、平均をほぼ 0 に
+
+    for v in me.vertices:
+        x, y, z = v.co.x, v.co.y, v.co.z
+        n = v.normal
+        front = smoothstep(0.0, -0.08, y)                        # 前面ほど 1
+        vary = 0.65 + 0.35 * math.sin(x * 23.0 + z * 17.0)       # 単調にならないよう強さを揺らす
+        d = 0.0
+        # 膝の前: 腹の下の一点から広がる、ゆるい弧の襞(3〜4本)
+        lap = smoothstep(0.34, 0.24, z) * front
+        if lap > 0:
+            r = math.hypot(x * 0.9, (z + 0.12))
+            d += FOLD_AMP * lap * vary * ridge(2 * math.pi * r / 0.085)
+        # 胸〜腹: 左肩から右腰へ流れる、まばらな斜めの襞
+        torso = smoothstep(0.24, 0.32, z) * smoothstep(0.56, 0.46, z) * front
+        if torso > 0:
+            d += FOLD_AMP * 0.7 * torso * vary * ridge(2 * math.pi * (0.5 * x + 0.87 * z) / 0.09)
+        # 腕・袖: 腕に沿って巻く襞
+        arm = smoothstep(0.17, 0.25, abs(x)) * smoothstep(0.60, 0.54, z) * smoothstep(0.26, 0.34, z)
+        if arm > 0:
+            d += FOLD_AMP * 0.7 * arm * vary * ridge(2 * math.pi * (z + 0.25 * abs(x)) / 0.07)
+        if d != 0.0:
+            v.co += n * d
+    me.update()
+
+
+def rim_tubes(name, obj, radius, min_len=12, depsgraph=None):
+    """メッシュの境界(穴・切り口)の輪ごとに、ならした曲線へ管を掃引して縁(ヘム)にする。"""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    adj = {}
+    for e in bm.edges:
+        if e.is_boundary:
+            a, b = e.verts[0].index, e.verts[1].index
+            adj.setdefault(a, []).append(b)
+            adj.setdefault(b, []).append(a)
+    loops, seen = [], set()
+    for start in adj:
+        if start in seen:
+            continue
+        loop, prev, cur = [start], None, start
+        seen.add(start)
+        while True:
+            nxt = [n for n in adj.get(cur, []) if n != prev and n not in seen]
+            if not nxt:
+                break
+            prev, cur = cur, nxt[0]
+            loop.append(cur)
+            seen.add(cur)
+        if len(loop) >= min_len:
+            loops.append([bm.verts[i].co.copy() for i in loop])
+    bm.free()
+    out = bmesh.new()
+    for pts in loops:
+        lo = [round(min(p[i] for p in pts), 3) for i in range(3)]
+        hi = [round(max(p[i] for p in pts), 3) for i in range(3)]
+        log(f"    loop n={len(pts)} min {lo} max {hi}")
+        n = len(pts)
+        for _ in range(6):
+            pts = [(pts[(i - 1) % n] + pts[i] * 2 + pts[(i + 1) % n]) / 4 for i in range(n)]
+        segs = 8
+        rings = []
+        for i in range(n):
+            t = (pts[(i + 1) % n] - pts[(i - 1) % n]).normalized()
+            up = Vector((0, -1, 0)) if abs(t.y) < 0.9 else Vector((0, 0, 1))
+            side = t.cross(up).normalized()
+            up = side.cross(t).normalized()
+            rings.append([out.verts.new(pts[i] + side * (radius * math.cos(2 * math.pi * k / segs)) + up * (radius * math.sin(2 * math.pi * k / segs)))
+                          for k in range(segs)])
+        for i in range(n):
+            r0, r1 = rings[i], rings[(i + 1) % n]
+            for k in range(segs):
+                try:
+                    out.faces.new((r0[k], r1[k], r1[(k + 1) % segs], r0[(k + 1) % segs]))
+                except ValueError:
+                    pass
+    bmesh.ops.recalc_face_normals(out, faces=out.faces)
+    me = bpy.data.meshes.new(name)
+    out.to_mesh(me)
+    out.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    hem = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(hem)
+    log(f"  {name}: loops", len(loops))
+    return hem
+
+
 def build_robe(body, mesh):
-    """通肩の衣。粗い筒を体に沿わせ、緩めて、体の外側に保つ、を繰り返して布の張りを出す。"""
-    target, hand_points = robe_target(body, mesh)
-    robe = hull_mesh("Amida_Robe", target, levels=3)
-    log("  hull verts", len(robe.data.vertices))
+    """通肩の衣。上半身は体の面をふくらませた殻、下半身は凸包を落とした布。
+    二つをボクセルで一体化し、衣文を刻み、衿の V 字と袖口を開けて縁(ヘム)を付ける。"""
+    import bmesh
+    hands = set(arm_group_indices(body))
+    hand_points = [v.co.copy() for v in mesh.vertices if weight_of(v, hands)]
+    upper = robe_upper(body, mesh)
+    lower = robe_lower(body, mesh)
+    for o in (upper, lower):
+        pts = [v.co for v in o.data.vertices]
+        log(f"  {o.name}: verts {len(pts)} y {min(p.y for p in pts):.3f}..{max(p.y for p in pts):.3f} z {min(p.z for p in pts):.3f}..{max(p.z for p in pts):.3f}")
     bpy.ops.object.select_all(action="DESELECT")
-    robe.select_set(True)
-    bpy.context.view_layer.objects.active = robe
-    # 底面(接地)は動かさない
-    pinned = robe.vertex_groups.new(name="free")
-    free = [v.index for v in robe.data.vertices if v.co.z > 0.012]
-    pinned.add(free, 1.0, "REPLACE")
-
-    def project(offset, limit):
-        m = robe.modifiers.new("proj", "SHRINKWRAP")
-        m.target = target
-        m.wrap_method = "PROJECT"
-        m.use_negative_direction = True
-        m.use_positive_direction = False
-        m.project_limit = limit
-        m.offset = offset
-        m.vertex_group = "free"
-        apply_modifier(robe, m)
-
-    def wrap(offset, mode):
-        m = robe.modifiers.new("wrap", "SHRINKWRAP")
-        m.target = target
-        m.wrap_method = "NEAREST_SURFACEPOINT"
-        m.wrap_mode = mode
-        m.offset = offset
-        if "free" in robe.vertex_groups:
-            m.vertex_group = "free"
-        apply_modifier(robe, m)
-
-    def smooth(factor, iterations):
-        m = robe.modifiers.new("smooth", "SMOOTH")
-        m.factor = factor
-        m.iterations = iterations
-        m.vertex_group = "free"
-        apply_modifier(robe, m)
-
-    # 凸包から法線の内向きに布を落とす(届かないくぼみは張ったまま残る)
-    project(ROBE_OFFSET, 0.055)
-    for factor, it in ((0.5, 16), (0.4, 8)):
-        smooth(factor, it)
-        wrap(ROBE_OFFSET, "OUTSIDE")
-    # 閉じた塊のうちにボクセルで貼り直し、面の粗密と細長い三角形をなくす
+    upper.select_set(True)
+    lower.select_set(True)
+    bpy.context.view_layer.objects.active = lower
+    bpy.ops.object.join()
+    robe = bpy.context.active_object
+    robe.name = "Amida_Robe"
     rm = robe.modifiers.new("remesh", "REMESH")
     rm.mode = "VOXEL"
-    rm.voxel_size = 0.007
+    rm.voxel_size = ROBE_VOXEL
     rm.use_smooth_shade = True
     apply_modifier(robe, rm)
-    robe.vertex_groups.clear()
-    sm = robe.modifiers.new("smooth2", "SMOOTH")
+    sm = robe.modifiers.new("smooth", "SMOOTH")
     sm.factor = 0.5
     sm.iterations = 4
     apply_modifier(robe, sm)
-    wrap(ROBE_OFFSET, "OUTSIDE")
     dec = robe.modifiers.new("dec", "DECIMATE")
-    dec.ratio = max(0.05, min(1.0, 36000 / max(1, len(robe.data.polygons))))
+    dec.ratio = max(0.05, min(1.0, 90000 / max(1, len(robe.data.polygons))))
     apply_modifier(robe, dec)
-    log("  remeshed+decimated robe verts", len(robe.data.vertices))
-    # 底面を接地面へ揃える(座面に載る)
-    for v in robe.data.vertices:
-        if v.co.z < 0.012:
-            v.co.z = 0.0
-    log("  robe z max", round(max(v.co.z for v in robe.data.vertices), 3))
-    # 衿: 首まわりと胸元の V 字を開ける
-    import bmesh
+    rb = [robe.matrix_world @ v.co for v in robe.data.vertices]
+    log("  robe merged verts", len(robe.data.vertices), "bbox y", round(min(p.y for p in rb), 3), round(max(p.y for p in rb), 3), "z", round(min(p.z for p in rb), 3), round(max(p.z for p in rb), 3))
+    robe_folds(robe)
+
+    # 衿の V 字と袖口(手に被さる布)を開ける
     bm = bmesh.new()
     bm.from_mesh(robe.data)
+
     def collar_z(x):
-        return min(NECK_Z - 0.005, NECK_Z - 0.20 + abs(x) * 1.35)   # 胸元の V
+        return min(NECK_Z - 0.005, NECK_Z - 0.13 + abs(x) * 1.6)
 
     def above(v):
         front = v.co.y < -0.05
@@ -1119,10 +1308,9 @@ def build_robe(body, mesh):
 
     def over_hand(v):
         co, _, dist = kd.find(v.co)
-        return dist < ROBE_OFFSET + 0.016 and v.co.z > co.z - 0.006   # 手の上に被さる布だけ(袖口)
+        return dist < ROBE_OFFSET + 0.016 and v.co.z > co.z - 0.006
     doomed = [v for v in bm.verts if above(v) or over_hand(v)]
     bmesh.ops.delete(bm, geom=doomed, context="VERTS")
-    # 切り口をならす(縁の頂点を縁に沿った隣と平均)
     for _ in range(12):
         moves = {}
         for v in bm.verts:
@@ -1133,20 +1321,16 @@ def build_robe(body, mesh):
                 moves[v] = (v.co + sum((n.co for n in nbrs), Vector())) / (len(nbrs) + 1)
         for v, co in moves.items():
             v.co = co
-    # 残った縁の頂点を衿の線の上へ持ち上げて、縁を滑らかに
-    for v in bm.verts:
-        if v.is_boundary and v.co.z > 0.1:
-            limit = collar_z(v.co.x) if v.co.y < -0.05 else NECK_Z - 0.005
-            v.co.z = min(limit, v.co.z + 0.02)
+    # 内側(体側)の面は要らない: 体の中に埋まる面を落として一枚の布にする
     bm.to_mesh(robe.data)
     bm.free()
+    hem = rim_tubes("Amida_RobeHem", robe, ROBE_HEM_R)
     solid = robe.modifiers.new("solid", "SOLIDIFY")
-    solid.thickness = 0.012
-    solid.offset = 1.0
+    solid.thickness = 0.008
+    solid.offset = -1.0
     apply_modifier(robe, solid)
     for poly in robe.data.polygons:
         poly.use_smooth = True
-    bpy.data.objects.remove(target, do_unlink=True)
     lap = max((v.co.z for v in robe.data.vertices if abs(v.co.x) < 0.12 and -0.31 < v.co.y < -0.17 and v.co.z < 0.30), default=0)
     log("  robe verts", len(robe.data.vertices), "polys", len(robe.data.polygons), "robe lap z", round(lap, 3))
     return robe, lap
