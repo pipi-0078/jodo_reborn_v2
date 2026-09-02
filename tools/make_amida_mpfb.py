@@ -499,7 +499,7 @@ def add_head_features(body, mesh, eyes):
     z_top = hairline_z(face_half)                            # こめかみで額の弧と接続する高さ
     z_tip = ear_top - SIDEBURN_DROP                          # もみあげの尖った先
     ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
-    z_mid = ear_top - 0.026                                  # ここから下が丸い先端(耳の穴の下あたり)
+    z_mid = ear_top - 0.02                                   # ここから下が先端へ細くなる(耳の穴のあたり)
     w_top = SIDEBURN_TOP_W                                   # こめかみの生え際: 耳の前端からこれだけ前
     w_mid = SIDEBURN_WIDTH                                   # ふくらみの最大幅
 
@@ -514,7 +514,7 @@ def add_head_features(body, mesh, eyes):
         if z <= z_tip:
             return 0.0
         u = (z_mid - z) / (z_mid - z_tip)
-        return w_mid * (1 - u ** 2.2) ** 0.6
+        return w_mid * (1 - u)                             # 先端へ向かって真っ直ぐ細くなる
 
     def side_hair(v):
         if abs(v.co.x) < face_half or v.co.z <= z_tip:
