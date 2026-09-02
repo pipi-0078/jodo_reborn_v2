@@ -153,7 +153,7 @@ def pose_lotus_legs(arm, side, lift_deg):
 
 
 def pose_arms_dhyana(arm, lap_z):
-    """阿弥陀定印: 腹の前で両手を重ね、人差し指を曲げて親指と輪をつくる。"""
+    """法界定印(禅定印): 膝の上で右手の上に左手を重ね、四指を伸ばし、両の親指の先を軽く合わせる。"""
     for side, s in (("L", 1), ("R", -1)):
         ua = f"upperarm01.{side}"
         rotate_bone(arm, ua, (0, 1, 0), s * 32)      # 腕を体側へ下ろす
@@ -175,20 +175,26 @@ def pose_arms_dhyana(arm, lap_z):
         aim_bone(arm, f"wrist.{side}", (-s * 1.0, -0.12, 0.0))
         best = roll_to_palm_up(arm, side, f"wrist.{side}", bone_dir(arm, f"wrist.{side}"), wrist.head.copy())
         log(f"  palm {side}: wrist roll {best[0]} deg, normal.z {best[1]:.2f}, fingers", [round(v, 2) for v in bone_dir(arm, f"finger3-1.{side}")])
-        # 指: 人差し指を丸め、親指を寄せて輪に。他の指はゆるく伸ばす
-        for joint, deg in (("finger2-1", 42), ("finger2-2", 62), ("finger2-3", 45)):
-            pb = arm.pose.bones[f"{joint}.{side}"]
-            pb.rotation_mode = "XYZ"
-            pb.rotation_euler.x = math.radians(deg)
-        for joint, deg in (("finger1-1", 30), ("finger1-2", 36), ("finger1-3", 26)):
-            pb = arm.pose.bones[f"{joint}.{side}"]
-            pb.rotation_mode = "XYZ"
-            pb.rotation_euler.x = math.radians(deg)
-        for f in ("finger3", "finger4", "finger5"):
-            for j, deg in (("1", 4), ("2", 6), ("3", 4)):
+        # 指: 法界定印(禅定印)。四指はまっすぐ伸ばして重ね、親指は後で二本の先を合わせる
+        for f in ("finger2", "finger3", "finger4", "finger5"):
+            for j, deg in (("1", 2), ("2", 3), ("3", 2)):
                 pb = arm.pose.bones[f"{f}-{j}.{side}"]
                 pb.rotation_mode = "XYZ"
                 pb.rotation_euler.x = math.radians(deg)
+    # 親指: 左右の親指を掌の上で軽く合わせ、両手で楕円をつくる。
+    # 合わせる点は、重ねた手の中央の少し上
+    bpy.context.view_layer.update()
+    wl, wr = arm.pose.bones["wrist.L"].head, arm.pose.bones["wrist.R"].head
+    meet = Vector((0.0, (wl.y + wr.y) / 2 + 0.025, max(wl.z, wr.z) + 0.03))
+    for side in ("L", "R"):
+        for joint in ("finger1-1", "finger1-2", "finger1-3"):
+            pb = arm.pose.bones[f"{joint}.{side}"]
+            bpy.context.view_layer.update()
+            aim_bone(arm, f"{joint}.{side}", meet - pb.head)
+    bpy.context.view_layer.update()
+    for side in ("L", "R"):
+        tip = arm.pose.bones[f"finger1-3.{side}"].tail
+        log(f"  thumb {side} tip", [round(v, 3) for v in tip], "meet", [round(v, 3) for v in meet])
     bpy.context.view_layer.update()
 
 
@@ -1047,8 +1053,8 @@ def inner_robe_edge(body, mesh):
     pts = []
     for i in range(29):
         t = i / 28
-        x = 0.10 - 0.22 * t
-        z = 0.575 - 0.115 * t - 0.02 * math.sin(math.pi * t)     # わずかに垂れる弧
+        x = 0.10 - 0.24 * t
+        z = 0.575 - 0.10 * t - 0.02 * math.sin(math.pi * t)      # わずかに垂れる弧(手の上で止める)
         pts.append(Vector((x, -0.3, z)))
     return tube_along("Amida_InnerEdge", body, pts, 0.0035, depsgraph)
 
@@ -1462,8 +1468,8 @@ def build_robe(body, mesh):
     pts = []
     for i in range(41):
         t = i / 40
-        x = 0.16 - 0.36 * t
-        z = 0.60 - 0.24 * t - 0.03 * math.sin(math.pi * t)
+        x = 0.16 - 0.34 * t
+        z = 0.60 - 0.17 * t - 0.025 * math.sin(math.pi * t)     # 右脇の下(手の上)で止める
         pts.append(Vector((x, -0.35, z)))
     tube_along("Amida_OuterEdge", robe, pts, ROBE_HEM_R * 1.15, dg)
     solid = robe.modifiers.new("solid", "SOLIDIFY")
