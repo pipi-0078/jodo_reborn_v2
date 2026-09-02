@@ -26,7 +26,8 @@ GOLD = (0.85, 0.62, 0.20)
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
 USHNISHA_HEIGHT = 0.035  # 肉髻の盛り上がり(m)
 HAIRLINE_HEIGHT = 0.03
-SIDEBURN_DROP = 0.035  # 耳の上端からもみあげの下端までの距離(m)  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
+SIDEBURN_DROP = 0.03  # 耳の上端からもみあげの下端までの距離(m)
+SIDEBURN_WIDTH = 0.014  # もみあげの幅(耳の前端からの距離、m)  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
 BEAD_RADIUS = 0.0048  # 螺髪の粒(身長1.57m基準)
 BEAD_SPACING = 0.0086
 
@@ -480,10 +481,11 @@ def add_head_features(body, mesh, eyes):
     hair_z0 = brow_z + HAIRLINE_HEIGHT                     # 中央の生え際の高さ
     head_half = max(abs(v.co.x) for v in mesh.vertices if brow_z < v.co.z < top.z)
     def hairline_z(x):
-        return hair_z0 - 0.22 * (x * x) / max(head_half, 1e-3)   # 両側(こめかみ)へ向かって下がる弧
+        return hair_z0 - 0.38 * (x * x) / max(head_half, 1e-3)   # 両側(こめかみ)へ向かって下がる弧
     front_y = ear_y - 0.01                                  # 耳より前を「額側」とみなす
     sideburn_z = ear_top - SIDEBURN_DROP                    # もみあげの下端
-    face_half = 0.05                                        # ここより外はこめかみ〜もみあげ
+    ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
+    burn_y = ear_front_y - SIDEBURN_WIDTH                   # もみあげはここから耳まで(細い帯)
     candidates = set(hair_verts)
     for v in mesh.vertices:
         if v.co.y < front_y and v.co.z < top.z and v.co.z > min(hairline_z(v.co.x), sideburn_z):
@@ -493,12 +495,11 @@ def add_head_features(body, mesh, eyes):
         v = mesh.vertices[i]
         if any((v.co - q).length < 0.008 for q in ear_pts):
             continue                                        # 耳の周囲
-        if v.co.y < front_y and abs(v.co.x) < face_half and v.co.z < hairline_z(v.co.x):
-            continue                                        # 額: 生え際より下は肌
-        if v.co.y < front_y and abs(v.co.x) >= face_half and v.co.z < sideburn_z:
-            continue                                        # こめかみ〜もみあげ: 下端より下は肌
-        if v.co.y >= front_y and v.co.y < ear_y + 0.03 and v.co.z < sideburn_z and abs(v.co.x) > 0.04:
-            continue                                        # 耳の真上〜後ろ: もみあげの下端より下は肌
+        in_burn = v.co.y >= burn_y and abs(v.co.x) > 0.04   # 耳のすぐ前(もみあげ)〜耳の上・後ろ
+        if v.co.y < front_y and not in_burn and v.co.z < hairline_z(v.co.x):
+            continue                                        # 額〜こめかみ: 生え際の弧より下は肌
+        if in_burn and v.co.y < ear_y + 0.03 and v.co.z < sideburn_z:
+            continue                                        # もみあげ: 下端より下は肌
         hair_verts.add(i)
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
     # 頭皮の下地: 髪の領域の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
