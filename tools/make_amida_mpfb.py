@@ -1057,9 +1057,9 @@ def inner_robe_edge(body, mesh):
 NECK_Z = 0.60          # 衣の上端(首の付け根)。接地後の座標
 ROBE_OFFSET = 0.02     # 体との隙間(布の厚みぶん)
 ROBE_SMOOTH = 40       # 上半身の衣の平滑化の回数(体の細部を布の丸みに溶かす)
-ROBE_UPPER_Z0 = 0.30   # 上半身の衣(体の面をふくらませる)の下端
-ROBE_LOWER_Z1 = 0.42   # 下半身の衣(凸包を落とす)に含める頂点の上端(前腕の下から下)
-ROBE_DRAPE_LIMIT = 0.05  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
+ROBE_UPPER_Z0 = 0.20   # 上半身の衣(体の面をふくらませる)の下端(膝の上に載る前腕まで含む)
+ROBE_LOWER_Z1 = 0.30   # 下半身の衣(脚の凸包を落とす)に含める頂点の上端(腕は含めない)
+ROBE_DRAPE_LIMIT = 0.06  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
 ROBE_VOXEL = 0.006     # 一体化するボクセルの大きさ
 ROBE_HEM_R = 0.0055    # 衿・袖口の縁(ヘム)の太さ(半径)
 FOLD_AMP = 0.0038      # 衣文の高さ
@@ -1190,7 +1190,8 @@ def robe_lower(body, mesh):
     膝の間や前腕の下に張る布(袖の垂れと膝前の衣)をつくる。"""
     import bmesh
     hands = set(arm_group_indices(body))
-    pts = [v.co.copy() for v in mesh.vertices if v.co.z < ROBE_LOWER_Z1 and not weight_of(v, hands)]
+    arms = set(arm_group_indices(body, ("wrist", "finger", "metacarpal", "lowerarm", "upperarm")))
+    pts = [v.co.copy() for v in mesh.vertices if v.co.z < ROBE_LOWER_Z1 and not weight_of(v, arms)]
     target_mesh = mesh.copy()
     target = bpy.data.objects.new("robe_target", target_mesh)
     bpy.context.collection.objects.link(target)
@@ -1248,6 +1249,37 @@ def robe_lower(body, mesh):
             v.co.z = 0.0
     bpy.data.objects.remove(target, do_unlink=True)
     return obj
+
+
+
+def robe_sleeves(body, mesh, lap_top):
+    """袖の垂れ: 左右の前腕の頂点と、その真下(膝の上面の高さ)の点の凸包で、前腕から膝へ垂れる布をつくる。"""
+    import bmesh
+    lower = set(arm_group_indices(body, ("lowerarm",)))
+    objs = []
+    for sign in (1, -1):
+        pts = [v.co.copy() for v in mesh.vertices if weight_of(v, lower, 0.4) and v.co.x * sign > 0]
+        if len(pts) < 8:
+            continue
+        cloud = pts + [Vector((p.x, p.y, min(p.z, lap_top))) for p in pts]
+        bm = bmesh.new()
+        for q in cloud:
+            bm.verts.new(q)
+        bm.verts.ensure_lookup_table()
+        res = bmesh.ops.convex_hull(bm, input=bm.verts)
+        doomed = {g for g in res["geom_unused"] + res["geom_interior"] if isinstance(g, bmesh.types.BMVert)}
+        bmesh.ops.delete(bm, geom=list(doomed), context="VERTS")
+        me = bpy.data.meshes.new("robe_sleeve")
+        bm.to_mesh(me)
+        bm.free()
+        obj = bpy.data.objects.new("robe_sleeve", me)
+        bpy.context.collection.objects.link(obj)
+        sub = obj.modifiers.new("sub", "SUBSURF")
+        sub.subdivision_type = "SIMPLE"
+        sub.levels = 2
+        apply_modifier(obj, sub)
+        objs.append(obj)
+    return objs
 
 
 def robe_folds(robe):
@@ -1359,12 +1391,16 @@ def build_robe(body, mesh):
     hand_points = [v.co.copy() for v in mesh.vertices if weight_of(v, hands)]
     upper = robe_upper(body, mesh)
     lower = robe_lower(body, mesh)
-    for o in (upper, lower):
+    lap_top = max((v.co.z for v in lower.data.vertices if abs(v.co.x) < 0.14 and -0.32 < v.co.y < -0.12), default=0.2)
+    sleeves = robe_sleeves(body, mesh, lap_top + ROBE_OFFSET * 0.5)
+    for o in (upper, lower, *sleeves):
         pts = [v.co for v in o.data.vertices]
         log(f"  {o.name}: verts {len(pts)} y {min(p.y for p in pts):.3f}..{max(p.y for p in pts):.3f} z {min(p.z for p in pts):.3f}..{max(p.z for p in pts):.3f}")
     bpy.ops.object.select_all(action="DESELECT")
     upper.select_set(True)
     lower.select_set(True)
+    for o in sleeves:
+        o.select_set(True)
     bpy.context.view_layer.objects.active = lower
     bpy.ops.object.join()
     robe = bpy.context.active_object
