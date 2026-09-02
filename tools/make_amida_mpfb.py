@@ -28,8 +28,8 @@ BEAD_SPACING = 0.0135
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
-    "gender": 0.62, "age": 0.5, "muscle": 0.42, "weight": 0.58, "proportions": 0.5, "height": 0.5,
-    "cupsize": 0.5, "firmness": 0.5,
+    "gender": 0.38, "age": 0.5, "muscle": 0.36, "weight": 0.56, "proportions": 0.5, "height": 0.5,
+    "cupsize": 0.0, "firmness": 0.5,
     "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
 }
 
@@ -39,19 +39,22 @@ FACE_TARGETS = {
     "head-scale-vert-incr": 0.35, "head-scale-horiz-incr": 0.4, "head-scale-depth-incr": 0.3,
     "l-cheek-volume-incr": 0.45, "r-cheek-volume-incr": 0.45,
     "l-cheek-bones-decr": 0.3, "r-cheek-bones-decr": 0.3,
-    "chin-width-incr": 0.25, "chin-prominent-decr": 0.2,
+    "chin-width-decr": 0.15, "chin-prominent-decr": 0.3, "chin-bones-decr": 0.4,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
     "l-eye-height2-decr": 0.6, "r-eye-height2-decr": 0.6,   # 半眼
     "l-eye-eyefold-down": 0.5, "r-eye-eyefold-down": 0.5, "l-eye-eyefold-concave": 0.3, "r-eye-eyefold-concave": 0.3,
     "eyebrows-trans-forward": 0.35,
     "mouth-cupidsbow-incr": 0.4, "mouth-lowerlip-volume-incr": 0.3, "mouth-upperlip-height-incr": 0.15,
-    "nose-point-width-incr": 0.2, "nose-scale-vert-incr": 0.15, "nose-flaring-incr": 0.15,
+    "nose-point-width-incr": 0.1, "nose-scale-vert-incr": 0.1, "nose-scale-horiz-decr": 0.1,
     "l-eye-corner1-down": 0.2, "r-eye-corner1-down": 0.2,
-    "mouth-angles-up": 0.35, "mouth-scale-horiz-decr": 0.15, "mouth-upperlip-volume-decr": 0.2,
+    # アルカイックスマイル: 口角を上げ、唇は薄く閉じ、頬をふくらませる
+    "mouth-angles-up": 0.85, "mouth-scale-horiz-decr": 0.1, "mouth-upperlip-volume-decr": 0.1,
+    "mouth-dimples-in": 0.3, "mouth-laugh-lines-in": 0.2,
+    "l-eye-scale-incr": 0.15, "r-eye-scale-incr": 0.15, "l-eye-corner2-up": 0.15, "r-eye-corner2-up": 0.15,
     "chin-height-decr": 0.15,
-    "nose-scale-horiz-incr": 0.1, "nose-hump-decr": 0.3,
-    "eyebrows-angle-up": 0.15,
+    "nose-hump-decr": 0.3,
+    "eyebrows-angle-up": 0.3, "eyebrows-trans-up": 0.15,
     "neck-scale-vert-decr": 0.35, "neck-scale-horiz-incr": 0.2,
 }
 
