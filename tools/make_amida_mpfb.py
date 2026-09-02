@@ -1057,7 +1057,7 @@ ROBE_UPPER_Z0 = 0.30   # 上半身の衣(体の面をふくらませる)の下�
 ROBE_LOWER_Z1 = 0.42   # 下半身の衣(凸包を落とす)に含める頂点の上端(前腕の下から下)
 ROBE_DRAPE_LIMIT = 0.05  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
 ROBE_VOXEL = 0.006     # 一体化するボクセルの大きさ
-ROBE_HEM_R = 0.004     # 衿・袖口の縁(ヘム)の太さ(半径)
+ROBE_HEM_R = 0.0055    # 衿・袖口の縁(ヘム)の太さ(半径)
 FOLD_AMP = 0.0026      # 衣文の高さ
 
 
@@ -1386,7 +1386,7 @@ def build_robe(body, mesh):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
     def collar_z(x):
-        return min(NECK_Z - 0.005, NECK_Z - 0.13 + abs(x) * 1.6)
+        return min(NECK_Z - 0.005, NECK_Z - 0.15 + abs(x) * 1.25)
 
     def above(v):
         front = v.co.y < -0.05
