@@ -56,7 +56,10 @@ FACE_TARGETS = {
     "l-cheek-volume-incr": 0.38, "r-cheek-volume-incr": 0.38,
     "chin-bones-incr": 0.15, "chin-prominent-incr": 0.1, "chin-cleft-decr": 0.4, "chin-width-incr": 0.1,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
-    "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
+    "l-ear-scale-incr": 0.5, "r-ear-scale-incr": 0.5,
+    "l-ear-scale-vert-incr": 1.0, "r-ear-scale-vert-incr": 1.0,      # 耳全体を縦に長く(比率を保ったまま)
+    "l-ear-shape-round": 0.6, "r-ear-shape-round": 0.6,
+    "l-ear-flap-decr": 0.3, "r-ear-flap-decr": 0.3,
     "l-eye-scale-incr": 0.2, "r-eye-scale-incr": 0.2,
     "l-eye-epicanthus-in": 0.4, "r-eye-epicanthus-in": 0.4,
     "l-eye-bag-decr": 0.5, "r-eye-bag-decr": 0.5,
@@ -255,8 +258,10 @@ def add_sphere(name, center, radius, scale=(1, 1, 1), segments=24, rings=16):
     return obj
 
 
-def stretch_earlobes(body, mesh, factor=1.8):
-    """耳の中心より下の頂点を下へ引き伸ばし、長い耳朶にする。"""
+def stretch_earlobes(body, mesh, factor=1.25):
+    """耳の下半分を下へ伸ばして長い耳朶にする。
+    下端付近はまとめて平行移動して元の丸い形を保ち、中ほどだけを引き伸ばす(尖らせない)。
+    耳朶はわずかに厚く、丸く。"""
     idx = body.vertex_groups["ears"].index
     for side_sign in (1, -1):
         ear = [v for v in mesh.vertices if any(g.group == idx for g in v.groups) and v.co.x * side_sign > 0]
@@ -264,12 +269,17 @@ def stretch_earlobes(body, mesh, factor=1.8):
             continue
         zc = sum(v.co.z for v in ear) / len(ear)
         zmin = min(v.co.z for v in ear)
+        drop = (zc - zmin) * (factor - 1)
         for v in ear:
             if v.co.z < zc:
-                t = (zc - v.co.z) / max(zc - zmin, 1e-6)
-                v.co.z -= (zc - zmin) * (factor - 1) * t * t
-                v.co.x += side_sign * 0.003 * t          # わずかに外へ
-                v.co.y += -0.004 * t * t                  # 耳朶を前へ厚く
+                t = (zc - v.co.z) / max(zc - zmin, 1e-6)          # 0(中心)〜1(下端)
+                u = min(1.0, t / 0.55)                              # 下 45% はまとめて動かす
+                w = u * u * (3 - 2 * u)
+                v.co.z -= drop * w
+                v.co.x += side_sign * 0.0025 * w                    # わずかに外へ
+                v.co.y += -0.003 * w                                # 少し前へ
+                # 耳朶を丸く厚く: 下端に近いほど、耳の面の内外へふくらませる
+                v.co += v.normal * (0.0018 * max(0.0, t - 0.55) / 0.45)
     mesh.update()
 
 
