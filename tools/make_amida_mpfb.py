@@ -115,9 +115,9 @@ def pose_lotus_legs(arm, side, lift_deg):
     """結跏趺坐。side: 'L' or 'R'。lift_deg: 脛を持ち上げる角(上に組む脚ほど大きく)。"""
     s = 1 if side == "L" else -1
     leg = f"upperleg01.{side}"
-    # 股関節: 前へ 90° 曲げ、外へ 58° 開く
+    # 股関節: 前へ 90° 曲げ、外へ 46° 開く(膝を前へ出して奥行きをつくる)
     rotate_bone(arm, leg, (1, 0, 0), -90)
-    rotate_bone(arm, leg, (0, 0, 1), s * 58)
+    rotate_bone(arm, leg, (0, 0, 1), s * 46)
     # 膝: 脛を反対側へ折り畳む(水平面内)、次に大腿軸まわりに持ち上げる
     thigh = bone_dir(arm, leg)
     knee = arm.pose.bones[f"lowerleg01.{side}"].head.copy()
@@ -134,7 +134,7 @@ def pose_arms_dhyana(arm, lap_z):
         rotate_bone(arm, ua, (0, 1, 0), s * 32)      # 腕を体側へ下ろす
         rotate_bone(arm, ua, (1, 0, 0), -14)          # わずかに前へ
         # 前腕を腹の前へ。手首が中心線の手前で交差し、右手が下・左手が上(指先は反対側へ)
-        hand_z = lap_z + ROBE_OFFSET + (0.065 if side == "L" else 0.03)   # 右手の甲が衣に載り、左手はその上
+        hand_z = lap_z + ROBE_OFFSET + (0.077 if side == "L" else 0.042)   # 右手の甲が衣に載り、左手はその上
         wrist_target = Vector((-s * 0.05, -0.245, hand_z))
         elbow = arm.pose.bones[f"lowerarm01.{side}"].head
         # lowerarm01 の先は lowerarm02→wrist と続くので、肘→手首の距離ぶんだけ伸ばした方向を狙う
@@ -287,10 +287,20 @@ NECK_Z = 0.60          # 衣の上端(首の付け根)。接地後の座標
 ROBE_OFFSET = 0.018    # 体との隙間
 
 
+def hand_group_indices(body):
+    return [g.index for g in body.vertex_groups
+            if g.name.split(".")[0].startswith(("wrist", "finger", "metacarpal"))]
+
+
+def hand_bottom(body, mesh):
+    """手の頂点の最下点(接地後の座標)。"""
+    groups = hand_group_indices(body)
+    return min(v.co.z for v in mesh.vertices if any(g.group in groups and g.weight > 0.3 for g in v.groups))
+
+
 def robe_target(body, mesh):
     """衣を沿わせる対象: 本体から頭と手を除いた複製。"""
-    hand_groups = [g.index for g in body.vertex_groups
-                   if g.name.split(".")[0].startswith(("wrist", "finger", "metacarpal"))]
+    groups = hand_group_indices(body)
     target_mesh = mesh.copy()
     target = bpy.data.objects.new("robe_target", target_mesh)
     bpy.context.collection.objects.link(target)
@@ -303,10 +313,8 @@ def robe_target(body, mesh):
     bm.to_mesh(target_mesh)
     bm.free()
     hand_points = [v.co.copy() for v in target_mesh.vertices
-                   if any(g.group in hand_groups and g.weight > 0.3 for g in v.groups)]
-    lo = [round(min(p[i] for p in hand_points), 3) for i in range(3)]
-    hi = [round(max(p[i] for p in hand_points), 3) for i in range(3)]
-    log("  robe target verts", len(target_mesh.vertices), "hand verts", len(hand_points), "hand bbox", lo, hi)
+                   if any(g.group in groups and g.weight > 0.3 for g in v.groups)]
+    log("  robe target verts", len(target_mesh.vertices), "hand verts", len(hand_points))
     return target, hand_points
 
 
@@ -398,7 +406,10 @@ def build_robe(body, mesh):
     sm.iterations = 4
     apply_modifier(robe, sm)
     wrap(ROBE_OFFSET, "OUTSIDE")
-    log("  remeshed robe verts", len(robe.data.vertices))
+    dec = robe.modifiers.new("dec", "DECIMATE")
+    dec.ratio = max(0.05, min(1.0, 36000 / max(1, len(robe.data.polygons))))
+    apply_modifier(robe, dec)
+    log("  remeshed+decimated robe verts", len(robe.data.vertices))
     # 底面を接地面へ揃える(座面に載る)
     for v in robe.data.vertices:
         if v.co.z < 0.012:
@@ -420,16 +431,13 @@ def build_robe(body, mesh):
         kd.insert(p, i)
     kd.balance()
 
-    near = [(v, kd.find(v.co)) for v in bm.verts]
-    near = [(v, co, dist) for v, (co, _, dist) in near if dist < ROBE_OFFSET + 0.014]
-    dz = sorted(round(v.co.z - co.z, 3) for v, co, _ in near)
-    log("  robe verts near hands:", len(near), "dz quartiles", dz[len(dz) // 4], dz[len(dz) // 2], dz[3 * len(dz) // 4] if dz else None)
-    over = {v for v, co, dist in near if v.co.z > co.z - 0.004}   # 手の上に被さる布だけ
-    log("  robe verts over hands:", len(over))
-    doomed = [v for v in bm.verts if above(v) or v in over]
+    def over_hand(v):
+        co, _, dist = kd.find(v.co)
+        return dist < ROBE_OFFSET + 0.016 and v.co.z > co.z - 0.006   # 手の上に被さる布だけ(袖口)
+    doomed = [v for v in bm.verts if above(v) or over_hand(v)]
     bmesh.ops.delete(bm, geom=doomed, context="VERTS")
     # 切り口をならす(縁の頂点を縁に沿った隣と平均)
-    for _ in range(4):
+    for _ in range(12):
         moves = {}
         for v in bm.verts:
             if not v.is_boundary or v.co.z < 0.05:
@@ -450,14 +458,12 @@ def build_robe(body, mesh):
     solid.thickness = 0.012
     solid.offset = 1.0
     apply_modifier(robe, solid)
-    dec = robe.modifiers.new("dec", "DECIMATE")
-    dec.ratio = max(0.05, min(1.0, 60000 / max(1, len(robe.data.polygons) * 2)))
-    apply_modifier(robe, dec)
     for poly in robe.data.polygons:
         poly.use_smooth = True
     bpy.data.objects.remove(target, do_unlink=True)
-    log("  robe verts", len(robe.data.vertices), "polys", len(robe.data.polygons))
-    return robe
+    lap = max((v.co.z for v in robe.data.vertices if abs(v.co.x) < 0.12 and -0.31 < v.co.y < -0.17 and v.co.z < 0.30), default=0)
+    log("  robe verts", len(robe.data.vertices), "polys", len(robe.data.polygons), "robe lap z", round(lap, 3))
+    return robe, lap
 
 
 # ---------------------------------------------------------------- 組み立て
@@ -478,59 +484,64 @@ def build(stage, matte=False):
     log("targets applied:", len(applied), applied[:6])
 
     arm = HumanService.add_builtin_rig(human, "default")
-    bpy.context.view_layer.objects.active = arm
-    arm.select_set(True)
-    bpy.ops.object.mode_set(mode="POSE")
-    pose_lotus_legs(arm, "R", 18)
-    pose_lotus_legs(arm, "L", 34)
-    floor_z, lap_z = measure_lap(human)
-    log(f"  floor z {floor_z:.3f}, lap top z {lap_z:.3f} (above floor {lap_z - floor_z:.3f})")
-    pose_arms_dhyana(arm, lap_z)
-    pose_head(arm)
-    bpy.ops.object.mode_set(mode="OBJECT")
 
-    # 指先・足先の座標を確認用に出す
-    for n in ("finger2-3.L", "finger1-3.L", "finger2-3.R", "finger1-3.R", "foot.L", "foot.R", "wrist.L", "wrist.R"):
-        pb = arm.pose.bones[n]
-        log(f"  {n:12s} tail", [round(v, 3) for v in pb.tail])
+    def pose_all(hand_lift):
+        bpy.context.view_layer.objects.active = arm
+        arm.select_set(True)
+        bpy.ops.object.mode_set(mode="POSE")
+        for pb in arm.pose.bones:
+            pb.matrix_basis = Matrix()
+        bpy.context.view_layer.update()
+        pose_lotus_legs(arm, "R", 18)
+        pose_lotus_legs(arm, "L", 34)
+        floor_z, lap_z = measure_lap(human)
+        log(f"  floor z {floor_z:.3f}, lap top z {lap_z:.3f} (above floor {lap_z - floor_z:.3f}), hand lift {hand_lift:.3f}")
+        pose_arms_dhyana(arm, lap_z + hand_lift)
+        pose_head(arm)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        for n in ("wrist.L", "wrist.R", "foot.L", "foot.R"):
+            log(f"  {n:12s} tail", [round(v, 3) for v in arm.pose.bones[n].tail])
 
-    # 眼球ヘルパー(マスクで消える前)から目の中心と半径を取る
-    mask = human.modifiers["Hide helpers"]
-    mask.show_viewport = False
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    full = human.evaluated_get(depsgraph).data
-    eyes = {}
-    for side in ("l", "r"):
-        idx = human.vertex_groups[f"helper-{side}-eye"].index
-        pts = [v.co.copy() for v in full.vertices if any(g.group == idx for g in v.groups)]
-        c = sum(pts, Vector()) / len(pts)
-        r = max((q - c).length for q in pts)
-        eyes[side] = (c, r)
-        log(f"  eye {side}: center {[round(v, 3) for v in c]} r {r:.4f} ({len(pts)} verts)")
-    mask.show_viewport = True
+    def bake():
+        # 眼球ヘルパー(マスクで消える前)から目の中心と半径を取る
+        mask = human.modifiers["Hide helpers"]
+        mask.show_viewport = False
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        full = human.evaluated_get(depsgraph).data
+        eyes = {}
+        for side in ("l", "r"):
+            idx = human.vertex_groups[f"helper-{side}-eye"].index
+            pts = [v.co.copy() for v in full.vertices if any(g.group == idx for g in v.groups)]
+            c = sum(pts, Vector()) / len(pts)
+            eyes[side] = (c, max((q - c).length for q in pts))
+        mask.show_viewport = True
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        baked = bpy.data.meshes.new_from_object(human.evaluated_get(depsgraph), depsgraph=depsgraph)
+        body = bpy.data.objects.new("Amida_Body", baked)
+        bpy.context.collection.objects.link(body)
+        # 接地: 最下点を z=0 に、左右中心を x=0 に。下半身は前後に 1.2 倍して坐像の奥行きをつくる
+        zs = [v.co.z for v in baked.vertices]
+        xs = [v.co.x for v in baked.vertices]
+        shift = Vector((-(max(xs) + min(xs)) / 2, 0, -min(zs)))
+        baked.transform(Matrix.Translation(shift))
+        for v in baked.vertices:
+            k = 1.0 + 0.2 * max(0.0, min(1.0, (0.50 - v.co.z) / 0.15))
+            v.co.y *= k
+        for side in eyes:
+            eyes[side] = (eyes[side][0] + shift, eyes[side][1])
+        ys = [v.co.y for v in baked.vertices]
+        log("  body bbox y", round(min(ys), 3), round(max(ys), 3), "verts", len(baked.vertices))
+        return body, baked, eyes
 
-    # モディファイア(ターゲット・アーマチュア・ヘルパー除去)を焼き込んだメッシュへ
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    baked = bpy.data.meshes.new_from_object(human.evaluated_get(depsgraph), depsgraph=depsgraph)
-    body = bpy.data.objects.new("Amida_Body", baked)
-    bpy.context.collection.objects.link(body)
+    pose_all(ROBE_OFFSET + 0.045)
+    body, baked, eyes = bake()
+    if stage >= 2:
+        robe, robe_lap = build_robe(body, baked)
+        log(f"  robe lap {robe_lap:.3f}, hand bottom {hand_bottom(body, baked):.3f}")
     for obj in (human, arm):
         bpy.data.objects.remove(obj, do_unlink=True)
 
-    # 接地: 最下点を z=0 に、左右中心を x=0 に
-    zs = [v.co.z for v in baked.vertices]
-    xs = [v.co.x for v in baked.vertices]
-    ys = [v.co.y for v in baked.vertices]
-    shift = Vector((-(max(xs) + min(xs)) / 2, 0, -min(zs)))
-    baked.transform(Matrix.Translation(shift))
-    for side in eyes:
-        eyes[side] = (eyes[side][0] + shift, eyes[side][1])
-    log("body bbox x", round(min(xs), 3), round(max(xs), 3), "y", round(min(ys), 3), round(max(ys), 3),
-        "z", round(min(zs), 3), round(max(zs), 3), "verts", len(baked.vertices), "polys", len(baked.polygons))
-
     add_head_features(body, baked, eyes)
-    if stage >= 2:
-        build_robe(body, baked)
 
     mat = bpy.data.materials.new("AmidaGold")
     mat.use_nodes = True
