@@ -25,7 +25,10 @@ OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 HAIR_COLOR = (0.012, 0.016, 0.03)  # 螺髪: 紺青がかった黒漆
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
-USHNISHA_HEIGHT = 0.035  # 肉髻の盛り上がり(m)
+USHNISHA_HEIGHT = 0.03  # 肉髻(二段目)の高さ(m)
+USHNISHA_RADIUS = 0.052  # 肉髻の半径(m)
+USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、m)
+HAIR_THICKNESS = 0.011  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
 SIDEBURN_DROP = 0.03  # 耳の上端からもみあげの下端までの距離(m)
 SIDEBURN_WIDTH = 0.014  # もみあげの幅(耳の前端からの距離、m)  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
@@ -461,13 +464,18 @@ def add_head_features(body, mesh, eyes):
     scalp = [mesh.vertices[i].co for i in hair_verts]
     top = max(scalp, key=lambda p: p.z)
     apex = Vector((0, top.y + 0.01, top.z - 0.015))
-    # 頭頂を滑らかに盛り上げる(肉髻)。頂点から 8cm 以内をなだらかに持ち上げる
+    # 肉髻: 頭頂に二段目の丸い盛り上がりを作る(段差がはっきり見える二段構造)。
+    # 頂点から半径 USHNISHA_RADIUS の内側を垂直に持ち上げ、縁の細い帯でなだらかに落とす
+    def smoothstep(t):
+        t = max(0.0, min(1.0, t))
+        return t * t * (3 - 2 * t)
     for i in hair_verts:
         v = mesh.vertices[i]
-        d = (Vector((v.co.x, v.co.y, 0)) - Vector((apex.x, apex.y, 0))).length
-        if d < 0.08 and v.co.z > apex.z - 0.06:
-            w = (1 - d / 0.08) ** 2
-            v.co += v.normal * (USHNISHA_HEIGHT * w * (v.co.z - (apex.z - 0.06)) / 0.06)
+        d = (Vector((v.co.x, v.co.y, 0)) - Vector((apex.x, apex.y + 0.005, 0))).length
+        if d < USHNISHA_RADIUS + USHNISHA_EDGE and v.co.z > apex.z - 0.07:
+            w = 1.0 - smoothstep((d - USHNISHA_RADIUS) / USHNISHA_EDGE)
+            dome = 1.0 - (min(d, USHNISHA_RADIUS) / USHNISHA_RADIUS) ** 2      # 上面の丸み
+            v.co.z += USHNISHA_HEIGHT * w * (0.75 + 0.25 * dome)
     mesh.update()
     top = max((mesh.vertices[i].co for i in hair_verts), key=lambda p: p.z)
     apex = Vector((0, top.y, top.z))
@@ -503,10 +511,35 @@ def add_head_features(body, mesh, eyes):
             continue                                        # もみあげ: 下端より下は肌
         hair_verts.add(i)
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
-    # 頭皮の下地: 髪の領域の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
+    # 地髪の下地: 髪の領域を法線方向へ厚く盛り、生え際で段差(帽子の縁のような厚み)を作る。
+    # 縁は境界からの頂点の段数でなだらかに丸める
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.verts.ensure_lookup_table()
+    ring = {}
+    frontier = []
+    for i in hair_verts:
+        v = bm.verts[i]
+        if any(e.other_vert(v).index not in hair_verts for e in v.link_edges):
+            ring[i] = 0
+            frontier.append(v)
+    level = 0
+    while frontier and level < 3:
+        level += 1
+        nxt = []
+        for v in frontier:
+            for e in v.link_edges:
+                o = e.other_vert(v)
+                if o.index in hair_verts and o.index not in ring:
+                    ring[o.index] = level
+                    nxt.append(o)
+        frontier = nxt
+    bm.free()
+    profile = {0: 0.35, 1: 0.7, 2: 0.9}
     for i in hair_verts:
         v = mesh.vertices[i]
-        v.co += v.normal * 0.0055
+        v.co += v.normal * (HAIR_THICKNESS * profile.get(ring.get(i, 3), 1.0))
     mesh.update()
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
