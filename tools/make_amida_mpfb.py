@@ -968,9 +968,91 @@ def cavity_colors(obj, strength, floor=0.45, protect=()):
     return attr
 
 
+
+def refine_torso(body, mesh, eyes):
+    """首の三道(三本の筋)を刻み、胸(衿から見える部分)の肌の細部をならす。"""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    # 胸: 衿の V から見える範囲をなめらかに
+    chest = [v for v in bm.verts if 0.42 < v.co.z < 0.60 and abs(v.co.x) < 0.13 and v.co.y < -0.05]
+    nip = {body.vertex_groups[n].index for n in ("nipple", "nippleTip") if n in body.vertex_groups}
+    dl = bm.verts.layers.deform.verify()
+    nipples = [v for v in bm.verts if any(v[dl].get(i, 0.0) > 0.05 for i in nip)]
+    around = [v for v in bm.verts if any((v.co - q.co).length < 0.03 for q in nipples[::10])] if nipples else []
+    for _ in range(30):
+        bmesh.ops.smooth_vert(bm, verts=around, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    for _ in range(6):
+        bmesh.ops.smooth_vert(bm, verts=chest, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    # 三道: 首の前〜横に三本の浅い溝
+    neck = [v for v in mesh.vertices if NECK_Z + 0.005 < v.co.z < NECK_Z + 0.085 and v.co.y < 0.03
+            and abs(v.co.x) < 0.075 and abs(v.normal.z) < 0.45]
+    for v in neck:
+        d = 0.0
+        for k in range(3):
+            zk = NECK_Z + 0.022 + k * 0.021
+            d += math.exp(-((v.co.z - zk) / 0.0032) ** 2)
+        v.co -= v.normal * (0.0014 * d)
+    mesh.update()
+    log("  torso refined: chest", len(chest), "neck", len(neck))
+
+
+def tube_along(name, body, points, radius, depsgraph):
+    """点列を肌へ投影し、細い管を掃引する(衣の縁など)。"""
+    import bmesh
+    proj, nrm = [], []
+    for q in points:
+        ok, loc, nr, _ = body.closest_point_on_mesh(q, depsgraph=depsgraph)
+        proj.append(loc.copy() if ok else Vector(q))
+        nrm.append(nr.copy() if ok else Vector((0, -1, 0)))
+    out = bmesh.new()
+    n = len(proj)
+    segs = 8
+    rings = []
+    for i in range(n):
+        t = (proj[min(i + 1, n - 1)] - proj[max(i - 1, 0)]).normalized()
+        up = nrm[i]
+        sd = t.cross(up).normalized()
+        up = sd.cross(t).normalized()
+        rings.append([out.verts.new(proj[i] + up * (radius * 0.4) + sd * (radius * math.cos(2 * math.pi * k / segs)) + up * (radius * math.sin(2 * math.pi * k / segs)))
+                      for k in range(segs)])
+    for i in range(n - 1):
+        for k in range(segs):
+            try:
+                out.faces.new((rings[i][k], rings[i + 1][k], rings[i + 1][(k + 1) % segs], rings[i][(k + 1) % segs]))
+            except ValueError:
+                pass
+    bmesh.ops.recalc_face_normals(out, faces=out.faces)
+    me = bpy.data.meshes.new(name)
+    out.to_mesh(me)
+    out.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
+def inner_robe_edge(body, mesh):
+    """僧祇支(内衣)の縁: 左肩の付け根から右脇の下へ、胸を斜めに横切る一本の縁。"""
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    pts = []
+    for i in range(29):
+        t = i / 28
+        x = 0.10 - 0.22 * t
+        z = 0.575 - 0.115 * t - 0.02 * math.sin(math.pi * t)     # わずかに垂れる弧
+        pts.append(Vector((x, -0.3, z)))
+    return tube_along("Amida_InnerEdge", body, pts, 0.0035, depsgraph)
+
+
 # ---------------------------------------------------------------- 衣
 NECK_Z = 0.60          # 衣の上端(首の付け根)。接地後の座標
-ROBE_OFFSET = 0.015    # 体との隙間(布の厚みぶん)
+ROBE_OFFSET = 0.02     # 体との隙間(布の厚みぶん)
+ROBE_SMOOTH = 40       # 上半身の衣の平滑化の回数(体の細部を布の丸みに溶かす)
 ROBE_UPPER_Z0 = 0.30   # 上半身の衣(体の面をふくらませる)の下端
 ROBE_LOWER_Z1 = 0.42   # 下半身の衣(凸包を落とす)に含める頂点の上端(前腕の下から下)
 ROBE_DRAPE_LIMIT = 0.05  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
@@ -1069,7 +1151,15 @@ def robe_upper(body, mesh):
         ys = [v.co.y for v in bm.verts]
         log(f"    upper {tag}: n={len(bm.verts)} y {min(ys):.3f}..{max(ys):.3f} z {min(zs):.3f}..{max(zs):.3f}")
     rng("after delete")
-    for _ in range(12):
+    # 乳首・へそなど肌の細部は布には出ない: その周りを強くならしてから全体もならす
+    nip = {body.vertex_groups[n].index for n in ("nipple", "nippleTip") if n in body.vertex_groups}
+    dl = bm.verts.layers.deform.verify()
+    centers = [v.co.copy() for v in bm.verts if any(v[dl].get(i, 0.0) > 0.3 for i in nip)]
+    seeds = centers[::max(1, len(centers) // 8)]
+    around = [v for v in bm.verts if any((v.co - c).length < 0.045 for c in seeds)]
+    for _ in range(80):
+        bmesh.ops.smooth_vert(bm, verts=around, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    for _ in range(ROBE_SMOOTH):
         bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     rng("after smooth")
     bm.normal_update()
@@ -1290,9 +1380,10 @@ def build_robe(body, mesh):
     log("  robe merged verts", len(robe.data.vertices), "bbox y", round(min(p.y for p in rb), 3), round(max(p.y for p in rb), 3), "z", round(min(p.z for p in rb), 3), round(max(p.z for p in rb), 3))
     robe_folds(robe)
 
-    # 衿の V 字と袖口(手に被さる布)を開ける
+    # 衿の V 字と袖口(手に被さる布)を開ける。まず法線を外向きに揃える(裏返ると外から見えない)
     bm = bmesh.new()
     bm.from_mesh(robe.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
     def collar_z(x):
         return min(NECK_Z - 0.005, NECK_Z - 0.13 + abs(x) * 1.6)
@@ -1410,6 +1501,8 @@ def build(stage, matte=False):
     pose_all(ROBE_OFFSET + 0.045)
     body, baked, eyes = bake()
     if stage >= 2:
+        refine_torso(body, baked, eyes)
+        inner_robe_edge(body, baked)
         robe, robe_lap = build_robe(body, baked)
         log(f"  robe lap {robe_lap:.3f}, hand bottom {hand_bottom(body, baked):.3f}")
     for obj in (human, arm):
