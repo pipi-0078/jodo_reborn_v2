@@ -31,7 +31,7 @@ USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、
 HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
 SIDEBURN_DROP = 0.046  # 耳の上端からもみあげの尖った下端までの距離(m)
-SIDEBURN_WIDTH = 0.032  # もみあげの最大幅(耳の前端から頬側へ、m)
+SIDEBURN_WIDTH = 0.012  # もみあげが中ほどで頬側へふくらむ量(m)
 BEAD_SPACING = 0.0078
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
@@ -492,34 +492,52 @@ def add_head_features(body, mesh, eyes):
     def hairline_z(x):
         return hair_z0 - 0.5 * (x * x) / max(head_half, 1e-3) - 0.005 * math.exp(-(x / 0.012) ** 2)   # 深い弧、中央にわずかな切れ込み
     front_y = ear_y - 0.01                                  # 耳より前を「額側」とみなす
-    sideburn_z = ear_top - SIDEBURN_DROP                    # もみあげの下端(尖った先)
+    # 側頭部の生え際: 額の弧の端(こめかみ)から一本の滑らかな線で下り、耳の前で頬側へふくらんで
+    # 耳朶の高さの尖った先で終わる。高さ z ごとに「耳の前端からどれだけ前(頬側)まで髪か」を w(z) で決める
+    face_half = 0.05                                        # ここより外は側頭部
+    z_top = hairline_z(face_half)                            # こめかみで額の弧と接続する高さ
+    z_tip = ear_top - SIDEBURN_DROP                          # もみあげの尖った先
     ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
-    burn_top = ear_top + 0.035                               # もみあげが生え際から分かれる高さ
+    temple = [v.co.y for v in mesh.vertices
+              if abs(abs(v.co.x) - face_half) < 0.006 and abs(v.co.z - z_top) < 0.006 and v.co.y < ear_front_y]
+    w_top = (ear_front_y - min(temple)) if temple else 0.05  # こめかみの生え際は耳の前端からこれだけ前
 
-    def sideburn_width(z):
-        """高さ z でのもみあげの幅(耳の前端から頬側へ)。上で生え際に溶け、中ほどで最も広く、下端で尖る。"""
-        if z > burn_top or z < sideburn_z:
+    def burn_w(z):
+        if z >= z_top:
+            return w_top
+        if z <= z_tip:
             return 0.0
-        t = (burn_top - z) / (burn_top - sideburn_z)
-        return SIDEBURN_WIDTH * math.sin(math.pi * t) ** 0.8
+        t = (z_top - z) / (z_top - z_tip)
+        return w_top * (1 - t) ** 1.15 + SIDEBURN_WIDTH * math.sin(math.pi * t) ** 1.6   # 中ほどで前へふくらむ
 
-    def in_sideburn(v):
-        return abs(v.co.x) > 0.045 and v.co.y < ear_front_y + 0.002 and v.co.y > ear_front_y - sideburn_width(v.co.z)
+    def side_hair(v):
+        if abs(v.co.x) < face_half or v.co.z <= z_tip:
+            return False
+        if v.co.z < ear_top and v.co.y > ear_front_y - 0.003:
+            return False                                    # 耳の下・耳の高さの耳より後ろは髪にしない
+        if v.co.z >= z_top:
+            return True                                     # こめかみの線より上は全部髪
+        return v.co.y > ear_front_y - burn_w(v.co.z)
 
     candidates = set(hair_verts)
     for v in mesh.vertices:
-        if v.co.y < front_y and v.co.z < top.z and (v.co.z > hairline_z(v.co.x) or in_sideburn(v)):
+        if v.co.y < front_y and v.co.z < top.z and ((abs(v.co.x) < face_half and v.co.z > hairline_z(v.co.x)) or side_hair(v)):
             candidates.add(v.index)
     hair_verts = set()
     for i in candidates:
         v = mesh.vertices[i]
         if any((v.co - q).length < 0.007 for q in ear_pts):
             continue                                        # 耳の周囲
-        if v.co.y < front_y and v.co.z < hairline_z(v.co.x) and not in_sideburn(v):
-            continue                                        # 額〜こめかみ: 生え際の弧より下は肌(もみあげを除く)
+        if v.co.y < front_y and abs(v.co.x) < face_half and v.co.z < hairline_z(v.co.x):
+            continue                                        # 額: 生え際の弧より下は肌
+        if v.co.y < front_y and abs(v.co.x) >= face_half and not side_hair(v):
+            continue                                        # 側頭部: 生え際の線より前は肌
         if v.co.y >= front_y and v.co.y < ear_y + 0.03 and v.co.z < ear_top and abs(v.co.x) > 0.04:
             continue                                        # 耳の真上〜後ろ: 耳の上端より下は肌
+        if abs(v.co.x) > 0.04 and v.co.z < ear_top and v.co.y > ear_front_y - 0.003 and v.co.y < ear_y + 0.03:
+            continue                                        # 耳の下: 肌
         hair_verts.add(i)
+    log(f"  sideburn: z_top {z_top:.3f} z_tip {z_tip:.3f} w_top {w_top:.3f}")
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
     # 地髪の下地: 髪の領域を法線方向へ厚く盛り、生え際で段差(帽子の縁のような厚み)を作る。
     # 縁は境界からの頂点の段数でなだらかに丸める
