@@ -32,7 +32,7 @@ HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
 SIDEBURN_DROP = 0.062  # 耳の上端からもみあげの尖った下端までの距離(m)
 SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、m)
-SIDEBURN_TIP_R = 0.015  # もみあげの先端の丸み(半径、m)
+SIDEBURN_TIP_R = 0.012  # もみあげの先端の丸み(半径、m)
 SIDEBURN_TOP_W = 0.036  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
 RIM_RADIUS = 0.0022  # 生え際の縁取りの線の太さ(半径、m)
@@ -512,11 +512,11 @@ def add_head_features(body, mesh, eyes):
             return w_top
         if z <= z_tip:
             return 0.0
-        w = w_top * (z - z_tip) / (z_top - z_tip)
-        r = SIDEBURN_TIP_R                                   # 先端は半径 r の丸み
-        if z < z_tip + r:
-            w = max(w, r * math.sqrt(max(0.0, 1 - ((z_tip + r - z) / r) ** 2)))
-        return w
+        r = SIDEBURN_TIP_R                                   # 先端の丸み(この幅で丸く終わる)
+        z_end = z_tip + r
+        if z >= z_end:
+            return r + (w_top - r) * (z - z_end) / max(z_top - z_end, 1e-6)   # 先端の丸みまで真っ直ぐ細くなる
+        return math.sqrt(max(0.0, r * r - (z_end - z) ** 2))                # 丸い先端
 
     def side_hair(v):
         if abs(v.co.x) < face_half or v.co.z <= z_tip:
@@ -580,26 +580,6 @@ def add_head_features(body, mesh, eyes):
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
     created.append(hairline_rim(body, mesh, hair_verts))
-    # もみあげの先端: 丸い平たいドームを肌の上に置いて、先端を丸く見せる
-    bpy.context.view_layer.update()
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    for sign in (1, -1):
-        low = sorted((mesh.vertices[i].co for i in hair_verts if mesh.vertices[i].co.x * sign > 0.04 and mesh.vertices[i].co.y < ear_y),
-                     key=lambda p: p.z)[:6]
-        if not low:
-            continue
-        tip = sum(low, Vector()) / len(low)
-        r = SIDEBURN_TIP_R
-        ok, loc, nrm, _ = body.closest_point_on_mesh(tip + Vector((0, 0, r * 0.9)), depsgraph=depsgraph)
-        if not ok:
-            continue
-        cap = add_sphere(f"Amida_SideburnTip_{'L' if sign > 0 else 'R'}", loc + nrm * (r * 0.15), r, segments=20, rings=12)
-        # 肌の法線方向に平たく
-        q = nrm.to_track_quat("Z", "Y")
-        cap.rotation_mode = "QUATERNION"
-        cap.rotation_quaternion = q
-        cap.scale = (1.0, 1.0, 0.32)
-        created.append(cap)
     return created, hair_verts
 
 
