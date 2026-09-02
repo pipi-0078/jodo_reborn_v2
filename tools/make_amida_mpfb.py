@@ -24,6 +24,7 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
+HAIRLINE_DROP = 0.02  # 生え際を素体より額側へ下げる幅(m、身長1.57m基準)
 BEAD_RADIUS = 0.0068  # 螺髪の粒(身長1.57m基準)
 BEAD_SPACING = 0.0125
 
@@ -38,7 +39,7 @@ MACRO = {
 FACE_TARGETS = {
     # 美男子系・アジア系。頬骨は浅く、口角を上げて微笑む。目はリグの瞼ボーンで閉じる
     "head-oval": 0.35, "head-scale-vert-incr": 0.3, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
-    "forehead-temple-incr": 0.3, "forehead-nubian-decr": 0.4,
+    "forehead-temple-incr": 0.3, "forehead-nubian-decr": 0.4, "forehead-scale-vert-decr": 0.35,
     "l-cheek-bones-decr": 0.6, "r-cheek-bones-decr": 0.6,          # 頬骨は浅く
     "l-cheek-volume-incr": 0.2, "r-cheek-volume-incr": 0.2,
     "chin-bones-incr": 0.15, "chin-prominent-incr": 0.1, "chin-cleft-decr": 0.4, "chin-width-incr": 0.1,
@@ -451,16 +452,26 @@ def add_head_features(body, mesh, eyes):
     created.append(add_sphere("Amida_Urna", Vector((0, front + 0.002, mid.z + 0.03)), 0.0065))
     # 肉髻: 頭頂の丸い盛り上がり
     scalp_idx = body.vertex_groups["scalp"].index
-    scalp = [v.co for v in mesh.vertices if any(g.group == scalp_idx for g in v.groups)]
+    hair_verts = {v.index for v in mesh.vertices if any(g.group == scalp_idx for g in v.groups)}
+    scalp = [mesh.vertices[i].co for i in hair_verts]
     top = max(scalp, key=lambda p: p.z)
     apex = Vector((0, top.y + 0.01, top.z - 0.015))
     created.append(add_sphere("Amida_Ushnisha", apex, 0.052, scale=(1.0, 1.05, 0.9)))
-    # 頭皮の下地: 頭皮の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
+    # 生え際を額の側へ下げる: 前面の生え際から HAIRLINE_DROP 以内の頂点を髪の領域に加える
+    brow_z = mid.z + 0.03
+    front_edge = [mesh.vertices[i].co for i in hair_verts
+                  if mesh.vertices[i].co.y < top.y - 0.03 and mesh.vertices[i].co.z < top.z - 0.02]
     for v in mesh.vertices:
-        if any(g.group == scalp_idx for g in v.groups):
-            v.co += v.normal * 0.0055
+        if v.index in hair_verts or v.co.z < brow_z + 0.035 or v.co.y > top.y - 0.03:
+            continue
+        if any((v.co - q).length < HAIRLINE_DROP for q in front_edge):
+            hair_verts.add(v.index)
+    # 頭皮の下地: 髪の領域の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
+    for i in hair_verts:
+        v = mesh.vertices[i]
+        v.co += v.normal * 0.0055
     mesh.update()
-    hair = place_rahotsu(body, mesh, scalp_idx, apex)
+    hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
     return created
 
@@ -509,10 +520,10 @@ def spiral_knob_mesh():
     return me
 
 
-def place_rahotsu(body, mesh, scalp_idx, apex):
+def place_rahotsu(body, mesh, hair_verts, apex):
     """螺髪を据える。まず生え際に沿って一列、次に頭皮と肉髻の面に緯線状の列(互い違い)で詰める。"""
     import bmesh
-    scalp_verts = {v.index for v in mesh.vertices if any(g.group == scalp_idx for g in v.groups)}
+    scalp_verts = set(hair_verts)
     scalp_faces = {f.index for f in mesh.polygons if all(i in scalp_verts for i in f.vertices)}
     pts = [mesh.vertices[i].co for i in scalp_verts]
     center = sum(pts, Vector()) / len(pts)
