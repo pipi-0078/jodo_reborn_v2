@@ -23,6 +23,7 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
+HAIR_COLOR = (0.012, 0.016, 0.03)  # 螺髪: 紺青がかった黒漆
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
 USHNISHA_HEIGHT = 0.035  # 肉髻の盛り上がり(m)
 HAIRLINE_HEIGHT = 0.03
@@ -509,7 +510,7 @@ def add_head_features(body, mesh, eyes):
     mesh.update()
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
-    return created
+    return created, hair_verts
 
 
 
@@ -922,7 +923,7 @@ def build(stage, matte=False):
     for obj in (human, arm):
         bpy.data.objects.remove(obj, do_unlink=True)
 
-    add_head_features(body, baked, eyes)
+    _, hair_verts = add_head_features(body, baked, eyes)
 
     mat = bpy.data.materials.new("AmidaGold")
     mat.use_nodes = True
@@ -934,9 +935,20 @@ def build(stage, matte=False):
     for poly in baked.polygons:
         poly.use_smooth = True
 
+    # 螺髪と頭皮の下地は黒漆(紺青)のマテリアル
+    hair_mat = bpy.data.materials.new("AmidaHair")
+    hair_mat.use_nodes = True
+    hb = hair_mat.node_tree.nodes["Principled BSDF"]
+    hb.inputs["Base Color"].default_value = (*HAIR_COLOR, 1)
+    hb.inputs["Metallic"].default_value = 0.25
+    hb.inputs["Roughness"].default_value = 0.42
+    baked.materials.append(hair_mat)
+    for poly in baked.polygons:
+        if all(i in hair_verts for i in poly.vertices):
+            poly.material_index = 1
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and not obj.data.materials:
-            obj.data.materials.append(mat)
+            obj.data.materials.append(hair_mat if obj.name == "Amida_Hair" else mat)
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
             cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4,
