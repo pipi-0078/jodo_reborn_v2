@@ -30,8 +30,8 @@ USHNISHA_RADIUS = 0.052  # 肉髻の半径(m)
 USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、m)
 HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
-SIDEBURN_DROP = 0.028  # 耳の上端からもみあげの尖った下端までの距離(m)
-SIDEBURN_WIDTH = 0.022  # もみあげの最大幅(耳の前端から頬側へ、m)
+SIDEBURN_DROP = 0.046  # 耳の上端からもみあげの尖った下端までの距離(m)
+SIDEBURN_WIDTH = 0.032  # もみあげの最大幅(耳の前端から頬側へ、m)
 BEAD_SPACING = 0.0078
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
@@ -564,7 +564,7 @@ def spiral_knob_mesh():
     頂点座標は半径 1、+Z が先端。"""
     import bmesh
     bm = bmesh.new()
-    segs, rings = 9, 5
+    segs, rings = 8, 4
     grid = []
     for i in range(rings + 1):
         u = i / rings                                  # 0(先端)〜1(裾)
@@ -653,7 +653,7 @@ def place_rahotsu(body, mesh, hair_verts, apex):
     face_ids = {f.index for f in scalp_faces}
     pts = [q for q, _ in placed]
     nrms = [n for _, n in placed]
-    for round_ in range(5):
+    for round_ in range(16):
         # 反発
         grid = {}
         for i, q in enumerate(pts):
@@ -690,7 +690,7 @@ def place_rahotsu(body, mesh, hair_verts, apex):
                 for dy in (-1, 0, 1):
                     for dz in (-1, 0, 1):
                         for j in grid.get((cx + dx, cy + dy, cz + dz), ()):
-                            if (q - pts[j]).length < spacing * 0.9:
+                            if (q - pts[j]).length < spacing * 0.74:
                                 near = True
                                 break
                         if near:
@@ -705,7 +705,24 @@ def place_rahotsu(body, mesh, hair_verts, apex):
                 grid.setdefault((cx, cy, cz), []).append(len(pts) - 1)
                 added += 1
         log(f"  rahotsu relax round {round_}: {len(pts)} (+{added})")
-    placed = list(zip(pts, nrms))
+    # 髪の輪郭からはみ出す粒は置かない(境界の頂点に粒の半径より近いものを除く)
+    from mathutils.kdtree import KDTree
+    boundary = []
+    bm_b = bmesh.new()
+    bm_b.from_mesh(mesh)
+    bm_b.verts.ensure_lookup_table()
+    for i in scalp_verts:
+        v = bm_b.verts[i]
+        if any(e.other_vert(v).index not in scalp_verts for e in v.link_edges):
+            boundary.append(v.co.copy())
+    bm_b.free()
+    kd = KDTree(len(boundary))
+    for i, b in enumerate(boundary):
+        kd.insert(b, i)
+    kd.balance()
+    kept = [(q, n) for q, n in zip(pts, nrms) if kd.find(q)[2] >= BEAD_RADIUS * 0.85]
+    log("  rahotsu trimmed at hair edge:", len(pts) - len(kept))
+    placed = kept
 
     knob = spiral_knob_mesh()
     bm = bmesh.new()
