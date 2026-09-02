@@ -43,7 +43,7 @@ BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下�
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
-    "gender": 0.65, "age": 0.5, "muscle": 0.45, "weight": 0.56, "proportions": 0.5, "height": 0.5,
+    "gender": 0.65, "age": 0.5, "muscle": 0.5, "weight": 0.62, "proportions": 0.5, "height": 0.5,
     "cupsize": 0.0, "firmness": 0.5,
     "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
 }
@@ -70,6 +70,10 @@ FACE_TARGETS = {
     "mouth-angles-up": 0.7, "mouth-scale-horiz-decr": 0.1,           # 口角を上げて微笑む
     "mouth-upperlip-volume-decr": 0.35, "mouth-lowerlip-volume-decr": 0.2, "mouth-dimples-in": 0.3,
     "neck-scale-vert-decr": 0.5, "neck-scale-horiz-incr": 0.2,
+    # 体つき(参考像の、肩が広く胸の厚い堂々とした上半身)
+    "torso-scale-horiz-incr": 0.35, "torso-scale-depth-incr": 0.2, "measure-shoulder-dist-incr": 0.4,
+    "torso-vshape-incr": 0.2, "l-upperarm-fat-incr": 0.3, "r-upperarm-fat-incr": 0.3,
+    "l-lowerarm-fat-incr": 0.2, "r-lowerarm-fat-incr": 0.2,
 }
 
 
@@ -155,8 +159,8 @@ def pose_arms_dhyana(arm, lap_z):
         rotate_bone(arm, ua, (0, 1, 0), s * 32)      # 腕を体側へ下ろす
         rotate_bone(arm, ua, (1, 0, 0), -14)          # わずかに前へ
         # 前腕を腹の前へ。手首が中心線の手前で交差し、右手が下・左手が上(指先は反対側へ)
-        hand_z = lap_z + ROBE_OFFSET + (0.077 if side == "L" else 0.042)   # 右手の甲が衣に載り、左手はその上
-        wrist_target = Vector((-s * 0.05, -0.245, hand_z))
+        hand_z = lap_z + ROBE_OFFSET + (0.062 if side == "L" else 0.03)    # 右手の甲が衣に載り、左手はその上
+        wrist_target = Vector((-s * 0.04, -0.245, hand_z))
         elbow = arm.pose.bones[f"lowerarm01.{side}"].head
         # lowerarm01 の先は lowerarm02→wrist と続くので、肘→手首の距離ぶんだけ伸ばした方向を狙う
         target = wrist_target - elbow
@@ -172,16 +176,16 @@ def pose_arms_dhyana(arm, lap_z):
         best = roll_to_palm_up(arm, side, f"wrist.{side}", bone_dir(arm, f"wrist.{side}"), wrist.head.copy())
         log(f"  palm {side}: wrist roll {best[0]} deg, normal.z {best[1]:.2f}, fingers", [round(v, 2) for v in bone_dir(arm, f"finger3-1.{side}")])
         # 指: 人差し指を丸め、親指を寄せて輪に。他の指はゆるく伸ばす
-        for joint, deg in (("finger2-1", 35), ("finger2-2", 55), ("finger2-3", 40)):
+        for joint, deg in (("finger2-1", 42), ("finger2-2", 62), ("finger2-3", 45)):
             pb = arm.pose.bones[f"{joint}.{side}"]
             pb.rotation_mode = "XYZ"
             pb.rotation_euler.x = math.radians(deg)
-        for joint, deg in (("finger1-1", 20), ("finger1-2", 30), ("finger1-3", 25)):
+        for joint, deg in (("finger1-1", 30), ("finger1-2", 36), ("finger1-3", 26)):
             pb = arm.pose.bones[f"{joint}.{side}"]
             pb.rotation_mode = "XYZ"
             pb.rotation_euler.x = math.radians(deg)
         for f in ("finger3", "finger4", "finger5"):
-            for j, deg in (("1", 8), ("2", 12), ("3", 8)):
+            for j, deg in (("1", 4), ("2", 6), ("3", 4)):
                 pb = arm.pose.bones[f"{f}-{j}.{side}"]
                 pb.rotation_mode = "XYZ"
                 pb.rotation_euler.x = math.radians(deg)
@@ -1058,7 +1062,7 @@ ROBE_LOWER_Z1 = 0.42   # 下半身の衣(凸包を落とす)に含める頂点�
 ROBE_DRAPE_LIMIT = 0.05  # 凸包から体へ落とす距離の上限(届かない所は布として張る)
 ROBE_VOXEL = 0.006     # 一体化するボクセルの大きさ
 ROBE_HEM_R = 0.0055    # 衿・袖口の縁(ヘム)の太さ(半径)
-FOLD_AMP = 0.0026      # 衣文の高さ
+FOLD_AMP = 0.0038      # 衣文の高さ
 
 
 def hand_group_indices(body):
@@ -1265,10 +1269,10 @@ def robe_folds(robe):
         vary = 0.65 + 0.35 * math.sin(x * 23.0 + z * 17.0)       # 単調にならないよう強さを揺らす
         d = 0.0
         # 膝の前: 腹の下の一点から広がる、ゆるい弧の襞(3〜4本)
-        lap = smoothstep(0.34, 0.24, z) * front
+        lap = smoothstep(0.36, 0.26, z) * front
         if lap > 0:
-            r = math.hypot(x * 0.9, (z + 0.12))
-            d += FOLD_AMP * lap * vary * ridge(2 * math.pi * r / 0.085)
+            r = math.hypot(x * 0.8, (0.44 - z))                  # 膝の間に垂れる U 字の弧(中心は上)
+            d += FOLD_AMP * lap * vary * ridge(2 * math.pi * r / 0.062)
         # 胸〜腹: 左肩から右腰へ流れる、まばらな斜めの襞
         torso = smoothstep(0.24, 0.32, z) * smoothstep(0.56, 0.46, z) * front
         if torso > 0:
@@ -1276,7 +1280,8 @@ def robe_folds(robe):
         # 腕・袖: 腕に沿って巻く襞
         arm = smoothstep(0.17, 0.25, abs(x)) * smoothstep(0.60, 0.54, z) * smoothstep(0.26, 0.34, z)
         if arm > 0:
-            d += FOLD_AMP * 0.7 * arm * vary * ridge(2 * math.pi * (z + 0.25 * abs(x)) / 0.07)
+            k = 1.0 if x > 0 else 0.7                             # 左腕(大衣が掛かる側)は襞が深い
+            d += FOLD_AMP * k * arm * vary * ridge(2 * math.pi * (z + 0.35 * abs(x)) / 0.062)
         if d != 0.0:
             v.co += n * d
     me.update()
@@ -1416,6 +1421,15 @@ def build_robe(body, mesh):
     bm.to_mesh(robe.data)
     bm.free()
     hem = rim_tubes("Amida_RobeHem", robe, ROBE_HEM_R)
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    pts = []
+    for i in range(41):
+        t = i / 40
+        x = 0.16 - 0.36 * t
+        z = 0.60 - 0.24 * t - 0.03 * math.sin(math.pi * t)
+        pts.append(Vector((x, -0.35, z)))
+    tube_along("Amida_OuterEdge", robe, pts, ROBE_HEM_R * 1.15, dg)
     solid = robe.modifiers.new("solid", "SOLIDIFY")
     solid.thickness = 0.008
     solid.offset = -1.0
