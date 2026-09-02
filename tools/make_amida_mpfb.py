@@ -24,8 +24,8 @@ from mpfb_bootstrap import bootstrap  # noqa: E402
 OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
-BEAD_RADIUS = 0.0072  # 螺髪の粒(身長1.57m基準)
-BEAD_SPACING = 0.0135
+BEAD_RADIUS = 0.0068  # 螺髪の粒(身長1.57m基準)
+BEAD_SPACING = 0.0125
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
@@ -458,7 +458,7 @@ def add_head_features(body, mesh, eyes):
     # 頭皮の下地: 頭皮の頂点を法線方向へ少し盛って、粒の隙間に肌が見えないようにする
     for v in mesh.vertices:
         if any(g.group == scalp_idx for g in v.groups):
-            v.co += v.normal * 0.004
+            v.co += v.normal * 0.0055
     mesh.update()
     hair = place_rahotsu(body, mesh, scalp_idx, apex)
     created.append(hair)
@@ -469,35 +469,38 @@ def add_head_features(body, mesh, eyes):
 
 # ---------------------------------------------------------------- 螺髪
 def spiral_knob_mesh():
-    """右巻きの渦を刻んだ粒(半球より少し高い)。頂点座標は半径1、+Z が先端。"""
+    """右巻きの渦を巻いた粒(螺髪)。裾から先端へ 2.5 周の螺旋の畝と溝を持ち、先端は小さく尖る。
+    頂点座標は半径 1、+Z が先端。"""
     import bmesh
     bm = bmesh.new()
-    segs, rings = 10, 6
+    segs, rings = 12, 8
     grid = []
     for i in range(rings + 1):
-        ph = math.pi * 0.62 * i / rings          # 0(先端)〜 約112°(裾)
-        row = []
+        u = i / rings                                  # 0(先端)〜1(裾)
+        ph = math.pi * (0.06 + 0.60 * u)               # 極角(裾は約 119°、少し下へ巻き込む)
         for j in range(segs):
             th = 2 * math.pi * j / segs
-            groove = 0.5 + 0.5 * math.cos(th * 1 + ph * 6.0)   # 渦の溝(下るほど回る)
-            r = 1.0 - 0.16 * groove ** 2 * min(1.0, ph / 0.5)
+            # 螺旋: 裾から先端へ右巻きに 2.5 周。畝(山)と溝(谷)を交互に
+            spiral = math.cos(th - 2.5 * 2 * math.pi * (1 - u))
+            depth = 0.13 * (0.5 - 0.5 * spiral) ** 1.5 * min(1.0, u * 4)   # 先端付近では溝を浅く
+            r = 1.0 - depth
             x = r * math.sin(ph) * math.cos(th)
             y = r * math.sin(ph) * math.sin(th)
-            z = r * math.cos(ph) * 1.15
-            row.append(bm.verts.new((x, y, z)))
-        grid.append(row)
+            z = r * math.cos(ph) * 1.12 + 0.05 * (1 - u) ** 3     # 先端をわずかに立てる
+            grid.append(bm.verts.new((x, y, z)) if i > 0 else None)
+    # 先端は一点
+    tip = bm.verts.new((0, 0, 1.2))
+    def at(i, j):
+        return tip if i == 0 else grid[i * segs + (j % segs)]
     for i in range(rings):
         for j in range(segs):
-            a, b = grid[i][j], grid[i][(j + 1) % segs]
-            c, d = grid[i + 1][(j + 1) % segs], grid[i + 1][j]
+            a, b, c, d = at(i, j), at(i, j + 1), at(i + 1, j + 1), at(i + 1, j)
             if i == 0:
-                pass
-            bm.faces.new((a, b, c, d))
-    # 先端を閉じる
-    tip = bm.verts.new((0, 0, 1.18))
-    for j in range(segs):
-        bm.faces.new((tip, grid[0][(j + 1) % segs], grid[0][j]))
+                bm.faces.new((a, c, d))
+            else:
+                bm.faces.new((a, b, c, d))
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     me = bpy.data.meshes.new("knob")
     bm.to_mesh(me)
     bm.free()
@@ -507,7 +510,7 @@ def spiral_knob_mesh():
 
 
 def place_rahotsu(body, mesh, scalp_idx, apex):
-    """頭皮と肉髻の面に、緯線に沿った列で渦巻きの粒を据える。"""
+    """螺髪を据える。まず生え際に沿って一列、次に頭皮と肉髻の面に緯線状の列(互い違い)で詰める。"""
     import bmesh
     scalp_verts = {v.index for v in mesh.vertices if any(g.group == scalp_idx for g in v.groups)}
     scalp_faces = {f.index for f in mesh.polygons if all(i in scalp_verts for i in f.vertices)}
@@ -517,7 +520,51 @@ def place_rahotsu(body, mesh, scalp_idx, apex):
     radius = sum((p - center).length for p in pts) / len(pts)
     spacing = BEAD_SPACING
     placed = []   # (location, normal)
-    # 頭皮: 頭の中心から放射状にレイを飛ばし、頭皮の面に当たった所へ置く
+
+    def free(loc, k=0.82):
+        return all((loc - q).length > spacing * k for q, _ in placed)
+
+    # 1) 生え際: 頭皮の面集合の境界の頂点をたどり、前面(額側)の輪郭に沿って等間隔に
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.faces.ensure_lookup_table()
+    boundary = []
+    for e in bm.edges:
+        fs = [f.index in scalp_faces for f in e.link_faces]
+        if len(fs) == 2 and fs[0] != fs[1]:
+            boundary.append((e.verts[0].co.copy(), e.verts[1].co.copy()))
+    bm.free()
+    # 額側(y が中心より前)の境界だけ
+    front = [(a, b) for a, b in boundary if (a.y + b.y) / 2 < center.y - 0.02 and (a.z + b.z) / 2 > center.z]
+    # 境界の線分を x 順に並べ、線に沿って等間隔にサンプル
+    front.sort(key=lambda ab: (ab[0].x + ab[1].x) / 2)
+    hairline = []
+    for a, b in front:
+        hairline.append((a + b) / 2)
+    if hairline:
+        # 曲線を滑らかにしてから、間隔 spacing で置く(少し内側=上へ寄せる)
+        smooth = []
+        for i, p in enumerate(hairline):
+            lo, hi = max(0, i - 3), min(len(hairline), i + 4)
+            smooth.append(sum(hairline[lo:hi], Vector()) / (hi - lo))
+        acc = 0.0
+        last = None
+        for p in smooth:
+            if last is not None:
+                acc += (p - last).length
+            last = p
+            if acc >= spacing or not placed:
+                acc = 0.0
+                d = (p - center).normalized()
+                hit, loc, nrm, fi = body.ray_cast(center, d)
+                if hit:
+                    loc2 = loc + Vector((0, 0, BEAD_RADIUS * 0.6))
+                    hit2, loc3, nrm3, fi3 = body.ray_cast(center, (loc2 - center).normalized())
+                    if hit2 and fi3 in scalp_faces and free(loc3):
+                        placed.append((loc3.copy(), nrm3.copy()))
+    n_hair = len(placed)
+
+    # 2) 頭皮: 頭の中心から放射状にレイを飛ばし、頭皮の面に当たった所へ(列は互い違い)
     n_rings = int(math.pi * 0.7 * radius / spacing) + 1
     for k in range(n_rings + 1):
         ph = math.pi * 0.7 * k / n_rings
@@ -526,25 +573,30 @@ def place_rahotsu(body, mesh, scalp_idx, apex):
             th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
             d = Vector((math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)))
             hit, loc, nrm, fi = body.ray_cast(center, d)
-            if hit and fi in scalp_faces and all((loc - q).length > spacing * 0.8 for q, _ in placed):
+            if hit and fi in scalp_faces and free(loc):
                 placed.append((loc.copy(), nrm.copy()))
-    # 肉髻(球)にも同じ列で
+    # 3) 肉髻(球)にも同じ列で(少し密に、面のすぐ外に)
     rx, ry, rz = 0.052, 0.0546, 0.0468
-    n_rings2 = int(math.pi * 0.55 * rx / spacing) + 1
+    sp2 = spacing * 0.9
+    n_rings2 = int(math.pi * 0.6 * rx / sp2) + 1
     for k in range(n_rings2 + 1):
-        ph = math.pi * 0.55 * k / n_rings2
-        n = max(1, round(2 * math.pi * rx * math.sin(ph) / spacing))
+        ph = math.pi * 0.6 * k / n_rings2
+        n = max(1, round(2 * math.pi * rx * math.sin(ph) / sp2))
         for j in range(n):
             th = 2 * math.pi * (j + 0.5 * (k % 2)) / n
             d = Vector((math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)))
-            loc = apex + Vector((d.x * rx, d.y * ry, d.z * rz))
-            if all((loc - q).length > spacing * 0.8 for q, _ in placed):
+            loc = apex + Vector((d.x * rx, d.y * ry, d.z * rz)) + d * 0.0025
+            if free(loc, 0.75):
                 placed.append((loc, d))
+
     knob = spiral_knob_mesh()
     bm = bmesh.new()
+    import random
+    rng = random.Random(11)
     for loc, nrm in placed:
         rot = nrm.to_track_quat("Z", "Y").to_matrix().to_4x4()
-        mat = Matrix.Translation(loc - nrm * 0.0015) @ rot @ Matrix.Scale(BEAD_RADIUS, 4)
+        spin = Matrix.Rotation(rng.random() * 2 * math.pi, 4, "Z")
+        mat = Matrix.Translation(loc - nrm * 0.002) @ rot @ spin @ Matrix.Scale(BEAD_RADIUS, 4)
         tmp = bmesh.new()
         tmp.from_mesh(knob)
         bmesh.ops.transform(tmp, matrix=mat, verts=tmp.verts)
@@ -560,7 +612,7 @@ def place_rahotsu(body, mesh, scalp_idx, apex):
         poly.use_smooth = True
     hair = bpy.data.objects.new("Amida_Hair", me)
     bpy.context.collection.objects.link(hair)
-    log("  rahotsu:", len(placed), "tris", len(me.polygons) * 2)
+    log("  rahotsu:", len(placed), "(hairline", n_hair, ") tris", len(me.polygons) * 2)
     return hair
 
 
