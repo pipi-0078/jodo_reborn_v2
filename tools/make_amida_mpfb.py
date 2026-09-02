@@ -580,6 +580,26 @@ def add_head_features(body, mesh, eyes):
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
     created.append(hairline_rim(body, mesh, hair_verts))
+    # もみあげの先端: 丸い平たいドームを肌の上に置いて、先端を丸く見せる
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    for sign in (1, -1):
+        low = sorted((mesh.vertices[i].co for i in hair_verts if mesh.vertices[i].co.x * sign > 0.04 and mesh.vertices[i].co.y < ear_y),
+                     key=lambda p: p.z)[:6]
+        if not low:
+            continue
+        tip = sum(low, Vector()) / len(low)
+        r = SIDEBURN_TIP_R
+        ok, loc, nrm, _ = body.closest_point_on_mesh(tip + Vector((0, 0, r * 0.9)), depsgraph=depsgraph)
+        if not ok:
+            continue
+        cap = add_sphere(f"Amida_SideburnTip_{'L' if sign > 0 else 'R'}", loc + nrm * (r * 0.15), r, segments=20, rings=12)
+        # 肌の法線方向に平たく
+        q = nrm.to_track_quat("Z", "Y")
+        cap.rotation_mode = "QUATERNION"
+        cap.rotation_quaternion = q
+        cap.scale = (1.0, 1.0, 0.32)
+        created.append(cap)
     return created, hair_verts
 
 
@@ -1182,7 +1202,7 @@ def build(stage, matte=False):
             poly.material_index = 1
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and not obj.data.materials:
-            obj.data.materials.append(hair_mat if obj.name in ("Amida_Hair", "Amida_HairRim") else mat)
+            obj.data.materials.append(hair_mat if obj.name.startswith(("Amida_Hair", "Amida_SideburnTip")) else mat)
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
             cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4,
