@@ -160,6 +160,13 @@
       "file": "tree_yanagi.glb",
       "desc": "同じくWeber&Penn法による枝垂れ柳。金の葉が枝先まで流れる",
       "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整"
+    },
+    {
+      "id": "amida_wip",
+      "name": "阿弥陀如来坐像・本体(制作中)",
+      "file": "amida_wip.glb?v=14",
+      "desc": "MakeHuman(MPFB2)の素体から組み立て中の本体。承認用ではなく途中経過の確認用",
+      "credit": "ベースメッシュ: MakeHuman(CC0) / 組み立て: 本プロジェクト"
     }
   ]
 }
