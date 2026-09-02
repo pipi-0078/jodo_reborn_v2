@@ -30,8 +30,9 @@ USHNISHA_RADIUS = 0.052  # 肉髻の半径(m)
 USHNISHA_EDGE = 0.012  # 肉髻の縁の帯(段差をなだらかにする幅、m)
 HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
-SIDEBURN_DROP = 0.046  # 耳の上端からもみあげの尖った下端までの距離(m)
-SIDEBURN_WIDTH = 0.012  # もみあげが中ほどで頬側へふくらむ量(m)
+SIDEBURN_DROP = 0.048  # 耳の上端からもみあげの尖った下端までの距離(m)
+SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、m)
+SIDEBURN_TOP_W = 0.03  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
@@ -498,17 +499,22 @@ def add_head_features(body, mesh, eyes):
     z_top = hairline_z(face_half)                            # こめかみで額の弧と接続する高さ
     z_tip = ear_top - SIDEBURN_DROP                          # もみあげの尖った先
     ear_front_y = min(p.y for p in ear_pts)                 # 耳の前端
-    temple = [v.co.y for v in mesh.vertices
-              if abs(abs(v.co.x) - face_half) < 0.006 and abs(v.co.z - z_top) < 0.006 and v.co.y < ear_front_y]
-    w_top = (ear_front_y - min(temple)) if temple else 0.05  # こめかみの生え際は耳の前端からこれだけ前
+    z_mid = ear_top - 0.012                                  # もみあげが最も前へふくらむ高さ(耳の穴のあたり)
+    w_top = SIDEBURN_TOP_W                                   # こめかみの生え際: 耳の前端からこれだけ前
+    w_mid = SIDEBURN_WIDTH                                   # ふくらみの最大幅
 
     def burn_w(z):
+        """高さ z で、耳の前端からどれだけ前(頬側)まで髪か。
+        こめかみから下るにつれて前へふくらみ、耳の穴の高さで最大、そこから丸みを帯びて耳朶の高さの先で尖る。"""
         if z >= z_top:
             return w_top
+        if z >= z_mid:
+            t = (z_top - z) / max(z_top - z_mid, 1e-6)
+            return w_top + (w_mid - w_top) * math.sin(0.5 * math.pi * t)
         if z <= z_tip:
             return 0.0
-        t = (z_top - z) / (z_top - z_tip)
-        return w_top * (1 - t) ** 1.15 + SIDEBURN_WIDTH * math.sin(math.pi * t) ** 1.6   # 中ほどで前へふくらむ
+        u = (z_mid - z) / (z_mid - z_tip)
+        return w_mid * (1 - u ** 2.2) ** 0.6
 
     def side_hair(v):
         if abs(v.co.x) < face_half or v.co.z <= z_tip:
@@ -537,7 +543,7 @@ def add_head_features(body, mesh, eyes):
         if abs(v.co.x) > 0.04 and v.co.z < ear_top and v.co.y > ear_front_y - 0.003 and v.co.y < ear_y + 0.03:
             continue                                        # 耳の下: 肌
         hair_verts.add(i)
-    log(f"  sideburn: z_top {z_top:.3f} z_tip {z_tip:.3f} w_top {w_top:.3f}")
+    log(f"  sideburn: z_top {z_top:.3f} z_mid {z_mid:.3f} z_tip {z_tip:.3f}")
     log("  hair verts", len(hair_verts), "ear top z", round(ear_top, 3), "hairline z0", round(hair_z0, 3))
     # 地髪の下地: 髪の領域を法線方向へ厚く盛り、生え際で段差(帽子の縁のような厚み)を作る。
     # 縁は境界からの頂点の段数でなだらかに丸める
