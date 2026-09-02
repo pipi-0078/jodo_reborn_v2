@@ -28,7 +28,7 @@ BEAD_SPACING = 0.0135
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
-    "gender": 0.35, "age": 0.42, "muscle": 0.36, "weight": 0.56, "proportions": 0.5, "height": 0.5,
+    "gender": 0.4, "age": 0.62, "muscle": 0.36, "weight": 0.56, "proportions": 0.5, "height": 0.5,
     "cupsize": 0.0, "firmness": 0.5,
     "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
 }
@@ -37,24 +37,25 @@ MACRO = {
 FACE_TARGETS = {
     # 中宮寺 菩薩半跏像を範に: 長めの卵形の面、高い額、細く高い弧の眉から続く通った鼻筋、
     # 伏せた長い目(瞼の折り目は作らない)、小さく薄い唇の口角だけを上げる
-    "head-oval": 0.3, "head-round": 0.3, "head-scale-vert-incr": 0.4, "head-scale-horiz-incr": 0.6, "head-scale-depth-incr": 0.35,
-    "head-fat-incr": 0.35, "forehead-scale-vert-incr": 0.3, "forehead-temple-incr": 0.7, "forehead-nubian-decr": 0.2,
-    "l-cheek-volume-incr": 0.6, "r-cheek-volume-incr": 0.6, "l-cheek-inner-incr": 0.3, "r-cheek-inner-incr": 0.3,
+    "head-oval": 0.4, "head-round": 0.2, "head-scale-vert-incr": 0.4, "head-scale-horiz-incr": 0.45, "head-scale-depth-incr": 0.35,
+    "head-fat-incr": 0.2, "forehead-scale-vert-incr": 0.3, "forehead-temple-incr": 0.6, "forehead-nubian-decr": 0.5,
+    "l-cheek-volume-incr": 0.45, "r-cheek-volume-incr": 0.45, "l-cheek-bones-incr": 0.0, "r-cheek-bones-incr": 0.0,
     "l-cheek-bones-decr": 0.5, "r-cheek-bones-decr": 0.5,
-    "chin-prominent-decr": 0.35, "chin-bones-decr": 0.6, "chin-width-incr": 0.35, "chin-cleft-decr": 0.4, "chin-height-decr": 0.1,
+    "chin-prominent-decr": 0.25, "chin-bones-decr": 0.5, "chin-width-incr": 0.2, "chin-cleft-decr": 0.4,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
     "l-eye-height2-decr": 1.0, "r-eye-height2-decr": 1.0,            # 半眼(細い線)
-    "l-eye-height1-decr": 0.5, "r-eye-height1-decr": 0.5, "l-eye-height3-decr": 0.5, "r-eye-height3-decr": 0.5,
+    "l-eye-height1-decr": 1.0, "r-eye-height1-decr": 1.0, "l-eye-height3-decr": 1.0, "r-eye-height3-decr": 1.0,
+    "l-eye-epicanthus-in": 0.6, "r-eye-epicanthus-in": 0.6, "l-eye-push1-in": 0.2, "r-eye-push1-in": 0.2,
     "l-eye-scale-incr": 0.35, "r-eye-scale-incr": 0.35,               # 目を長く
     "l-eye-trans-out": 0.3, "r-eye-trans-out": 0.3,
     "l-eye-corner2-up": 0.1, "r-eye-corner2-up": 0.1,
     "l-eye-bag-decr": 0.5, "r-eye-bag-decr": 0.5,
     "eyebrows-angle-up": 0.6, "eyebrows-trans-up": 0.25,
-    "nose-greek-incr": 0.4, "nose-hump-decr": 0.5, "nose-scale-horiz-decr": 0.1, "nose-trans-backward": 0.15,
-    "nose-nostrils-width-decr": 0.3, "nose-point-width-decr": 0.2, "nose-flaring-decr": 0.3,
+    "nose-greek-incr": 0.3, "nose-hump-decr": 0.5, "nose-scale-horiz-decr": 0.4, "nose-trans-backward": 0.1, "nose-base-up": 0.2,
+    "nose-nostrils-width-decr": 0.6, "nose-point-width-decr": 0.35, "nose-flaring-decr": 0.6, "nose-volume-decr": 0.2,
     "mouth-scale-horiz-decr": 0.35, "mouth-angles-up": 0.65,
-    "mouth-upperlip-volume-decr": 0.35, "mouth-lowerlip-volume-decr": 0.15, "mouth-cupidsbow-incr": 0.15,
+    "mouth-upperlip-volume-decr": 0.55, "mouth-lowerlip-volume-decr": 0.4, "mouth-cupidsbow-incr": 0.1, "mouth-trans-backward": 0.15,
     "mouth-dimples-in": 0.45, "mouth-laugh-lines-in": 0.1,
     "neck-scale-vert-decr": 0.3, "neck-scale-horiz-incr": 0.15,
 }
@@ -253,7 +254,7 @@ def add_head_features(body, mesh, eyes):
     stretch_earlobes(body, mesh)
     created = []
     for side, (c, r) in eyes.items():
-        created.append(add_sphere(f"Amida_Eye_{side.upper()}", c, r * 1.02))
+        created.append(add_sphere(f"Amida_Eye_{side.upper()}", c + Vector((0, 0.004, 0)), r * 0.95))
     # 白毫: 眉間。両目の中点から前へ出し、眉間の肌の上に半分埋める
     mid = (eyes["l"][0] + eyes["r"][0]) / 2
     front = min(v.co.y for v in mesh.vertices if abs(v.co.x) < 0.01 and abs(v.co.z - (mid.z + 0.03)) < 0.008)
