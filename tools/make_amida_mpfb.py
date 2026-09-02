@@ -25,9 +25,9 @@ OUT = os.path.join(ROOT, "public/assets/amida_wip.glb")
 GOLD = (0.85, 0.62, 0.20)
 UPPER_LID_DEG = -30  # 上瞼ボーンの回転(閉じ目)
 USHNISHA_HEIGHT = 0.035  # 肉髻の盛り上がり(m)
-HAIRLINE_HEIGHT = 0.045  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
-BEAD_RADIUS = 0.0068  # 螺髪の粒(身長1.57m基準)
-BEAD_SPACING = 0.0125
+HAIRLINE_HEIGHT = 0.03  # 眉の高さから生え際(中央)までの距離(m、身長1.57m基準)
+BEAD_RADIUS = 0.0048  # 螺髪の粒(身長1.57m基準)
+BEAD_SPACING = 0.0086
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
 MACRO = {
@@ -39,17 +39,17 @@ MACRO = {
 # 相好(定朝様: 円満な面相・伏し目・長い耳朶)。値は 0..1
 FACE_TARGETS = {
     # 美男子系・アジア系。頬骨は浅く、口角を上げて微笑む。目はリグの瞼ボーンで閉じる
-    "head-oval": 0.35, "head-scale-vert-incr": 0.15, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
+    "head-oval": 0.2, "head-round": 0.25, "head-scale-vert-incr": 0.1, "head-scale-horiz-incr": 0.42, "head-scale-depth-incr": 0.3,
     "forehead-temple-incr": 0.3, "forehead-nubian-decr": 0.4, "forehead-scale-vert-decr": 0.35,
     "l-cheek-bones-decr": 0.6, "r-cheek-bones-decr": 0.6,          # 頬骨は浅く
-    "l-cheek-volume-incr": 0.2, "r-cheek-volume-incr": 0.2,
+    "l-cheek-volume-incr": 0.38, "r-cheek-volume-incr": 0.38,
     "chin-bones-incr": 0.15, "chin-prominent-incr": 0.1, "chin-cleft-decr": 0.4, "chin-width-incr": 0.1,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
     "l-eye-scale-incr": 0.2, "r-eye-scale-incr": 0.2,
     "l-eye-epicanthus-in": 0.4, "r-eye-epicanthus-in": 0.4,
     "l-eye-bag-decr": 0.5, "r-eye-bag-decr": 0.5,
-    "eyebrows-angle-up": 0.25, "eyebrows-trans-forward": 0.1,
+    "eyebrows-angle-up": 0.4, "eyebrows-trans-forward": 0.1,
     "nose-greek-incr": 0.4, "nose-hump-decr": 0.4, "nose-scale-horiz-decr": 0.35,
     "nose-nostrils-width-decr": 0.5, "nose-flaring-decr": 0.5, "nose-point-width-decr": 0.3,
     "mouth-angles-up": 0.7, "mouth-scale-horiz-decr": 0.1,           # 口角を上げて微笑む
@@ -244,7 +244,7 @@ def add_sphere(name, center, radius, scale=(1, 1, 1), segments=24, rings=16):
     return obj
 
 
-def stretch_earlobes(body, mesh, factor=1.55):
+def stretch_earlobes(body, mesh, factor=1.8):
     """耳の中心より下の頂点を下へ引き伸ばし、長い耳朶にする。"""
     idx = body.vertex_groups["ears"].index
     for side_sign in (1, -1):
@@ -479,7 +479,7 @@ def add_head_features(body, mesh, eyes):
     hair_z0 = brow_z + HAIRLINE_HEIGHT                     # 中央の生え際の高さ
     head_half = max(abs(v.co.x) for v in mesh.vertices if brow_z < v.co.z < top.z)
     def hairline_z(x):
-        return hair_z0 + 0.10 * (x * x) / max(head_half, 1e-3)   # 両側でわずかに上がる弧
+        return hair_z0 - 0.22 * (x * x) / max(head_half, 1e-3)   # 両側(こめかみ)へ向かって下がる弧
     front_y = ear_y - 0.01                                  # 耳より前を「額側」とみなす
     candidates = set(hair_verts)
     for v in mesh.vertices:
@@ -490,7 +490,7 @@ def add_head_features(body, mesh, eyes):
         v = mesh.vertices[i]
         if v.co.y < front_y and v.co.z < hairline_z(v.co.x):
             continue                                        # 額: 生え際より下は肌
-        if v.co.y < ear_y + 0.025 and v.co.z < ear_top + 0.002 and abs(v.co.x) > 0.04:
+        if v.co.y < ear_y + 0.025 and v.co.z < ear_top and abs(v.co.x) > 0.04:
             continue                                        # 耳の前〜真上: 耳の上端より下は肌
         if any((v.co - q).length < 0.008 for q in ear_pts):
             continue                                        # 耳の周囲
@@ -514,7 +514,7 @@ def spiral_knob_mesh():
     頂点座標は半径 1、+Z が先端。"""
     import bmesh
     bm = bmesh.new()
-    segs, rings = 12, 8
+    segs, rings = 10, 6
     grid = []
     for i in range(rings + 1):
         u = i / rings                                  # 0(先端)〜1(裾)
@@ -622,7 +622,7 @@ def place_rahotsu(body, mesh, hair_verts, apex):
     faces = [mesh.polygons[i] for i in scalp_faces]
     areas = [f.area for f in faces]
     n_before = len(placed)
-    for _ in range(9000):
+    for _ in range(30000):
         f = rng.choices(faces, weights=areas)[0]
         vs = [mesh.vertices[i].co for i in f.vertices]
         a_, b_ = rng.random(), rng.random()
