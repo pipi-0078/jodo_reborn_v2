@@ -32,7 +32,7 @@ HAIR_THICKNESS = 0.008  # 地髪の厚み(生え際で段差になる、m)
 HAIRLINE_HEIGHT = 0.03
 SIDEBURN_DROP = 0.048  # 耳の上端からもみあげの尖った下端までの距離(m)
 SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、m)
-SIDEBURN_TOP_W = 0.03  # こめかみの生え際の、耳の前端からの前方距離(m)
+SIDEBURN_TOP_W = 0.028  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
@@ -504,17 +504,12 @@ def add_head_features(body, mesh, eyes):
     w_mid = SIDEBURN_WIDTH                                   # ふくらみの最大幅
 
     def burn_w(z):
-        """高さ z で、耳の前端からどれだけ前(頬側)まで髪か。
-        こめかみから下るにつれて前へふくらみ、耳の穴の高さで最大、そこから丸みを帯びて耳朶の高さの先で尖る。"""
+        """高さ z で、耳の前端からどれだけ前(頬側)まで髪か。こめかみから先端へ、下るほど一様に細くなる。"""
         if z >= z_top:
             return w_top
-        if z >= z_mid:
-            t = (z_top - z) / max(z_top - z_mid, 1e-6)
-            return w_top + (w_mid - w_top) * t                # 前縁は真っ直ぐ(下るほど少し前へ)
         if z <= z_tip:
             return 0.0
-        u = (z_mid - z) / (z_mid - z_tip)
-        return w_mid * (1 - u)                             # 先端へ向かって真っ直ぐ細くなる
+        return w_top * (z - z_tip) / (z_top - z_tip)
 
     def side_hair(v):
         if abs(v.co.x) < face_half or v.co.z <= z_tip:
