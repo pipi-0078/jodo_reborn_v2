@@ -37,20 +37,21 @@ MACRO = {
 FACE_TARGETS = {
     # 中宮寺 菩薩半跏像を範に: 長めの卵形の面、高い額、細く高い弧の眉から続く通った鼻筋、
     # 伏せた長い目(瞼の折り目は作らない)、小さく薄い唇の口角だけを上げる
-    "head-oval": 0.5, "head-scale-vert-incr": 0.45, "head-scale-horiz-incr": 0.3, "head-scale-depth-incr": 0.3,
-    "head-fat-incr": 0.1, "forehead-scale-vert-incr": 0.3,
-    "l-cheek-volume-incr": 0.3, "r-cheek-volume-incr": 0.3,
+    "head-oval": 0.3, "head-round": 0.3, "head-scale-vert-incr": 0.4, "head-scale-horiz-incr": 0.6, "head-scale-depth-incr": 0.35,
+    "head-fat-incr": 0.35, "forehead-scale-vert-incr": 0.3, "forehead-temple-incr": 0.7, "forehead-nubian-decr": 0.2,
+    "l-cheek-volume-incr": 0.6, "r-cheek-volume-incr": 0.6, "l-cheek-inner-incr": 0.3, "r-cheek-inner-incr": 0.3,
     "l-cheek-bones-decr": 0.5, "r-cheek-bones-decr": 0.5,
-    "chin-prominent-decr": 0.3, "chin-bones-decr": 0.5, "chin-width-decr": 0.05, "chin-cleft-decr": 0.3,
+    "chin-prominent-decr": 0.35, "chin-bones-decr": 0.6, "chin-width-incr": 0.35, "chin-cleft-decr": 0.4, "chin-height-decr": 0.1,
     "l-ear-lobe-incr": 1.0, "r-ear-lobe-incr": 1.0,
     "l-ear-scale-incr": 0.6, "r-ear-scale-incr": 0.6,
-    "l-eye-height2-decr": 0.8, "r-eye-height2-decr": 0.8,            # 伏し目(ほぼ閉じる)
+    "l-eye-height2-decr": 1.0, "r-eye-height2-decr": 1.0,            # 半眼(細い線)
+    "l-eye-height1-decr": 0.5, "r-eye-height1-decr": 0.5, "l-eye-height3-decr": 0.5, "r-eye-height3-decr": 0.5,
     "l-eye-scale-incr": 0.35, "r-eye-scale-incr": 0.35,               # 目を長く
-    "l-eye-trans-out": 0.1, "r-eye-trans-out": 0.1,
+    "l-eye-trans-out": 0.3, "r-eye-trans-out": 0.3,
     "l-eye-corner2-up": 0.1, "r-eye-corner2-up": 0.1,
     "l-eye-bag-decr": 0.5, "r-eye-bag-decr": 0.5,
     "eyebrows-angle-up": 0.6, "eyebrows-trans-up": 0.25,
-    "nose-greek-incr": 0.45, "nose-hump-decr": 0.4, "nose-scale-horiz-decr": 0.3,
+    "nose-greek-incr": 0.4, "nose-hump-decr": 0.5, "nose-scale-horiz-decr": 0.1, "nose-trans-backward": 0.15,
     "nose-nostrils-width-decr": 0.3, "nose-point-width-decr": 0.2, "nose-flaring-decr": 0.3,
     "mouth-scale-horiz-decr": 0.35, "mouth-angles-up": 0.65,
     "mouth-upperlip-volume-decr": 0.35, "mouth-lowerlip-volume-decr": 0.15, "mouth-cupidsbow-incr": 0.15,
@@ -229,8 +230,26 @@ def stretch_earlobes(body, mesh, factor=1.9):
     mesh.update()
 
 
+def soften_face(body, mesh, factor=0.5, iterations=5):
+    """顔の面をなめらかにして、人間的な細部より大きな面の流れで見せる(唇・耳・頭皮は除く)。"""
+    import bmesh
+    keep = {body.vertex_groups[n].index for n in ("lips", "ears", "scalp") if n in body.vertex_groups}
+    z_chin = min(v.co.z for v in mesh.vertices if any(g.group in keep and body.vertex_groups[g.group].name == "lips" for g in v.groups)) - 0.03
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    dl = bm.verts.layers.deform.verify()
+    verts = [v for v in bm.verts if v.co.z > z_chin and v.co.y < -0.02 and not any(v[dl].get(i, 0.0) > 0.2 for i in keep)]
+    for _ in range(iterations):
+        bmesh.ops.smooth_vert(bm, verts=verts, factor=factor, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    log("  softened face verts", len(verts))
+
+
 def add_head_features(body, mesh, eyes):
     """目(半眼の奥を埋める球)・白毫・肉髻・螺髪。"""
+    soften_face(body, mesh)
     stretch_earlobes(body, mesh)
     created = []
     for side, (c, r) in eyes.items():
