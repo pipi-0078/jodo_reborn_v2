@@ -34,6 +34,8 @@ SIDEBURN_DROP = 0.048  # 耳の上端からもみあげの尖った下端まで�
 SIDEBURN_WIDTH = 0.04  # もみあげの最大幅(耳の前端から頬側へ、m)
 SIDEBURN_TOP_W = 0.036  # こめかみの生え際の、耳の前端からの前方距離(m)
 BEAD_SPACING = 0.0078
+RIM_RADIUS = 0.0022  # 生え際の縁取りの線の太さ(半径、m)
+RIM_SMOOTH = 8  # 縁取りの曲線をならす回数
 BEAD_RADIUS = BEAD_SPACING * 0.6  # 螺髪の粒。隣と少し重なって下地を隠す
 
 # 体型(MakeHuman のマクロ。gender 0=女 1=男、age 0.5=25歳相当)
@@ -572,6 +574,7 @@ def add_head_features(body, mesh, eyes):
     mesh.update()
     hair = place_rahotsu(body, mesh, hair_verts, apex)
     created.append(hair)
+    created.append(hairline_rim(body, mesh, hair_verts))
     return created, hair_verts
 
 
@@ -767,6 +770,93 @@ def place_rahotsu(body, mesh, hair_verts, apex):
     bpy.context.collection.objects.link(hair)
     log("  rahotsu:", len(placed), "tris", len(me.polygons) * 2)
     return hair
+
+
+
+def hairline_rim(body, mesh, hair_verts):
+    """髪と肌の境界に沿って、滑らかな黒い縁取りの線(細い管)を敷く。
+    境界のジグザグをならした曲線を肌の面へ投影し、その上に円断面を掃引する。"""
+    import bmesh
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.verts.ensure_lookup_table()
+    # 境界の辺(片側だけが髪の面)
+    hair_faces = {f.index for f in bm.faces if all(v.index in hair_verts for v in f.verts)}
+    adj = {}
+    for e in bm.edges:
+        fs = [f.index in hair_faces for f in e.link_faces]
+        if len(fs) == 2 and fs[0] != fs[1]:
+            a, b = e.verts[0].index, e.verts[1].index
+            adj.setdefault(a, []).append(b)
+            adj.setdefault(b, []).append(a)
+    # 辺をたどって閉じた輪にする
+    loops = []
+    seen = set()
+    for start in adj:
+        if start in seen:
+            continue
+        loop = [start]
+        seen.add(start)
+        prev, cur = None, start
+        while True:
+            nxt = [n for n in adj.get(cur, []) if n != prev and n not in seen]
+            if not nxt:
+                break
+            prev, cur = cur, nxt[0]
+            loop.append(cur)
+            seen.add(cur)
+        if len(loop) >= 12:
+            loops.append(loop)
+    bm.free()
+
+    out = bmesh.new()
+    total = 0
+    for loop in loops:
+        pts = [mesh.vertices[i].co.copy() for i in loop]
+        n = len(pts)
+        # 輪に沿って均す(ジグザグを取る)
+        for _ in range(RIM_SMOOTH):
+            pts = [(pts[(i - 1) % n] + pts[i] * 2 + pts[(i + 1) % n]) / 4 for i in range(n)]
+        # 肌の面へ投影し、法線を得る
+        proj, nrm = [], []
+        for q in pts:
+            ok, loc, nr, _ = body.closest_point_on_mesh(q, depsgraph=depsgraph)
+            proj.append(loc.copy() if ok else q)
+            nrm.append(nr.copy() if ok else Vector((0, -1, 0)))
+        # 円断面を掃引
+        segs = 8
+        rings = []
+        for i in range(n):
+            t = (proj[(i + 1) % n] - proj[(i - 1) % n]).normalized()
+            up = nrm[i]
+            side = t.cross(up).normalized()
+            up = side.cross(t).normalized()
+            center = proj[i] + up * (RIM_RADIUS * 0.35)
+            ring = []
+            for k in range(segs):
+                a = 2 * math.pi * k / segs
+                ring.append(out.verts.new(center + side * (RIM_RADIUS * math.cos(a)) + up * (RIM_RADIUS * math.sin(a))))
+            rings.append(ring)
+        for i in range(n):
+            r0, r1 = rings[i], rings[(i + 1) % n]
+            for k in range(segs):
+                try:
+                    out.faces.new((r0[k], r1[k], r1[(k + 1) % segs], r0[(k + 1) % segs]))
+                except ValueError:
+                    pass
+        total += n
+    bmesh.ops.recalc_face_normals(out, faces=out.faces)
+    me = bpy.data.meshes.new("Amida_HairRim")
+    out.to_mesh(me)
+    out.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new("Amida_HairRim", me)
+    bpy.context.collection.objects.link(obj)
+    log("  hair rim: loops", len(loops), "points", total)
+    return obj
 
 
 # ---------------------------------------------------------------- 陰影(くぼみを暗く)
@@ -1087,7 +1177,7 @@ def build(stage, matte=False):
             poly.material_index = 1
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and not obj.data.materials:
-            obj.data.materials.append(hair_mat if obj.name == "Amida_Hair" else mat)
+            obj.data.materials.append(hair_mat if obj.name in ("Amida_Hair", "Amida_HairRim") else mat)
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH" and obj.name in ("Amida_Body", "Amida_Robe", "Amida_Hair"):
             cavity_colors(obj, strength=1.3 if obj.name == "Amida_Body" else 1.4,
