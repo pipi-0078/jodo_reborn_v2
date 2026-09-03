@@ -5,6 +5,8 @@ fal.ai の三面対応エンジンを叩く。LESSONS.md 2-1「有機的な造�
 および 4-6「キャラクターシートから image-to-3D」の続き。
 
 エンジン(--engine):
+    tripo    tripo3d/tripo/v2.5/multiview-to-3d  Tripo v2.5。HD テクスチャ・PBR・面数指定
+    tripo-single  tripo3d/tripo/v2.5/image-to-3d   同 v2.5 を正面図 1 枚で
     trellis  fal-ai/trellis/multi          螺髪・白毫・宝珠が形になる。顔も彫れる(9/3 採用)
     rodin    fal-ai/hyper3d/rodin          顔が最も整う。螺髪は模様止まり。9万tris
     hunyuan  fal-ai/hunyuan3d/v2/multi-view 4万tris で頭打ち。顔が崩れる
@@ -30,6 +32,8 @@ import urllib.error
 import urllib.request
 
 ENGINES = {
+    "tripo": "tripo3d/tripo/v2.5/multiview-to-3d",
+    "tripo-single": "tripo3d/tripo/v2.5/image-to-3d",
     "trellis": "fal-ai/trellis/multi",
     "rodin": "fal-ai/hyper3d/rodin",
     "hunyuan": "fal-ai/hunyuan3d/v2/multi-view",
@@ -120,6 +124,15 @@ def build_payload(engine, a, front, left, back):
         p = {"front_image_url": front, "left_image_url": left, "back_image_url": back,
              "textured_mesh": not a.no_texture, "octree_resolution": a.octree,
              "num_inference_steps": a.steps, "guidance_scale": a.guidance}
+    elif engine == "tripo":
+        # 右側面は無くてもよい。face_limit を切らないと数十万面になり Web に重い
+        p = {"front_image_url": front, "left_image_url": left, "back_image_url": back,
+             "texture": "HD", "pbr": True, "texture_alignment": "original_image",
+             "face_limit": a.face_limit, "orientation": "align_image"}
+    elif engine == "tripo-single":  # 正面図だけで起こす(--left/--back は使わない)
+        p = {"image_url": front, "texture": "HD", "pbr": True,
+             "texture_alignment": "original_image", "face_limit": a.face_limit,
+             "orientation": "align_image"}
     elif engine == "rodin":
         # addons は配列ではなく文字列 "HighPack"(配列だと 422)
         p = {"input_image_urls": [front, left, back], "condition_mode": "concat",
@@ -131,6 +144,54 @@ def build_payload(engine, a, front, left, back):
     if a.seed is not None:
         p["seed"] = a.seed
     return p
+
+
+def _glb_chunks(path):
+    buf = open(path, "rb").read()
+    off, chunks = 12, []
+    while off < len(buf):
+        clen, ctype = struct.unpack_from("<I4s", buf, off)
+        chunks.append((ctype, bytearray(buf[off + 8 : off + 8 + clen])))
+        off += 8 + clen + (-clen % 4)
+    return json.loads(chunks[0][1]), chunks[1][1]
+
+
+def rotate_y(path, deg):
+    """glb を上向き軸(Y)まわりに回す。Tripo は正面が -X を向いて出てくるので -90° で +Z 正面に揃える。
+    POSITION / NORMAL / TANGENT を書き換え、accessor の min/max も更新する。"""
+    import numpy as np
+
+    t = np.radians(deg)
+    c, s = np.cos(t), np.sin(t)
+    rot = np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]], dtype=np.float32)
+    jsn, bins = _glb_chunks(path)
+    done = set()
+    for mesh in jsn["meshes"]:
+        for prim in mesh["primitives"]:
+            for key in ("POSITION", "NORMAL", "TANGENT"):
+                ai = prim["attributes"].get(key)
+                if ai is None or ai in done:
+                    continue
+                done.add(ai)
+                acc = jsn["accessors"][ai]
+                bv = jsn["bufferViews"][acc["bufferView"]]
+                n = {"VEC3": 3, "VEC4": 4}[acc["type"]]
+                if bv.get("byteStride", 4 * n) != 4 * n:
+                    sys.exit("interleaved な bufferView は未対応")
+                start = bv.get("byteOffset", 0) + acc.get("byteOffset", 0)
+                a = np.frombuffer(bins, dtype=np.float32, count=acc["count"] * n, offset=start).reshape(-1, n).copy()
+                a[:, :3] = a[:, :3] @ rot.T
+                bins[start : start + a.nbytes] = a.tobytes()
+                if "min" in acc:
+                    acc["min"] = [float(v) for v in a.min(0)]
+                    acc["max"] = [float(v) for v in a.max(0)]
+    jb = json.dumps(jsn, separators=(",", ":")).encode()
+    jb += b" " * (-len(jb) % 4)
+    bb = bytes(bins) + b"\0" * (-len(bins) % 4)
+    with open(path, "wb") as f:
+        f.write(b"glTF" + struct.pack("<II", 2, 12 + 16 + len(jb) + len(bb)))
+        f.write(struct.pack("<I4s", len(jb), b"JSON") + jb + struct.pack("<I4s", len(bb), b"BIN\0") + bb)
+    print(f"  rotate_y {deg:+.0f}° ({len(done)} accessors)")
 
 
 def glb_bounds(path):
@@ -161,11 +222,12 @@ def glb_bounds(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--front", required=True)
-    ap.add_argument("--left", required=True)
-    ap.add_argument("--back", required=True)
+    ap.add_argument("--left", help="tripo-single では不要")
+    ap.add_argument("--back", help="tripo-single では不要")
     ap.add_argument("--engine", choices=list(ENGINES), default="trellis")
     ap.add_argument("--out", default="public/assets/amida_trellis.glb")
     ap.add_argument("--mirror-left", action="store_true", help="--left が右側面のとき反転する")
+    ap.add_argument("--face-limit", type=int, default=150000, help="[tripo] 出力の面数上限")
     ap.add_argument("--no-texture", action="store_true", help="[hunyuan] 形だけ生成")
     ap.add_argument("--octree", type=int, default=512, help="[hunyuan] オクツリー解像度(1-1024)")
     ap.add_argument("--steps", type=int, default=50, help="[hunyuan] 推論ステップ(1-50。超えると422)")
@@ -182,7 +244,12 @@ def main():
         left = mirror(left, os.path.join(os.path.dirname(a.out) or ".", "_left_mirrored.png"))
 
     print("画像を fal へ:")
-    payload = build_payload(a.engine, a, upload(a.front), upload(left), upload(a.back))
+    if a.engine == "tripo-single":
+        payload = build_payload(a.engine, a, upload(a.front), None, None)
+    else:
+        if not (a.left and a.back):
+            sys.exit("--left と --back が必要")
+        payload = build_payload(a.engine, a, upload(a.front), upload(left), upload(a.back))
 
     print(f"{ENGINES[a.engine]}:")
     res = submit(a.engine, payload)
@@ -194,6 +261,8 @@ def main():
 
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     urllib.request.urlretrieve(url, a.out)
+    if a.engine in ("tripo", "tripo-single"):  # orientation=align_image の出力は正面が -X。他エンジンと同じ +Z 正面に揃える
+        rotate_y(a.out, -90)
     size = os.path.getsize(a.out)
 
     lo, hi, tris, mats = glb_bounds(a.out)
