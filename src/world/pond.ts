@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { positionLocal, time, sin, vec3, normalView, positionViewDirection } from 'three/tsl';
 import {
-  POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, BANK_INNER,
+  POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, ISLAND_FOOT, ISLAND_WATERLINE, BANK_INNER,
 } from './layout';
 
 // 「七宝池 八功徳水充満其中 池底純以金沙布地」
@@ -9,7 +9,7 @@ import {
 export function createPond(scene: THREE.Scene): void {
   // 斜面と水位(-0.5m)の交点
   const bankWaterline = POND_OUTER - (-WATER_LEVEL) * (POND_OUTER - BANK_INNER) / -POND_DEPTH;
-  const islandWaterline = ISLAND_RADIUS + 3 * (ISLAND_TOP - WATER_LEVEL) / (ISLAND_TOP - POND_DEPTH);
+  const islandWaterline = ISLAND_WATERLINE;
 
   const loader = new THREE.TextureLoader();
 
@@ -59,12 +59,12 @@ export function createPond(scene: THREE.Scene): void {
   // --- 中島: 砂の斜面を上がった先に金の頂 ---
   const islandDry = new THREE.Mesh(
     new THREE.CylinderGeometry(ISLAND_RADIUS, islandWaterline, ISLAND_TOP - WATER_LEVEL, 96, 1, true),
-    makeSand(8, 0.14),
+    makeSand(8, 0.14 * (ISLAND_TOP - WATER_LEVEL) / 0.9), // 斜面の高さに合わせて縦の繰り返しを保つ(伸びると縞になる)
   );
   islandDry.position.y = (ISLAND_TOP + WATER_LEVEL) / 2;
   scene.add(islandDry);
   const islandWet = new THREE.Mesh(
-    new THREE.CylinderGeometry(islandWaterline, ISLAND_RADIUS + 3, WATER_LEVEL - POND_DEPTH, 96, 3, true),
+    new THREE.CylinderGeometry(islandWaterline, ISLAND_FOOT, WATER_LEVEL - POND_DEPTH, 96, 3, true),
     makeSand(8, 0.26, THREE.FrontSide, true),
   );
   islandWet.position.y = WATER_LEVEL - 0.85;

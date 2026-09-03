@@ -7,11 +7,14 @@ export const POND_OUTER = 38; // 七宝池の外周
 export const WATER_LEVEL = -0.5;
 export const POND_DEPTH = -2.2;
 export const CAUSEWAY_HALF_WIDTH = 1.5; // 橋の通行帯の半幅
-export const BRIDGE_RISE = 3.2; // 橋の反り高
+export const BRIDGE_RISE = 2.2; // 橋の反り高(3.2 → 2.2 に緩めた 9/3)
 export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
 export const BRIDGE_HALF = 14.5; // 全長29mの半分(中島r=9.5 → 岸r=38.5)
 export const BRIDGE_DECK = 0.09; // デッキ板の厚み(反りの弧の上に載る)
-export const ISLAND_TOP = 0.4;
+export const ISLAND_TOP = 2.4; // 中島の頂の高さ(0.4 → 2.4。岸のスタート地点からも金の頂と蓮華座が見えるように 9/3)
+export const ISLAND_SLOPE = 6.0; // 中島の砂斜面の水平幅(頂 r=10 から池底 r=16 へ、勾配約37°)
+export const ISLAND_FOOT = ISLAND_RADIUS + ISLAND_SLOPE; // 斜面が池底に達する半径
+export const ISLAND_WATERLINE = ISLAND_RADIUS + ISLAND_SLOPE * (ISLAND_TOP - WATER_LEVEL) / (ISLAND_TOP - POND_DEPTH); // 斜面と水位の交点
 export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
 export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(これより先は入水)
 
@@ -42,7 +45,7 @@ export interface GroundSample {
   blocked: boolean;
 }
 
-// 橋の上の足元高さ。中島側の袂(r=9.5)は島の高さ0.4、岸側の袂(r=38.5)は0に着く
+// 橋の上の足元高さ。中島側の袂(r=9.5)は島の高さ ISLAND_TOP、岸側の袂(r=38.5)は0に着く
 export function bridgeHeight(r: number): number {
   const u = THREE.MathUtils.clamp((r - BRIDGE_CENTER) / BRIDGE_HALF, -1, 1);
   const foot = THREE.MathUtils.lerp(ISLAND_TOP, 0, (u + 1) / 2);

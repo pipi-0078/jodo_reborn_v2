@@ -3,8 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
 import {
-  BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, PAVILION_CLEARANCE, PAVILION_RADIUS,
-  POND_INNER, POND_OUTER, TREE_RINGS, WATER_LEVEL,
+  BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS,
+  POND_OUTER, TREE_RINGS, WATER_LEVEL,
 } from './layout';
 
 // 完成予想図(docs/reference_concept.png)に沿って、承認済みアセットを据える。
@@ -106,7 +106,7 @@ function plantable(x: number, z: number, pavilions: THREE.Vector2[]): boolean {
   return pavilions.every((p) => Math.hypot(p.x - x, p.y - z) > PAVILION_CLEARANCE);
 }
 
-// 四方に架かる金の反橋(全長29m)。中島側の袂は島の高さ(0.4)、岸側は地表(0)に着ける
+// 四方に架かる金の反橋(全長29m)。中島側の袂は島の高さ(ISLAND_TOP)、岸側は地表(0)に着ける
 async function placeBridges(scene: THREE.Scene): Promise<void> {
   const template = await loadTemplate('bridge_long.glb');
   const tilt = Math.atan2(ISLAND_TOP, BRIDGE_HALF * 2);
@@ -291,7 +291,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
     const scales: number[] = [];
     for (let i = 0; i < 13; i++) {
       const giant = i === 12;
-      const p = giant ? spot(29, bankWaterline - 3, 0, Math.PI / 3) : spot(POND_INNER + 3.5, bankWaterline - 2.5);
+      const p = giant ? spot(29, bankWaterline - 3, 0, Math.PI / 3) : spot(ISLAND_WATERLINE + 2, bankWaterline - 2.5);
       const scale = giant ? 2.7 + random() * 0.3 : 1.8 + random() * 0.7;
       matrices.push(compose(p.x, WATER_LEVEL - 0.03 * scale, p.z, random() * Math.PI * 2, scale));
       scales.push(scale);
@@ -304,7 +304,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   // 蕾: 茎を水中に下ろして水面から立ち上げる
   const buds: THREE.Matrix4[] = [];
   for (let i = 0; i < 14; i++) {
-    const p = spot(POND_INNER + 3.5, bankWaterline - 2.5);
+    const p = spot(ISLAND_WATERLINE + 2, bankWaterline - 2.5);
     buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 1.7 + random() * 0.8));
   }
   instance(scene, bud, buds, petalTint(BUD_TINT, 0.4));

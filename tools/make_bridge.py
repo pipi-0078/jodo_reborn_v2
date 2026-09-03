@@ -154,7 +154,8 @@ def lantern(location, gold_mat, glow_mat):
     hoju.data.materials.append(gold_mat)
 
 
-def build_bridge(path):
+def build_bridge(path, pier_base=None):
+    """pier_base: 支柱の底の高さ(袂の地面基準)。長橋は中島側の袂が高い所に着くので深く下ろす。"""
     reset_scene()
     deck_mat = paving_material()
     gold_mat = plain_material("gold", GOLD, 0.92, 0.28)
@@ -242,10 +243,10 @@ def build_bridge(path):
     # 水中への支柱(底面は橋台と同じ深さに揃え、上端はデッキ裏へ差し込む)
     for sx in (-1, 1):
         p, _ = arc_point(0.5 + sx * 0.28)
-        depth = p.z - BASE
+        depth = p.z - (pier_base if pier_base is not None else BASE)
         for sy in (-1, 1):
             bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.11, depth=depth,
-                                                location=(p.x, sy * (WIDTH / 2 - 0.12), (p.z + BASE) / 2))
+                                                location=(p.x, sy * (WIDTH / 2 - 0.12), (p.z + (pier_base if pier_base is not None else BASE)) / 2))
             bpy.context.active_object.data.materials.append(gold_mat)
 
     export(path)
@@ -254,7 +255,8 @@ def build_bridge(path):
 if __name__ == "__main__":
     configure(8.0, 1.1, 2.4)
     build_bridge(os.path.join(OUT_DIR, "bridge.glb"))
-    # 池の四方に架ける長橋(中島r=9.5 → 岸r=38.5 を跨ぐ・全長29m)
-    configure(29.0, 3.2, 3.0)
-    build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"))
+    # 池の四方に架ける長橋(中島r=9.5 → 岸r=38.5 を跨ぐ・全長29m・反り 2.2m)
+    # 中島側の袂は島の高さ 2.4m に着くので、支柱は袂の基準面から 3.4m 下まで下ろして水面下に届かせる
+    configure(29.0, 2.2, 3.0)
+    build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"), pier_base=-3.4)
     print("done", file=sys.stderr)
