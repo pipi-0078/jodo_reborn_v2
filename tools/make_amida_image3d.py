@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """キャラクターシート(正面・左側面・背面)から阿弥陀如来坐像を image-to-3D で起こす。
 
-fal.ai の Hunyuan3D v2 multi-view を叩く。LESSONS.md 2-1「有機的な造形はゼロから作らない」
+fal.ai の三面対応エンジンを叩く。LESSONS.md 2-1「有機的な造形はゼロから作らない」
 および 4-6「キャラクターシートから image-to-3D」の続き。
+
+エンジン(--engine):
+    trellis  fal-ai/trellis/multi          螺髪・白毫・宝珠が形になる。顔も彫れる(9/3 採用)
+    rodin    fal-ai/hyper3d/rodin          顔が最も整う。螺髪は模様止まり。9万tris
+    hunyuan  fal-ai/hunyuan3d/v2/multi-view 4万tris で頭打ち。顔が崩れる
 
 使い方:
     export FAL_KEY=...
-    python3 tools/make_amida_hunyuan.py \
+    python3 tools/make_amida_image3d.py --engine trellis \
         --front refs/amida_front.png --left refs/amida_left.png --back refs/amida_back.png \
-        --out public/assets/amida_hunyuan.glb
+        --out public/assets/amida_trellis.glb
 
 引数はローカルパスでも http(s) URL でもよい。ローカルなら fal のストレージへ上げてから使う。
 --mirror-left は「像が画面左を向いた写真」(=右側面)しかないときに左右反転して左側面に仕立てる。
@@ -24,7 +29,11 @@ import time
 import urllib.error
 import urllib.request
 
-QUEUE = "https://queue.fal.run/fal-ai/hunyuan3d/v2/multi-view"
+ENGINES = {
+    "trellis": "fal-ai/trellis/multi",
+    "rodin": "fal-ai/hyper3d/rodin",
+    "hunyuan": "fal-ai/hunyuan3d/v2/multi-view",
+}
 INITIATE = "https://rest.alpha.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3"
 
 
@@ -77,21 +86,51 @@ def mirror(path, out):
     return out
 
 
-def submit(payload):
-    job = _req(QUEUE, payload)
-    rid = job["request_id"]
-    print(f"  request_id: {rid}")
-    base = f"https://queue.fal.run/fal-ai/hunyuan3d/requests/{rid}"
+def submit(engine, payload):
+    job = _req("https://queue.fal.run/" + ENGINES[engine], payload)
+    print(f"  request_id: {job['request_id']}")
     last = None
     for _ in range(360):  # 最大 30 分
-        st = _req(base + "/status")["status"]
+        st = _req(job["status_url"])["status"]  # URL は応答のものを使う(自分で組むと 404 する)
         if st != last:
             print(f"  {st}")
             last = st
         if st == "COMPLETED":
-            return _req(base)
+            return _req(job["response_url"])
         time.sleep(5)
     sys.exit("タイムアウト")
+
+
+def find_glb(obj):
+    """応答のどこかにある .glb の URL を拾う(エンジンごとにキーが違う)。"""
+    if isinstance(obj, dict):
+        if str(obj.get("url", "")).endswith(".glb"):
+            return obj["url"]
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for v in obj:
+            u = find_glb(v)
+            if u:
+                return u
+    return None
+
+
+def build_payload(engine, a, front, left, back):
+    if engine == "hunyuan":
+        p = {"front_image_url": front, "left_image_url": left, "back_image_url": back,
+             "textured_mesh": not a.no_texture, "octree_resolution": a.octree,
+             "num_inference_steps": a.steps, "guidance_scale": a.guidance}
+    elif engine == "rodin":
+        # addons は配列ではなく文字列 "HighPack"(配列だと 422)
+        p = {"input_image_urls": [front, left, back], "condition_mode": "concat",
+             "quality": "high", "addons": "HighPack", "material": "PBR",
+             "geometry_file_format": "glb", "tier": "Regular"}
+    else:  # trellis: mesh_simplify は 0.9 以上しか受けない
+        p = {"image_urls": [front, left, back], "mesh_simplify": 0.9, "texture_size": 2048,
+             "multiimage_algo": "multidiffusion", "ss_sampling_steps": 20, "slat_sampling_steps": 20}
+    if a.seed is not None:
+        p["seed"] = a.seed
+    return p
 
 
 def glb_bounds(path):
@@ -124,40 +163,34 @@ def main():
     ap.add_argument("--front", required=True)
     ap.add_argument("--left", required=True)
     ap.add_argument("--back", required=True)
-    ap.add_argument("--out", default="public/assets/amida_hunyuan.glb")
+    ap.add_argument("--engine", choices=list(ENGINES), default="trellis")
+    ap.add_argument("--out", default="public/assets/amida_trellis.glb")
     ap.add_argument("--mirror-left", action="store_true", help="--left が右側面のとき反転する")
-    ap.add_argument("--no-texture", action="store_true", help="形だけ生成(金一色は後で当てる)")
-    ap.add_argument("--octree", type=int, default=256, help="オクツリー解像度(彫りの細かさ、1-1024)")
-    ap.add_argument("--steps", type=int, default=50, help="推論ステップ(1-50。超えると422)")
-    ap.add_argument("--guidance", type=float, default=7.5, help="ガイダンス(0-20)")
+    ap.add_argument("--no-texture", action="store_true", help="[hunyuan] 形だけ生成")
+    ap.add_argument("--octree", type=int, default=512, help="[hunyuan] オクツリー解像度(1-1024)")
+    ap.add_argument("--steps", type=int, default=50, help="[hunyuan] 推論ステップ(1-50。超えると422)")
+    ap.add_argument("--guidance", type=float, default=7.5, help="[hunyuan] ガイダンス(0-20)")
     ap.add_argument("--seed", type=int)
     a = ap.parse_args()
-    for name, val, lo, hi in (("--octree", a.octree, 1, 1024), ("--steps", a.steps, 1, 50),
-                              ("--guidance", a.guidance, 0, 20)):
-        if not lo <= val <= hi:
-            sys.exit(f"{name} は {lo}〜{hi} の範囲(指定: {val})")
-
+    if a.engine == "hunyuan":  # アップロード前に範囲を確かめる(422 は本文を読むまで分からない)
+        for name, val, lo, hi in (("--octree", a.octree, 1, 1024), ("--steps", a.steps, 1, 50),
+                                  ("--guidance", a.guidance, 0, 20)):
+            if not lo <= val <= hi:
+                sys.exit(f"{name} は {lo}〜{hi} の範囲(指定: {val})")
     left = a.left
     if a.mirror_left:
         left = mirror(left, os.path.join(os.path.dirname(a.out) or ".", "_left_mirrored.png"))
 
     print("画像を fal へ:")
-    payload = {
-        "front_image_url": upload(a.front),
-        "left_image_url": upload(left),
-        "back_image_url": upload(a.back),
-        "textured_mesh": not a.no_texture,
-        "octree_resolution": a.octree,
-        "num_inference_steps": a.steps,
-        "guidance_scale": a.guidance,
-    }
-    if a.seed is not None:
-        payload["seed"] = a.seed
+    payload = build_payload(a.engine, a, upload(a.front), upload(left), upload(a.back))
 
-    print("Hunyuan3D v2 multi-view:")
-    res = submit(payload)
-    url = res["model_mesh"]["url"]
-    print(f"  seed: {res.get('seed')}")
+    print(f"{ENGINES[a.engine]}:")
+    res = submit(a.engine, payload)
+    url = find_glb(res)
+    if not url:
+        sys.exit("応答に glb が無い: " + json.dumps(res)[:500])
+    if "seed" in res:
+        print(f"  seed: {res['seed']}")
 
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     urllib.request.urlretrieve(url, a.out)
