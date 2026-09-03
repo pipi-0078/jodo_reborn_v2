@@ -21,6 +21,7 @@ import os
 import struct
 import sys
 import time
+import urllib.error
 import urllib.request
 
 QUEUE = "https://queue.fal.run/fal-ai/hunyuan3d/v2/multi-view"
@@ -43,8 +44,11 @@ def _req(url, data=None, method=None, headers=None, raw=False):
     if headers:
         hdrs.update(headers)
     req = urllib.request.Request(url, data=body, headers=hdrs, method=method)
-    with urllib.request.urlopen(req, timeout=300) as res:
-        return json.loads(res.read())
+    try:
+        with urllib.request.urlopen(req, timeout=300) as res:
+            return json.loads(res.read())
+    except urllib.error.HTTPError as e:  # 422 は本文に理由が入る。握り潰さない
+        sys.exit(f"{e.code} {e.reason}\n{e.read().decode(errors='replace')[:800]}")
 
 
 def upload(path):
@@ -123,11 +127,15 @@ def main():
     ap.add_argument("--out", default="public/assets/amida_hunyuan.glb")
     ap.add_argument("--mirror-left", action="store_true", help="--left が右側面のとき反転する")
     ap.add_argument("--no-texture", action="store_true", help="形だけ生成(金一色は後で当てる)")
-    ap.add_argument("--octree", type=int, default=256, help="オクツリー解像度(彫りの細かさ)")
-    ap.add_argument("--steps", type=int, default=50)
-    ap.add_argument("--guidance", type=float, default=7.5)
+    ap.add_argument("--octree", type=int, default=256, help="オクツリー解像度(彫りの細かさ、1-1024)")
+    ap.add_argument("--steps", type=int, default=50, help="推論ステップ(1-50。超えると422)")
+    ap.add_argument("--guidance", type=float, default=7.5, help="ガイダンス(0-20)")
     ap.add_argument("--seed", type=int)
     a = ap.parse_args()
+    for name, val, lo, hi in (("--octree", a.octree, 1, 1024), ("--steps", a.steps, 1, 50),
+                              ("--guidance", a.guidance, 0, 20)):
+        if not lo <= val <= hi:
+            sys.exit(f"{name} は {lo}〜{hi} の範囲(指定: {val})")
 
     left = a.left
     if a.mirror_left:
