@@ -103,56 +103,61 @@
       "id": "lotus_blue",
       "name": "青蓮華",
       "file": "lotus.glb",
-      "desc": "車輪ほどの大きさの蓮。花びら22枚を一枚ずつ成形(青色青光)",
+      "desc": "車輪ほどの大きさの蓮。花びら30枚を一枚ずつ成形(中肋の畝・葉脈・縁の揺らぎ)、逆円錐の花托に実19粒、雄しべ120本。芯から青い光が透ける(青色青光)",
       "credit": "制作: 本プロジェクト(Blenderパラメトリック曲面)",
       "tint": {
         "materialName": "petal",
         "color": "#6f8cf5"
-      }
+      },
+      "glow": true
     },
     {
       "id": "lotus_yellow",
       "name": "黄蓮華",
       "file": "lotus.glb",
-      "desc": "同型の黄(黄色黄光)",
+      "desc": "同型の黄。芯から黄の光が透ける(黄色黄光)",
       "credit": "制作: 本プロジェクト",
       "tint": {
         "materialName": "petal",
         "color": "#f2c452"
-      }
+      },
+      "glow": true
     },
     {
       "id": "lotus_red",
       "name": "赤蓮華",
       "file": "lotus.glb",
-      "desc": "同型の赤(赤色赤光)",
+      "desc": "同型の赤。芯から赤の光が透ける(赤色赤光)",
       "credit": "制作: 本プロジェクト",
       "tint": {
         "materialName": "petal",
         "color": "#f07a7a"
-      }
+      },
+      "glow": true
     },
     {
       "id": "lotus_white",
       "name": "白蓮華",
       "file": "lotus.glb",
-      "desc": "同型の白(白色白光)",
+      "desc": "同型の白。芯から白い光が透ける(白色白光)",
       "credit": "制作: 本プロジェクト",
       "tint": {
         "materialName": "petal",
         "color": "#f7faff"
-      }
+      },
+      "glow": true
     },
     {
       "id": "lotus_bud",
       "name": "蓮の蕾",
       "file": "lotus_bud.glb",
-      "desc": "開花前の蕾。茎で水面から立ち上がる(色は満開と同じ四色で使う)",
+      "desc": "開花前の蕾。茎で水面から立ち上がる(色は満開と同じ四色で使う)。花びらは満開と同じ造り",
       "credit": "制作: 本プロジェクト",
       "tint": {
         "materialName": "petal",
         "color": "#f2a8c0"
-      }
+      },
+      "glow": true
     },
     {
       "id": "tree_yanagi",

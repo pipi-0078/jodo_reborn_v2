@@ -153,35 +153,71 @@ def make_bark(size=512):
 
 # ---------------------------------------------------------------- 蓮の花びら
 
-def make_petal(size=512):
-    """蓮の花びら。UVは縦=花びらの根元(下)→先端(上)。
-    白っぽい地に縦の葉脈、先端へ向けてわずかに濃くなる。実行時に四宝の色を乗算する。"""
-    img = Image.new("RGB", (size, size), (250, 248, 244))
-    draw = ImageDraw.Draw(img)
+def make_petal(size=1024):
+    """蓮の花びら(四色共用)。UVは u=幅 0..1 / v=丈 0..1(v=0 が根元、画像では下)。
+    実行時に四宝の色を乗算するので、ここでは白地の「明るさの模様」だけを描く。
+      petal.png        ベースカラー: 根元は透けるように明るく、先端へ向けて色が深まる。
+                       扇状の主脈と網目の細脈、微細な細胞の粒
+      petal_normal.png 法線: 主脈が浅い畝、細脈がごく浅い筋、細胞の粒
+      petal_emit.png   発光マップ: 花の芯(根元)から光が透けて先端へ薄れる。脈は逆光の葉のように少し暗い
+    """
+    r = random.Random(1201)
+    v = (np.arange(size)[::-1, None] / (size - 1)) * np.ones((1, size))  # 0=根元(下) 1=先端(上)
+    u = (np.arange(size)[None, :] / (size - 1)) * np.ones((size, 1))
 
-    # 先端(上)へ向けた濃淡グラデーション
-    for y in range(size):
-        t = y / size  # 0=先端, 1=根元
-        # 根元は明るく、先端は少し濃い(乗算で色が深く出る)
-        value = int(255 - 52 * (1 - t) ** 1.6)
-        draw.line([(0, y), (size, y)], fill=(value, value - 3, max(0, value - 8)))
+    # --- 主脈: 中央一本 + 左右へ扇状に開く。根元に収束する
+    veins = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(veins)
+    offsets = [0.0, 0.075, -0.075, 0.155, -0.155, 0.24, -0.24, 0.33, -0.33, 0.42, -0.42]
+    for i, off in enumerate(offsets):
+        pts = []
+        for k in range(80):
+            t = k / 79
+            wobble = math.sin(t * 9.0 + i * 1.7) * 0.004
+            uu = 0.5 + off * (t ** 0.8) + wobble
+            pts.append((uu * size, (1 - t) * size))
+        w = 5 if i == 0 else (4 if i < 5 else 3)
+        val = 230 if i == 0 else r.randint(160, 200)
+        draw.line(pts, fill=val, width=w)
+    main_veins = np.asarray(veins.filter(ImageFilter.GaussianBlur(1.4))).astype(np.float32) / 255
 
-    # 縦の葉脈(中央から扇形にわずかに開く)
-    cx = size // 2
-    for i in range(22):
-        offset = (i - 10.5) / 10.5  # -1..1
-        x0 = cx + offset * size * 0.36
-        x1 = cx + offset * size * 0.48
-        shade = rng.randint(6, 20)
-        points = []
-        for y in range(0, size + 16, 16):
-            t = y / size
-            x = x0 + (x1 - x0) * (1 - t) + math.sin(y * 0.02 + i) * 1.5
-            points.append((x, y))
-        draw.line(points, fill=(255 - shade * 3, 252 - shade * 3, 246 - shade * 3), width=2)
+    # --- 細脈: 主脈のあいだを斜めに結ぶ網目
+    net = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(net)
+    for i in range(len(offsets) - 1):
+        off_a = offsets[i]
+        for t0 in np.arange(0.12, 0.96, 0.055):
+            t0 += r.uniform(-0.015, 0.015)
+            u0 = 0.5 + off_a * (t0 ** 0.8)
+            side = r.choice((-1, 1))
+            u1 = u0 + side * 0.05 * (0.5 + t0)
+            t1 = t0 + r.uniform(0.03, 0.06)
+            draw.line([(u0 * size, (1 - t0) * size), (u1 * size, (1 - t1) * size)],
+                      fill=r.randint(80, 130), width=2)
+    net = np.asarray(net.filter(ImageFilter.GaussianBlur(1.0))).astype(np.float32) / 255
 
-    img = img.filter(ImageFilter.GaussianBlur(0.7))
-    img.save(os.path.join(OUT, "petal.png"))
+    # --- 細胞の粒: 細かいノイズ。根元ほど大きく、先端ほど細かい
+    cells = tileable_noise(size, octaves=8, seed=1202)
+    grain = np.clip((cells - 0.5) * 2.2, -1, 1)
+
+    # --- ベースカラー(明るさ)。根元は透けるように白く、先端は色が深く出る(乗算で濃くなる)
+    depth = 0.94 - 0.36 * (v ** 1.4)  # 先端ほど暗く=濃い色
+    # 縁(u=0,1)は薄く透けて明るい
+    edge = np.exp(-((np.minimum(u, 1 - u)) / 0.09) ** 2)
+    shade = depth + edge * 0.08 - main_veins * 0.07 - net * 0.03 + grain * 0.02
+    shade = np.clip(shade, 0, 1)
+    rgb = np.stack([shade * 255, shade * 251, shade * 244], axis=-1)
+    Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "petal.png"))
+
+    # --- 法線: 主脈は畝(高)、細脈は溝(低)、粒
+    height = np.clip(0.5 + main_veins * 0.30 - net * 0.10 + grain * 0.04, 0, 1)
+    height_to_normal(height, 2.2).save(os.path.join(OUT, "petal_normal.png"))
+
+    # --- 発光: 芯(根元)から光が透けて先端へ薄れる。花弁全体が淡く光り(下限 0.22)、
+    #     脈は逆光の葉のように少し暗く浮かぶ(開いた花弁の外面は空の光が当たらないので、発光が主な明るさになる)
+    glow = 0.22 + 0.78 * (1 - v) ** 1.3 - main_veins * 0.10 - net * 0.04
+    glow = np.clip(glow + grain * 0.02, 0, 1)
+    Image.fromarray((glow * 255).astype(np.uint8)).convert("RGB").save(os.path.join(OUT, "petal_emit.png"))
 
 
 # ---------------------------------------------------------------- 金の敷石(橋・道用)

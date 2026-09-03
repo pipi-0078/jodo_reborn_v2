@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSky } from './world/sky';
+import { makeGlowSprite, makeHaloMesh, tintPetal } from './world/glow';
 
 interface GalleryItem {
   id: string;
@@ -10,6 +11,7 @@ interface GalleryItem {
   desc: string;
   credit: string;
   tint?: { materialName: string; color: string };
+  glow?: boolean; // 蓮など、tint の色で淡く光らせる(発光マップ+光のスプライト+床の光輪)
 }
 
 async function main(): Promise<void> {
@@ -41,6 +43,7 @@ async function main(): Promise<void> {
 
   const loader = new GLTFLoader();
   let current: THREE.Group | null = null;
+  let showToken = 0; // 読み込み中に別の品目へ切り替えたとき、遅れて届いた前の品目を捨てる
 
   const loading = document.getElementById('loading')!;
   const captionName = document.querySelector('#caption .name')!;
@@ -53,7 +56,9 @@ async function main(): Promise<void> {
       scene.remove(current);
       current = null;
     }
+    const token = ++showToken;
     const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${item.file}`);
+    if (token !== showToken) return;
     const model = gltf.scene;
 
     if (item.tint) {
@@ -62,9 +67,13 @@ async function main(): Promise<void> {
         if (object instanceof THREE.Mesh) {
           const material = object.material as THREE.MeshStandardMaterial;
           if (material.name === item.tint!.materialName) {
-            material.color.copy(color);
-            // 「青色青光」— それぞれの色で内側からほのかに光らせる
-            material.emissive.copy(color).multiplyScalar(0.18);
+            if (item.glow) {
+              // 「青色青光」— それぞれの色で内側から淡く光らせる(空間と同じ係数)
+              object.material = tintPetal(material, color);
+            } else {
+              material.color.copy(color);
+              material.emissive.copy(color).multiplyScalar(0.18);
+            }
           }
         }
       });
@@ -75,6 +84,16 @@ async function main(): Promise<void> {
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     model.position.set(-center.x, -box.min.y, -center.z);
+    if (item.tint && item.glow) {
+      // 花の芯の光と、展示台に落ちる光輪
+      const radius = Math.max(size.x, size.z) / 2;
+      const sprite = makeGlowSprite(item.tint.color, radius * 1.7, 0.2);
+      sprite.position.set(0, Math.min(size.y * 0.35, 0.2), 0);
+      model.add(sprite);
+      const halo = makeHaloMesh(item.tint.color, radius * 1.35, 0.5);
+      halo.position.y = 0.02;
+      model.add(halo);
+    }
     scene.add(model);
     (window as unknown as { __model?: unknown }).__model = model; // ヘッドレス検品用
     current = model;
