@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   positionLocal, positionWorld, time, sin, vec2, vec3, color, uv, texture, mix, smoothstep,
-  mx_noise_float, normalMap as normalMapNode, normalView, positionViewDirection,
+  mx_noise_float, normalMap as normalMapNode, normalView, positionViewDirection, reflector, cos,
 } from 'three/tsl';
 import {
   POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, ISLAND_FOOT, ISLAND_WATERLINE, BANK_INNER,
@@ -94,23 +94,31 @@ export function createPond(scene: THREE.Scene): void {
   // 水面の縁は、岸と中島の斜面が水位(-0.5m)と交わる半径に合わせる
   const waterGeometry = new THREE.RingGeometry(islandWaterline - 0.05, bankWaterline + 0.05, 192, 40);
   waterGeometry.rotateX(-Math.PI / 2);
-  const waterMaterial = new THREE.MeshPhysicalNodeMaterial({
-    color: 0x2b93a4, transparent: true, opacity: 0.55,
-    metalness: 0.0, roughness: 0.10,
-    // この世界の空はベージュ色。素直に映すと水までベージュに染まるので、
-    // 環境反射をほぼ断ち、瑠璃色の照りをフレネルで自前に持たせる
-    envMapIntensity: 0.06,
-    specularIntensity: 0.4,
-    depthWrite: false,
-  });
+  // 水面は照明を受けない素材にして、鏡面反射(reflector)で中島・宝樹・如来を映す(9/3)。
+  // 発光チャンネルに反射を載せるとブルームで水面全体が滲むので、colorNode に置く
+  const waterMaterial = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   const wave = sin(positionLocal.x.mul(0.24).add(time.mul(0.7)))
     .mul(sin(positionLocal.z.mul(0.21).add(time.mul(0.55))))
     .mul(0.16)
     .add(sin(positionLocal.x.mul(0.9).add(positionLocal.z.mul(0.75)).add(time.mul(1.2))).mul(0.045));
   waterMaterial.positionNode = positionLocal.add(vec3(0, wave, 0));
   const fresnel = normalView.dot(positionViewDirection.negate()).saturate().oneMinus().pow(3.0);
-  waterMaterial.emissiveNode = vec3(0.16, 0.42, 0.50).mul(fresnel).mul(1.3);
+
+  // 鏡面反射: 水面の平面で世界を映し、波でわずかに歪ませる。見下ろすほど水色が勝ち、
+  // 遠くを見るほど鏡になる(フレネル)。反射は照明を受けない emissive に乗せる
+  const mirror = reflector({ resolutionScale: 0.5 });
+  const distortion = vec2(
+    sin(positionWorld.x.mul(0.9).add(positionWorld.z.mul(0.75)).add(time.mul(1.2))),
+    cos(positionWorld.z.mul(0.8).sub(positionWorld.x.mul(0.6)).add(time.mul(0.9))),
+  ).mul(0.006);
+  mirror.uvNode = mirror.uvNode!.add(distortion);
+  const reflectance = fresnel.mul(0.55).add(0.35);
+  const waterColor = vec3(0.10, 0.40, 0.46);
+  waterMaterial.colorNode = mix(waterColor, mirror.rgb, reflectance).add(vec3(0.16, 0.42, 0.50).mul(fresnel).mul(0.35));
+  waterMaterial.opacityNode = fresnel.mul(0.4).add(0.6);
   const water = new THREE.Mesh(waterGeometry, waterMaterial);
   water.position.y = WATER_LEVEL;
+  mirror.target.rotateX(-Math.PI / 2); // 反射面の法線(target の +Z)を上に向ける
+  water.add(mirror.target);
   scene.add(water);
 }

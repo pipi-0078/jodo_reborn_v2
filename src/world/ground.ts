@@ -13,8 +13,8 @@ export function createGround(scene: THREE.Scene, withPondHole = false): void {
 
   const material = new THREE.MeshStandardMaterial({
     color: 0xc9a13b,
-    metalness: 0.45,
-    roughness: 0.55,
+    metalness: 0.4,
+    roughness: 0.68, // 西日の照り返しが地面に白い塊を作らない程度に粗く(9/3)
     roughnessMap: makeNoiseTexture(),
   });
 

@@ -1,4 +1,6 @@
 import * as THREE from 'three/webgpu';
+import { pass, mrt, output, emissive } from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { createSky } from './world/sky';
 import { createGround } from './world/ground';
 import { createPond } from './world/pond';
@@ -11,7 +13,7 @@ async function main(): Promise<void> {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.85;
+  renderer.toneMappingExposure = 0.78;
   document.body.appendChild(renderer.domElement);
   await renderer.init(); // WebGPU非対応環境では自動でWebGL 2にフォールバック
 
@@ -23,6 +25,16 @@ async function main(): Promise<void> {
   createGround(scene, true);
   createPond(scene);
   await createProps(scene);
+
+  // 後処理: 発光(蓮の光・灯籠)だけを滲ませるブルーム。
+  // 輝度しきい値で選ぶと日向の金の地面まで滲んで全体が白飛びするので、発光チャンネル(MRT)だけを使う(9/3)
+  const postProcessing = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  scenePass.setMRT(mrt({ output, emissive }));
+  const scenePassColor = scenePass.getTextureNode('output');
+  const emissivePass = scenePass.getTextureNode('emissive');
+  const bloomPass = bloom(emissivePass, 0.7, 0.5, 0.0);
+  postProcessing.outputNode = scenePassColor.add(bloomPass);
 
   const overlay = document.getElementById('overlay')!;
   const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
@@ -43,7 +55,7 @@ async function main(): Promise<void> {
     timer.update();
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
-    renderer.render(scene, camera);
+    postProcessing.render();
   });
 }
 
