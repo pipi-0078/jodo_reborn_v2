@@ -4,9 +4,10 @@
 「池底純以金沙布地」+ 四宝(金・銀・瑠璃・玻璃)の砂が
 流れに寄せられて吹き溜まりを作っている様子。
 - 粒: 1粒=数ピクセルの砂粒。粒ごとに四宝いずれかの色と明度を持つ
-- 吹き溜まり: 域を波打つノイズで分け、境界では粒が確率的に混ざる(9/3: 塊を 1/30 タイルまで細かく)
+- 吹き溜まり: 域を波打つノイズで分け、境界では粒が確率的に混ざる(9/3: 塊を 1/64 タイルまで細かく)
 - 砂紋: 水流が刻む低い畝を法線マップに焼き込む
-出力: public/textures/pond_sand.png / pond_sand_normal.png (2048px)
+出力: public/textures/pond_sand.png / pond_sand_normal.png (2048px、砂紋あり=池底用)
+      public/textures/pond_sand_flat.png / pond_sand_flat_normal.png(砂紋なし=斜面用)
 """
 import math
 import os
@@ -47,7 +48,7 @@ def make_pond_sand(size=2048, grain_px=2):
     g = size // grain_px                      # 粒格子(1セル=1粒)
 
     # --- 吹き溜まり: ドメインワープしたノイズで四宝の領域を分ける ---
-    # 吹き溜まりは 1 タイルの 1/30 程度の大きさ(据え付け時のタイル 3〜4m → 10〜20cm の塊。大きいと迷彩に見える)
+    # 吹き溜まりは 1 タイルの 1/64 程度の大きさ(据え付け時のタイル 1.6〜2.5m → 3〜4cm の粒立ち。大きいと迷彩に見える)
     warp_x = tileable_noise(g, octaves=4, seed=11, base=8)
     warp_y = tileable_noise(g, octaves=4, seed=12, base=8)
     yy, xx = np.mgrid[0:g, 0:g].astype(np.float32) / g
@@ -59,22 +60,22 @@ def make_pond_sand(size=2048, grain_px=2):
     stacks = []
     ix, iy = (fx * (g - 1)).astype(int), (fy * (g - 1)).astype(int)
     for i, b in enumerate(bias):
-        f = tileable_noise(g, octaves=3, seed=30 + i, base=30)[iy, ix]
+        f = tileable_noise(g, octaves=3, seed=30 + i, base=64)[iy, ix]
         f = np.asarray(Image.fromarray((f * 255).astype(np.uint8))
-                       .filter(ImageFilter.GaussianBlur(1.5))).astype(np.float32) / 255
+                       .filter(ImageFilter.GaussianBlur(1.0))).astype(np.float32) / 255
         stacks.append(f * b)
     stack = np.stack(stacks)
     types = np.argmax(stack, axis=0)
 
     # 境界で粒を確率的に混ぜる(一位と二位が拮抗する帯)
     part = np.sort(stack, axis=0)
-    band = (part[-1] - part[-2]) < 0.07
+    band = (part[-1] - part[-2]) < 0.09
     second = np.argsort(stack, axis=0)[-2]
     jitter = rng.random((g, g))
     swap = band & (jitter < 0.5)
     types[swap] = second[swap]
     # まばらな異色粒(どの砂にも他の宝の粒がわずかに紛れる)
-    stray = rng.random((g, g)) < 0.10
+    stray = rng.random((g, g)) < 0.14
     types[stray] = rng.integers(0, 4, stray.sum())
 
     # --- 粒ごとの色と明度 ---
@@ -103,17 +104,25 @@ def make_pond_sand(size=2048, grain_px=2):
     h = h * dome
     color = color * (0.86 + 0.14 * dome[:, :, None])
 
-    # --- 砂紋: 流れが刻む畝(ゆるく波打つ縞) ---
+    # --- 砂紋: 流れが刻む畝(ゆるく波打つ縞)。池底(平場)用
+    #     斜面に貼ると「地層の横線」に見えるので、斜面用には砂紋なしの版(_flat)を別に出す(9/3)
     w1 = tileable_noise(size, octaves=4, seed=21)
-    ripple = np.sin((yy_full := np.mgrid[0:size, 0:size][0].astype(np.float32)) / size
+    ripple = np.sin(np.mgrid[0:size, 0:size][0].astype(np.float32) / size
                     * math.pi * 2 * 26 + (w1 - 0.5) * 9.0)
     ripple = (ripple * 0.5 + 0.5) ** 1.3
     height = np.clip(h * 0.55 + ripple * 0.45, 0, 1)
-    color = color * (0.90 + ripple[:, :, None] * 0.18)
-
-    Image.fromarray(np.clip(color, 0, 255).astype(np.uint8)).save(
+    color_r = color * (0.90 + ripple[:, :, None] * 0.18)
+    Image.fromarray(np.clip(color_r, 0, 255).astype(np.uint8)).save(
         os.path.join(OUT, "pond_sand.png"))
     height_to_normal(height, 2.0).save(os.path.join(OUT, "pond_sand_normal.png"))
+
+    # 斜面用: 砂紋の代わりに方向性のないゆるい起伏だけ
+    mound = tileable_noise(size, octaves=3, seed=22, base=6)
+    height_flat = np.clip(h * 0.6 + mound * 0.4, 0, 1)
+    color_f = color * (0.94 + (mound[:, :, None] - 0.5) * 0.12)
+    Image.fromarray(np.clip(color_f, 0, 255).astype(np.uint8)).save(
+        os.path.join(OUT, "pond_sand_flat.png"))
+    height_to_normal(height_flat, 1.6).save(os.path.join(OUT, "pond_sand_flat_normal.png"))
     counts = [(types == i).mean() for i in range(4)]
     print("pond_sand 2048px  金/銀/瑠璃/玻璃 =", [round(c, 2) for c in counts])
 
