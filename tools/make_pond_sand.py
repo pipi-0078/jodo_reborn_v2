@@ -119,7 +119,7 @@ def make_pond_sand(size=2048, grain_px=2):
     # 斜面用: 砂紋の代わりに方向性のないゆるい起伏だけ
     mound = tileable_noise(size, octaves=3, seed=22, base=6)
     height_flat = np.clip(h * 0.6 + mound * 0.4, 0, 1)
-    color_f = color * (0.94 + (mound[:, :, None] - 0.5) * 0.12)
+    color_f = color * (0.97 + (mound[:, :, None] - 0.5) * 0.06)  # 起伏の明暗は弱く(タイルごとの斑が規則に見える)
     Image.fromarray(np.clip(color_f, 0, 255).astype(np.uint8)).save(
         os.path.join(OUT, "pond_sand_flat.png"))
     height_to_normal(height_flat, 1.6).save(os.path.join(OUT, "pond_sand_flat_normal.png"))

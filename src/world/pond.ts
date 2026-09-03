@@ -1,5 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { positionLocal, time, sin, vec3, normalView, positionViewDirection } from 'three/tsl';
+import {
+  positionLocal, positionWorld, time, sin, vec2, vec3, color, uv, texture, mix, smoothstep,
+  mx_noise_float, normalMap as normalMapNode, normalView, positionViewDirection,
+} from 'three/tsl';
 import {
   POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, ISLAND_FOOT, ISLAND_WATERLINE, BANK_INNER,
 } from './layout';
@@ -13,28 +16,36 @@ export function createPond(scene: THREE.Scene): void {
 
   const loader = new THREE.TextureLoader();
 
-  // 繰り返し数ごとに別テクスチャとして読み込む
-  // (読込前のcloneは空画像を複製してしまうため)
+  // 砂のマテリアル。同じテクスチャを角度・縮尺を変えて三重に貼り、低周波ノイズで切り替える
+  // (アンチタイリング: 1.6m ごとに同じ模様が繰り返す規則性を消す 9/3)
   // 水面下の砂は光が減衰して暗く青みがかる(tintで表現)
   // ripple: 水流の砂紋入り(池底の平場用)。斜面に貼ると横線が地層に見えるので、斜面は砂紋なし
   const makeSand = (repeatU: number, repeatV = repeatU, side: THREE.Side = THREE.FrontSide,
-    depth = false, ripple = false): THREE.MeshStandardMaterial => {
+    depth = false, ripple = false): THREE.Material => {
     const file = ripple ? 'pond_sand' : 'pond_sand_flat';
     const map = loader.load(`${import.meta.env.BASE_URL}textures/${file}.png`);
     map.wrapS = map.wrapT = THREE.RepeatWrapping;
     map.colorSpace = THREE.SRGBColorSpace;
     map.anisotropy = 8;
-    map.repeat.set(repeatU, repeatV);
-    const normalMap = loader.load(`${import.meta.env.BASE_URL}textures/${file}_normal.png`);
-    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-    normalMap.repeat.set(repeatU, repeatV);
-    return new THREE.MeshStandardMaterial({
-      map, normalMap,
-      color: depth ? 0x7e99a4 : 0xffffff,
-      metalness: 0.48, roughness: 0.55,
-      emissive: 0xffffff, emissiveIntensity: depth ? 0.03 : 0.10, emissiveMap: map,
-      side,
-    });
+    const normalTex = loader.load(`${import.meta.env.BASE_URL}textures/${file}_normal.png`);
+    normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping;
+    normalTex.anisotropy = 8;
+
+    const base = uv().mul(vec2(repeatU, repeatV));
+    const c1 = Math.cos(0.62), s1 = Math.sin(0.62);
+    const alt1 = vec2(base.x.mul(c1).sub(base.y.mul(s1)), base.x.mul(s1).add(base.y.mul(c1))).mul(0.79).add(vec2(0.37, 0.61));
+    const c2 = Math.cos(2.1), s2 = Math.sin(2.1);
+    const alt2 = vec2(base.x.mul(c2).sub(base.y.mul(s2)), base.x.mul(s2).add(base.y.mul(c2))).mul(1.23).add(vec2(0.71, 0.19));
+    const w1 = smoothstep(-0.06, 0.06, mx_noise_float(positionWorld.mul(0.45)));
+    const w2 = smoothstep(-0.06, 0.06, mx_noise_float(positionWorld.mul(0.27).add(vec3(31.7, 5.3, 12.9))));
+    const sample = (tex: THREE.Texture) => mix(mix(texture(tex, base), texture(tex, alt1), w1), texture(tex, alt2), w2);
+
+    const albedo = sample(map).rgb.mul(color(depth ? 0x7e99a4 : 0xffffff));
+    const material = new THREE.MeshStandardNodeMaterial({ metalness: 0.48, roughness: 0.55, side });
+    material.colorNode = albedo;
+    material.emissiveNode = albedo.mul(depth ? 0.03 : 0.10);
+    material.normalNode = normalMapNode(sample(normalTex), vec2(1, 1));
+    return material;
   };
 
   // --- 池底(平場) ---
