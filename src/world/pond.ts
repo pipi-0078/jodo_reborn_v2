@@ -38,20 +38,20 @@ export function createPond(scene: THREE.Scene): void {
   // --- 池底(平場) ---
   const floorGeometry = new THREE.CircleGeometry(POND_OUTER + 1, 96);
   floorGeometry.rotateX(-Math.PI / 2);
-  const floor = new THREE.Mesh(floorGeometry, makeSand(8, 8, THREE.FrontSide, true));
+  const floor = new THREE.Mesh(floorGeometry, makeSand(20, 20, THREE.FrontSide, true));
   floor.position.y = POND_DEPTH;
   scene.add(floor);
 
   // --- 外岸: なだらかに水へ下りる砂の斜面 ---
   const bankDry = new THREE.Mesh(
     new THREE.CylinderGeometry(POND_OUTER, bankWaterline, -WATER_LEVEL, 160, 1, true),
-    makeSand(30, 0.12, THREE.BackSide),
+    makeSand(80, 0.32, THREE.BackSide),
   );
   bankDry.position.y = WATER_LEVEL / 2;
   scene.add(bankDry);
   const bankWet = new THREE.Mesh(
     new THREE.CylinderGeometry(bankWaterline, BANK_INNER, WATER_LEVEL - POND_DEPTH, 160, 3, true),
-    makeSand(30, 0.4, THREE.BackSide, true),
+    makeSand(80, 1.07, THREE.BackSide, true),
   );
   bankWet.position.y = (WATER_LEVEL + POND_DEPTH) / 2;
   scene.add(bankWet);
@@ -59,13 +59,13 @@ export function createPond(scene: THREE.Scene): void {
   // --- 中島: 砂の斜面を上がった先に金の頂 ---
   const islandDry = new THREE.Mesh(
     new THREE.CylinderGeometry(ISLAND_RADIUS, islandWaterline, ISLAND_TOP - WATER_LEVEL, 96, 1, true),
-    makeSand(8, 0.14 * (ISLAND_TOP - WATER_LEVEL) / 0.9), // 斜面の高さに合わせて縦の繰り返しを保つ(伸びると縞になる)
+    makeSand(24, 0.42 * (ISLAND_TOP - WATER_LEVEL) / 0.9), // 斜面の高さに合わせて縦の繰り返しを保つ(伸びると縞になる)
   );
   islandDry.position.y = (ISLAND_TOP + WATER_LEVEL) / 2;
   scene.add(islandDry);
   const islandWet = new THREE.Mesh(
     new THREE.CylinderGeometry(islandWaterline, ISLAND_FOOT, WATER_LEVEL - POND_DEPTH, 96, 3, true),
-    makeSand(8, 0.26, THREE.FrontSide, true),
+    makeSand(24, 0.78, THREE.FrontSide, true),
   );
   islandWet.position.y = WATER_LEVEL - 0.85;
   scene.add(islandWet);

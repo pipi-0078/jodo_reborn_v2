@@ -4,7 +4,7 @@
 「池底純以金沙布地」+ 四宝(金・銀・瑠璃・玻璃)の砂が
 流れに寄せられて吹き溜まりを作っている様子。
 - 粒: 1粒=数ピクセルの砂粒。粒ごとに四宝いずれかの色と明度を持つ
-- 吹き溜まり: 域を波打つノイズで分け、境界では粒が確率的に混ざる
+- 吹き溜まり: 域を波打つノイズで分け、境界では粒が確率的に混ざる(9/3: 塊を 1/30 タイルまで細かく)
 - 砂紋: 水流が刻む低い畝を法線マップに焼き込む
 出力: public/textures/pond_sand.png / pond_sand_normal.png (2048px)
 """
@@ -19,11 +19,12 @@ OUT = os.path.join(ROOT, "public/textures")
 os.makedirs(OUT, exist_ok=True)
 
 
-def tileable_noise(size, octaves=5, seed=0):
+def tileable_noise(size, octaves=5, seed=0, base=4):
+    """base: 最低周波数のセル数(大きいほど模様が細かい)。"""
     r = np.random.default_rng(seed)
     acc = np.zeros((size, size))
     for o in range(octaves):
-        n = 2 ** (o + 2)
+        n = base * 2 ** o
         layer = r.random((n, n))
         layer = np.pad(layer, ((0, 1), (0, 1)), mode="wrap")
         img = Image.fromarray((layer * 255).astype(np.uint8)).resize(
@@ -46,33 +47,34 @@ def make_pond_sand(size=2048, grain_px=2):
     g = size // grain_px                      # 粒格子(1セル=1粒)
 
     # --- 吹き溜まり: ドメインワープしたノイズで四宝の領域を分ける ---
-    warp_x = tileable_noise(g, octaves=4, seed=11)
-    warp_y = tileable_noise(g, octaves=4, seed=12)
+    # 吹き溜まりは 1 タイルの 1/30 程度の大きさ(据え付け時のタイル 3〜4m → 10〜20cm の塊。大きいと迷彩に見える)
+    warp_x = tileable_noise(g, octaves=4, seed=11, base=8)
+    warp_y = tileable_noise(g, octaves=4, seed=12, base=8)
     yy, xx = np.mgrid[0:g, 0:g].astype(np.float32) / g
-    fx = (xx + (warp_x - 0.5) * 0.55) % 1.0
-    fy = (yy + (warp_y - 0.5) * 0.55) % 1.0
+    fx = (xx + (warp_x - 0.5) * 0.18) % 1.0
+    fy = (yy + (warp_y - 0.5) * 0.18) % 1.0
     # 四宝それぞれの「勢い」を独立したノイズで立て、勝った宝の吹き溜まりになる。
     # 金は経典どおり主役(池底純以金沙布地)。他の三宝が島状に寄る
     bias = [1.30, 0.97, 0.94, 0.97]           # 金 / 銀 / 瑠璃 / 玻璃
     stacks = []
     ix, iy = (fx * (g - 1)).astype(int), (fy * (g - 1)).astype(int)
     for i, b in enumerate(bias):
-        f = tileable_noise(g, octaves=3, seed=30 + i)[iy, ix]
+        f = tileable_noise(g, octaves=3, seed=30 + i, base=30)[iy, ix]
         f = np.asarray(Image.fromarray((f * 255).astype(np.uint8))
-                       .filter(ImageFilter.GaussianBlur(3))).astype(np.float32) / 255
+                       .filter(ImageFilter.GaussianBlur(1.5))).astype(np.float32) / 255
         stacks.append(f * b)
     stack = np.stack(stacks)
     types = np.argmax(stack, axis=0)
 
     # 境界で粒を確率的に混ぜる(一位と二位が拮抗する帯)
     part = np.sort(stack, axis=0)
-    band = (part[-1] - part[-2]) < 0.045
+    band = (part[-1] - part[-2]) < 0.07
     second = np.argsort(stack, axis=0)[-2]
     jitter = rng.random((g, g))
     swap = band & (jitter < 0.5)
     types[swap] = second[swap]
     # まばらな異色粒(どの砂にも他の宝の粒がわずかに紛れる)
-    stray = rng.random((g, g)) < 0.05
+    stray = rng.random((g, g)) < 0.10
     types[stray] = rng.integers(0, 4, stray.sum())
 
     # --- 粒ごとの色と明度 ---
