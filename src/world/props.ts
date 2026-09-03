@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
 import {
-  BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS,
+  BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
   POND_OUTER, TREE_RINGS, WATER_LEVEL,
 } from './layout';
 
@@ -132,8 +132,8 @@ async function placePavilions(scene: THREE.Scene): Promise<void> {
     const z = Math.sin(theta) * PAVILION_RADIUS;
     const east = Math.cos(theta) > 0;
     // 七宝楼閣の正面は -x、八角楼の正面は +x
-    if (east) rectMatrices.push(compose(x, 0, z, -theta, 1));
-    else octMatrices.push(compose(x, 0, z, -theta + Math.PI, 1));
+    if (east) rectMatrices.push(compose(x, 0, z, -theta, PAVILION_SCALE));
+    else octMatrices.push(compose(x, 0, z, -theta + Math.PI, PAVILION_SCALE));
   });
   instance(scene, rect, rectMatrices);
   instance(scene, octagon, octMatrices);

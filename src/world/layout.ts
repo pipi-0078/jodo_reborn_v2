@@ -11,8 +11,8 @@ export const BRIDGE_RISE = 2.2; // 橋の反り高(3.2 → 2.2 に緩めた 9/3)
 export const BRIDGE_CENTER = (POND_INNER + POND_OUTER) / 2;
 export const BRIDGE_HALF = 14.5; // 全長29mの半分(中島r=9.5 → 岸r=38.5)
 export const BRIDGE_DECK = 0.09; // デッキ板の厚み(反りの弧の上に載る)
-export const ISLAND_TOP = 2.4; // 中島の頂の高さ(0.4 → 2.4。岸のスタート地点からも金の頂と蓮華座が見えるように 9/3)
-export const ISLAND_SLOPE = 6.0; // 中島の砂斜面の水平幅(頂 r=10 から池底 r=16 へ、勾配約37°)
+export const ISLAND_TOP = 4.0; // 中島の頂の高さ(0.4 → 2.4 → 4.0。岸のスタート地点からも金の頂と蓮華座が見えるように 9/3)
+export const ISLAND_SLOPE = 8.0; // 中島の砂斜面の水平幅(頂 r=10 から池底 r=18 へ、勾配約38°)
 export const ISLAND_FOOT = ISLAND_RADIUS + ISLAND_SLOPE; // 斜面が池底に達する半径
 export const ISLAND_WATERLINE = ISLAND_RADIUS + ISLAND_SLOPE * (ISLAND_TOP - WATER_LEVEL) / (ISLAND_TOP - POND_DEPTH); // 斜面と水位の交点
 export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
@@ -23,7 +23,8 @@ export const TREE_RINGS = [44, 54, 64, 74, 84, 94, 104];
 
 // 楼閣の据え付け(岸の外、四隅の斜め方向)
 export const PAVILION_RADIUS = 52;
-export const PAVILION_CLEARANCE = 15; // 楼閣の周囲で木を植えない半径
+export const PAVILION_SCALE = 1.35; // 楼閣の据え付け倍率(高さ約15〜16m)
+export const PAVILION_CLEARANCE = 20; // 楼閣の周囲で木を植えない半径
 
 // 四宝のマテリアル(金・銀・瑠璃・玻璃)
 export function makeTreasureMaterials(): THREE.MeshStandardMaterial[] {

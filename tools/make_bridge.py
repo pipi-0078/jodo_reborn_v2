@@ -256,7 +256,7 @@ if __name__ == "__main__":
     configure(8.0, 1.1, 2.4)
     build_bridge(os.path.join(OUT_DIR, "bridge.glb"))
     # 池の四方に架ける長橋(中島r=9.5 → 岸r=38.5 を跨ぐ・全長29m・反り 2.2m)
-    # 中島側の袂は島の高さ 2.4m に着くので、支柱は袂の基準面から 3.4m 下まで下ろして水面下に届かせる
+    # 中島側の袂は島の高さ 4.0m に着くので、支柱は袂の基準面から 4.5m 下まで下ろして斜面の砂に埋める
     configure(29.0, 2.2, 3.0)
-    build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"), pier_base=-3.4)
+    build_bridge(os.path.join(OUT_DIR, "bridge_long.glb"), pier_base=-4.5)
     print("done", file=sys.stderr)
