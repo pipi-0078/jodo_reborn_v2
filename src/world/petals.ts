@@ -53,7 +53,7 @@ function makePetalTexture(): THREE.Texture {
 }
 
 export function createFallingFlowers(scene: THREE.Scene): { update(dt: number): void } {
-  const geometry = new THREE.PlaneGeometry(0.45, 0.6); // 摩訶曼陀羅華: 大きめの花弁(遠目にも見えるように)
+  const geometry = new THREE.PlaneGeometry(0.75, 1.0); // 摩訶曼陀羅華: 大きな花弁(0.45×0.6 → 0.75×1.0、9/4「もう少し大きく」)
   const material = new THREE.MeshStandardMaterial({
     map: makePetalTexture(), alphaMap: makePetalTexture(), transparent: true, alphaTest: 0.4,
     side: THREE.DoubleSide, roughness: 0.6, metalness: 0.0,
