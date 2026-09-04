@@ -20,7 +20,7 @@
   - 宝鈴: 縁の内側に 3m おき
 
 構成(原点 = 帯の中心、+X が帯の長さ方向、+Z が上。帯は幅方向にたわむ)
-ramou.glb(豪華版・内側 3 環用)/ ramou_lod.glb(軽量版・外側 4 環用、遠景)
+ramou.glb(12.4m・外側の環用)/ ramou_short.glb(6.2m・内側の環用)。9/4: 環は池の上(r=14〜38m)に集約、岸側 14.8m → 中心側 22m の天蓋
 
 使い方: python3 tools/make_ramou.py
 """
@@ -90,7 +90,7 @@ class Batch:
         self.verts.extend(verts)
         self.faces.extend(tuple(i + base for i in f) for f in faces)
 
-    def sphere(self, center, r, segments=6, rings=4):
+    def sphere(self, center, r, segments=5, rings=3):
         verts, faces = [], []
         for i in range(rings + 1):
             phi = i / rings * math.pi
@@ -178,7 +178,7 @@ def gem_material(name, color, ior=1.78, emission=None, strength=0.0):
     return mat
 
 
-def build_ramou(path, rich=True):
+def build_ramou(path, rich=True, length=LENGTH):
     """スワッグ(花綱)構造の羅網。9/4 の参考図に合わせて作り直し:
     支点(華鬘の金具+大きな色石)を 3.1m おきに置き、支点のあいだに真珠と水晶の鎖が弧を描いて垂れる。
     幅方向に 3 列(高さをずらして重ねる)、支点からは長さ違いの垂れ飾り。色石は支点と垂れ飾りの先に集める。"""
@@ -195,9 +195,9 @@ def build_ramou(path, rich=True):
             "shuju": Batch("shuju_batch", shuju, smooth=False)}
     colored = [gems["shuju"], gems["lapis"], gems["hari"]]
 
-    half_l = LENGTH / 2
+    half_l = length / 2
     span = 3.1
-    rows = [(2.4, 0.0), (0.0, -0.55), (-2.4, -1.1)] if rich else [(0.0, -0.4)]
+    rows = [(1.4, 0.0), (0.0, -0.55), (-1.4, -1.1)] if rich else [(0.0, -0.4)]  # 幅 4m(環の間隔 4m で隙間なく重なる)
 
     def chain(p0, p1, sag, spacing, pattern, wire_r=0.012):
         """p0→p1 を放物線で垂らした鎖。pattern は珠の種類の並び(関数のリスト)。"""
@@ -254,21 +254,22 @@ def build_ramou(path, rich=True):
             goldsmith.petal_disc(a + Vector((0, 0, 0.03)), 0.17, 8, tilt=0.5, width=0.5)
             colored[gem_idx % 3].gem(a + Vector((0, 0, 0.08)), 0.14, elong=1.0, facets=8)
             if rich:
-                length = 1.3 + 0.55 * ((k * 5 + row * 2) % 3)
-                pendant(a + Vector((0, 0, -0.05)), length, colored[(gem_idx + 1) % 3])
+                drop = 2.0 + 0.7 * ((k * 5 + row * 2) % 3)  # 2.0〜3.4m(もっと垂れ下がる感じに 9/4)
+                pendant(a + Vector((0, 0, -0.05)), drop, colored[(gem_idx + 1) % 3])
             gem_idx += 1
         # スワッグ: 支点のあいだに三本の鎖(真珠 / 水晶 / 真珠+色石)
         for a, b in zip(anchors[:-1], anchors[1:]):
-            chain(a, b, 0.7, 0.11, [pearl_at(0.045)])
+            chain(a, b, 1.2, 0.11, [pearl_at(0.045)])
             if rich:
-                chain(a, b, 0.95, 0.14, [gem_at(gems["hari"], 0.05), pearl_at(0.035)])
-                chain(a, b, 1.2, 0.11, [pearl_at(0.04)] * 4 + [gem_at(colored[gem_idx % 3], 0.06)])
-                # 弧の底の小さな雫
-                low = (a + b) / 2 + Vector((0, 0, -1.2))
-                wire.add(*tube([low, low + Vector((0, 0, -0.45))], 0.008, sides=4))
+                chain(a, b, 1.6, 0.14, [gem_at(gems["hari"], 0.05), pearl_at(0.035)])
+                chain(a, b, 2.0, 0.11, [pearl_at(0.04)] * 4 + [gem_at(colored[gem_idx % 3], 0.06)])
+                # 弧の底の雫(深く垂れる 9/4)
+                low = (a + b) / 2 + Vector((0, 0, -2.0))
+                wire.add(*tube([low, low + Vector((0, 0, -0.6))], 0.008, sides=4))
                 pearls.sphere(low + Vector((0, 0, -0.15)), 0.04)
                 pearls.sphere(low + Vector((0, 0, -0.3)), 0.04)
-                gems["hari"].gem(low + Vector((0, 0, -0.5)), 0.07, elong=1.8, facets=8)
+                pearls.sphere(low + Vector((0, 0, -0.45)), 0.04)
+                gems["hari"].gem(low + Vector((0, 0, -0.65)), 0.08, elong=1.8, facets=8)
                 gem_idx += 1
         # 列どうしをつなぐ斜めの鎖(網らしさ)
         if rich and row + 1 < len(rows):
@@ -278,7 +279,7 @@ def build_ramou(path, rich=True):
                 for dx in (-span / 2, span / 2):
                     bx = a.x + dx
                     if -half_l - 0.01 <= bx <= half_l + 0.01 and abs(((bx - offset2 + half_l) / span) % 1) < 0.01:
-                        chain(a, Vector((bx, y2, z2)), 0.45, 0.13, [pearl_at(0.035), gem_at(gems["hari"], 0.04)])
+                        chain(a, Vector((bx, y2, z2)), 0.7, 0.13, [pearl_at(0.035), gem_at(gems["hari"], 0.04)])
 
     wire.finish()
     goldsmith.finish()
@@ -289,6 +290,6 @@ def build_ramou(path, rich=True):
 
 
 if __name__ == "__main__":
-    build_ramou(os.path.join(OUT_DIR, "ramou.glb"), rich=True)
-    build_ramou(os.path.join(OUT_DIR, "ramou_lod.glb"), rich=False)
+    build_ramou(os.path.join(OUT_DIR, "ramou.glb"), rich=True, length=12.4)        # 外側の環(r ≥ 26m)
+    build_ramou(os.path.join(OUT_DIR, "ramou_short.glb"), rich=True, length=6.2)   # 内側の環(r < 26m、弦を短く)
     print("done", file=sys.stderr)

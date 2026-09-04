@@ -318,23 +318,26 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   glows(BUD_TINT, buds, () => 1.4, 0.85, 0.3);
 }
 
-// 「七重羅網」: 七つの並木の環の上空に、宝石の網を七重の環として渡す。
-// 環ごとに区画数を 2πR/12 に丸めて弦 ≈ 12m(区画は 12.4m で 0.4m 重なる)。高さは内側 19m から外側へ 1m ずつ上がる
-// (楼閣の屋根 約16m の上)。内側 3 環は豪華版、外側 4 環は遠景なので軽量版
-const NET_PANEL_LENGTH = 12.0;
-const NET_BASE_HEIGHT = 19;
+// 「七重羅網」: 七宝池の上空に、宝石の網を七重の環として渡す天蓋(9/4: 並木の上では広すぎたので池の上に集約)。
+// 環は半径 14〜38m(水面の上)、高さは岸側 14.8m から中心側 22m へ上がり、中央(中島の上)は空を開ける。
+// 区画は弦 ≈ 12m(外側)/ 6m(内側)で、0.4m 重ねてつなぐ
+const NET_RINGS = [14, 18, 22, 26, 30, 34, 38];
+const NET_HEIGHT_INNER = 22;
+const NET_HEIGHT_STEP = 1.2;
 async function placeNets(scene: THREE.Scene): Promise<void> {
-  const [rich, lod] = await Promise.all([loadTemplate('ramou.glb'), loadTemplate('ramou_lod.glb')]);
-  TREE_RINGS.forEach((radius, ring) => {
-    const count = Math.round((Math.PI * 2 * radius) / NET_PANEL_LENGTH);
-    const height = NET_BASE_HEIGHT + ring * 1.0;
+  const [long, short] = await Promise.all([loadTemplate('ramou.glb'), loadTemplate('ramou_short.glb')]);
+  NET_RINGS.forEach((radius, ring) => {
+    const useShort = radius < 26;
+    const panel = useShort ? 6.0 : 12.0;
+    const count = Math.round((Math.PI * 2 * radius) / panel);
+    const height = NET_HEIGHT_INNER - ring * NET_HEIGHT_STEP;
     const matrices: THREE.Matrix4[] = [];
     for (let k = 0; k < count; k++) {
       const angle = ((k + 0.5) / count) * Math.PI * 2;
       // 区画の長さ方向(+X)を円の接線に向ける
       matrices.push(compose(Math.cos(angle) * radius, height, Math.sin(angle) * radius, -(angle + Math.PI / 2), 1));
     }
-    instance(scene, ring < 3 ? rich : lod, matrices);
+    instance(scene, useShort ? short : long, matrices);
   });
 }
 
