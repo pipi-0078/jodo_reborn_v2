@@ -67,9 +67,39 @@ export function createGoldEnvironment(renderer: THREE.WebGPURenderer, sunDirecti
   }
 }
 
+// 宝石(名前が *_gem): 透き通るガラス。色は表面に塗らず、厚みに応じた吸収(attenuation)で付ける(9/4)
+// glb 側の濃い base color のままだと「色付きの不透明な樹脂」に見える
+const GEM_PRESETS: Record<string, { tint: number[]; attenuation: number[]; distance: number }> = {
+  // 吸収距離が短い(0.05)と黒く濁る。0.2〜0.3 で「明るい色ガラス」になる(9/4)
+  hari_gem: { tint: [1.0, 1.0, 1.0], attenuation: [0.85, 0.95, 1.0], distance: 1.0 },     // 玻璃: 無色透明
+  lapis_gem: { tint: [0.85, 0.92, 1.0], attenuation: [0.10, 0.28, 0.95], distance: 0.28 }, // 瑠璃: 透けて青
+  shuju_gem: { tint: [1.0, 0.86, 0.86], attenuation: [0.95, 0.10, 0.12], distance: 0.24 }, // 赤珠: 透けて紅
+};
+
+function applyGem(material: THREE.MeshPhysicalMaterial): void {
+  const preset = GEM_PRESETS[material.name];
+  if (!preset) return;
+  material.color.setRGB(preset.tint[0], preset.tint[1], preset.tint[2], THREE.LinearSRGBColorSpace);
+  material.transmission = 1.0;
+  material.thickness = 0.12;
+  material.attenuationColor.setRGB(preset.attenuation[0], preset.attenuation[1], preset.attenuation[2], THREE.LinearSRGBColorSpace);
+  material.attenuationDistance = preset.distance;
+  material.roughness = 0.02;
+  material.metalness = 0.0;
+  // 内部反射で光をためる感じを、色の弱い発光で代用
+  material.emissive.setRGB(preset.attenuation[0], preset.attenuation[1], preset.attenuation[2], THREE.LinearSRGBColorSpace);
+  material.emissiveIntensity = material.name === 'hari_gem' ? 0.12 : 0.22;
+  material.envMapIntensity = 1.4;
+  material.needsUpdate = true;
+}
+
 // マテリアルを純金にする(名前が金のものだけ)。テクスチャ付きは模様を活かし、反射だけ差し替える
-// 銀・玻璃は同じ考えで、暗めの無彩色環境を映す重い銀に
+// 銀・玻璃は同じ考えで、暗めの無彩色環境を映す重い銀に。宝石(*_gem)は透き通るガラスに
 export function applyPureGold(material: THREE.Material): void {
+  if (material.name.endsWith('_gem') && 'transmission' in material) {
+    applyGem(material as THREE.MeshPhysicalMaterial);
+    return;
+  }
   if (SILVER_NAMES.test(material.name)) {
     applyPureSilver(material as THREE.MeshStandardMaterial);
     return;
