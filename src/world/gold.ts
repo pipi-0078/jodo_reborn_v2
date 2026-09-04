@@ -86,9 +86,9 @@ export function applyPureGold(material: THREE.Material): void {
     gold.metalness = Math.max(gold.metalness, 0.95);
     gold.roughness = Math.min(gold.roughness, 0.45);
   } else if (gold.name.startsWith('gold_polished')) {
-    gold.color.copy(PURE_GOLD);   // 宝飾の金具・珠: 磨いた金(羅網など)
+    gold.color.copy(PURE_GOLD);   // 宝飾の金具・珠: 鏡のように磨いた金(羅網など)
     gold.metalness = 1.0;
-    gold.roughness = 0.2;
+    gold.roughness = 0.1;
   } else {
     gold.color.copy(PURE_GOLD);
     gold.metalness = 1.0;

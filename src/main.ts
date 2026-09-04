@@ -36,6 +36,8 @@ async function main(): Promise<void> {
   const scenePassColor = scenePass.getTextureNode('output');
   const emissivePass = scenePass.getTextureNode('emissive');
   const bloomPass = bloom(emissivePass, 1.4, 0.7, 0.0);
+  // 輝度ブルーム(煌めき用)は閾値 2.5 でも西日の地面の照り返しが滲んで白く飛ぶので、メイン空間では使わない(9/4)。
+  // ギャラリー(床の照り返しが弱い)だけで使う
   postProcessing.outputNode = scenePassColor.add(bloomPass);
 
   const overlay = document.getElementById('overlay')!;

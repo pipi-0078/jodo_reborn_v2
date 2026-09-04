@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { pass } from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { createSky } from './world/sky';
 import { makeGlowSprite, makeHaloMesh, tintPetal } from './world/glow';
 import { applyPureGold, createGoldEnvironment } from './world/gold';
@@ -36,6 +38,12 @@ async function main(): Promise<void> {
     new THREE.MeshStandardMaterial({ color: 0xc9a13b, metalness: 0.45, roughness: 0.55 }),
   );
   scene.add(floor);
+
+  // 煌めき: 強い光の点(宝石や磨いた金のハイライト)だけを滲ませる。閾値を高くして床の金は滲ませない(9/4)
+  const postProcessing = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  const scenePassColor = scenePass.getTextureNode('output');
+  postProcessing.outputNode = scenePassColor.add(bloom(scenePassColor, 0.6, 0.35, 1.9));
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -147,7 +155,7 @@ async function main(): Promise<void> {
 
   renderer.setAnimationLoop(() => {
     controls.update();
-    renderer.render(scene, camera);
+    postProcessing.render();
   });
 }
 

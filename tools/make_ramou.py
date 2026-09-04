@@ -164,7 +164,7 @@ def gem_material(name, color, ior=1.78, emission=None, strength=0.0):
     bsdf = mat.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Base Color"].default_value = (*color, 1.0)
     bsdf.inputs["Metallic"].default_value = 0.0
-    bsdf.inputs["Roughness"].default_value = 0.04
+    bsdf.inputs["Roughness"].default_value = 0.02
     bsdf.inputs["IOR"].default_value = ior
     bsdf.inputs["Transmission Weight"].default_value = 0.8
     bsdf.inputs["Specular IOR Level"].default_value = 1.0
@@ -177,7 +177,7 @@ def gem_material(name, color, ior=1.78, emission=None, strength=0.0):
 def build_ramou(path, rich=True):
     reset_scene()
     gold = plain_material("gold_polished", GOLD, 1.0, 0.22)  # 磨いた金(空間側で純金の反射に。磨きは粗さ 0.22)
-    silver = plain_material("silver", (0.92, 0.93, 0.95), 1.0, 0.18)
+    silver = plain_material("silver", (0.92, 0.93, 0.95), 1.0, 0.12)
     lapis = gem_material("lapis_gem", (0.04, 0.10, 0.52), 1.72, (0.03, 0.06, 0.25), 0.25)
     hari = gem_material("hari_gem", (0.92, 0.96, 1.0), 1.95, (0.6, 0.7, 0.9), 0.12)
     shuju = gem_material("shuju_gem", (0.60, 0.04, 0.05), 1.78, (0.35, 0.02, 0.02), 0.3)
