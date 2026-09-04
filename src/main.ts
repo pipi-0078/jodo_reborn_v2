@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   scenePass.setMRT(mrt({ output, emissive }));
   const scenePassColor = scenePass.getTextureNode('output');
   const emissivePass = scenePass.getTextureNode('emissive');
-  const bloomPass = bloom(emissivePass, 1.0, 0.6, 0.0);
+  const bloomPass = bloom(emissivePass, 1.4, 0.7, 0.0);
   postProcessing.outputNode = scenePassColor.add(bloomPass);
 
   const overlay = document.getElementById('overlay')!;

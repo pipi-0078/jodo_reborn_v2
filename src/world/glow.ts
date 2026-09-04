@@ -5,7 +5,7 @@ import * as THREE from 'three/webgpu';
 //  2. 光のスプライト: 花の芯に置く、常にカメラを向く放射状の淡い光(加算)
 //  3. 水面の光輪: 花の下の水面(床)に落ちる同色の光(加算)
 
-export const PETAL_GLOW = 1.1; // 花弁の発光係数(発光マップは根元 1.0 → 先端 0.22 なので実効 0.24〜1.1。0.75 では弱いと言われた 9/4)
+export const PETAL_GLOW = 1.6; // 花弁の発光係数(発光マップは根元 1.0 → 先端 0.22 なので実効 0.35〜1.6。0.75→1.1→1.6 と上げた 9/4)
 
 // 花弁マテリアルを色に染めて同色で光らせる(複製して返す。元は共有テンプレートなので触らない)
 export function tintPetal(material: THREE.Material, tint: THREE.ColorRepresentation, glow = PETAL_GLOW): THREE.Material {
