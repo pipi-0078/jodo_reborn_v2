@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "id": "amida_hitem3d",
+      "name": "阿弥陀如来坐像・蓮華座付き(Hitem3D 生成)",
+      "file": "amida_hitem3d.glb",
+      "desc": "多視点画像から Hitem3D(hi3d v3.0)で生成した金色の坐像。蓮華座と台座まで一体。約200万三角形・50MB の原型のまま(未加工)",
+      "credit": "生成: 施主が fal.ai の Hitem3D multi-view-to-3d で作成 / 未改変"
+    },
+    {
       "id": "amida",
       "name": "阿弥陀如来坐像",
       "file": "amida_gold.glb",
