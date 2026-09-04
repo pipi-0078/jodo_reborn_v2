@@ -5,7 +5,7 @@
 
 構成:
   - 緩やかに反るデッキ(金の敷石テクスチャ)と側桁
-  - 欄干: 親柱に擬宝珠(ぎぼし)、細い束(スピンドル)、金の手すり、瑠璃の中桟
+  - 欄干: 親柱に擬宝珠(ぎぼし)、細い束(スピンドル)、金の手すり、朱の中桟
   - 四隅の灯籠(ほのかに発光)
   - 水中への支柱4本
 
@@ -45,6 +45,7 @@ configure(SPAN, RISE, WIDTH)
 
 GOLD = (0.85, 0.62, 0.2)
 LAPIS = (0.16, 0.3, 0.78)
+SHU = (0.72, 0.16, 0.07)  # 朱。欄干の中桟は瑠璃(青)から朱に(9/4、施主の好み)
 
 
 def arc_point(t):
@@ -159,7 +160,7 @@ def build_bridge(path, pier_base=None):
     reset_scene()
     deck_mat = paving_material()
     gold_mat = plain_material("gold", GOLD, 0.92, 0.28)
-    lapis_mat = plain_material("lapis", LAPIS, 0.35, 0.22, (0.05, 0.1, 0.4), 0.4)
+    lapis_mat = plain_material("shu", SHU, 0.2, 0.35, (0.3, 0.06, 0.02), 0.3)  # 中桟(朱)
     glow_mat = plain_material("glow", (1.0, 0.92, 0.7), 0.1, 0.4, (1.0, 0.85, 0.55), 2.6)
 
     steps = 32

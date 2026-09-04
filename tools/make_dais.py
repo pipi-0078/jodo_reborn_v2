@@ -4,10 +4,10 @@
 「2. 高さと中心軸」: 中島の頂(金の円盤 r=10)に、蓮華座を載せる上段と欄干・階段・灯籠を足す。
 
 island_dais.glb(原点 = 中島の頂の中心、+Z が上。据え付けは y=ISLAND_TOP)
-  - 上段: 半径 7m・高さ 1.2m の円壇。側面は槌目の金、上面は金の敷石、上下に金の刳形と瑠璃の帯
+  - 上段: 半径 7m・高さ 1.2m の円壇。側面は槌目の金、上面は金の敷石、上下に金の刳形と朱の帯
   - 階段: 四方の階道の軸に 5 段(蹴上 0.24・踏面 0.32)、袖石と親柱
   - 欄干: 下段の縁(r=9.7、橋の袂 4 か所を空ける)と上段の縁(r=6.7、階段 4 か所を空ける)。橋と同じ意匠
-    (親柱に擬宝珠・束・金の手すり・瑠璃の中桟)
+    (親柱に擬宝珠・束・金の手すり・朱の中桟)
   - 灯籠: 下段の四隅方向に 8 基
   蓮華座(rengeza, 倍率 3 = 直径 9.1m)は上段の中央、y = ISLAND_TOP + 1.2 に据える(別アセット)
 
@@ -29,7 +29,7 @@ TEX = os.path.join(ROOT, "tools/textures")
 
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from make_trees import export, plain_material, reset_scene, textured_material  # noqa: E402
-from make_bridge import GOLD, LAPIS, box_at, giboshi, grid_strip, lantern  # noqa: E402
+from make_bridge import GOLD, LAPIS, SHU, box_at, giboshi, grid_strip, lantern  # noqa: E402
 
 UPPER_R = 7.0      # 上段の半径
 UPPER_H = 1.2      # 上段の高さ
@@ -132,7 +132,7 @@ def railing_ring(radius, z, gap_half_width, gold_mat, lapis_mat):
 def build_dais(path):
     reset_scene()
     gold_mat = plain_material("gold", GOLD, 0.85, 0.32)
-    lapis_mat = plain_material("lapis", LAPIS, 0.35, 0.22, (0.05, 0.1, 0.4), 0.4)
+    lapis_mat = plain_material("shu", SHU, 0.2, 0.35, (0.3, 0.06, 0.02), 0.3)  # 中桟と帯は朱(青は不評 9/4)
     glow_mat = plain_material("glow", (1.0, 0.92, 0.7), 0.1, 0.4, (1.0, 0.85, 0.55), 2.6)
     wall_mat = textured_material("wall", "tsuchime.png", normal="tsuchime_normal.png",
                                  metallic=0.8, roughness=0.4, tile=(14, 1))
@@ -200,7 +200,7 @@ def build_dais(path):
 def build_houdou(path):
     reset_scene()
     gold_mat = plain_material("gold", GOLD, 0.85, 0.32)
-    lapis_mat = plain_material("lapis", LAPIS, 0.35, 0.22, (0.05, 0.1, 0.4), 0.4)
+    lapis_mat = plain_material("shu", SHU, 0.2, 0.35, (0.3, 0.06, 0.02), 0.3)  # 柱の帯と垂れは朱
     banner_mat = plain_material("banner", (0.14, 0.26, 0.74), 0.1, 0.6, (0.06, 0.12, 0.45), 0.5)
     hoju_mat = plain_material("hoju", (0.95, 0.97, 1.0), 0.1, 0.1, (0.9, 0.95, 1.0), 1.4)
     banner_mat.use_backface_culling = False
