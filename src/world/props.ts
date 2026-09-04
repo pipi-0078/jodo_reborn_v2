@@ -8,7 +8,7 @@ import {
 } from './layout';
 
 // 完成予想図(docs/reference_concept.png)に沿って、承認済みアセットを据える。
-// 阿弥陀如来坐像は別途(蓮華座だけ先に中島へ置く)。
+// 阿弥陀如来坐像と蓮華座は巨大化の後に据える(中島には壇を先に置く)。
 
 const LOTUS_TINTS = [0x6f8cf5, 0xf2c452, 0xf07a7a, 0xf7faff]; // 青・黄・赤・白
 const BUD_TINT = 0xf2a8c0;
@@ -116,10 +116,10 @@ async function placeBridges(scene: THREE.Scene): Promise<void> {
   instance(scene, template, matrices);
 }
 
-// 中島の蓮華座(如来を迎える前に台座だけ据える)
-async function placePedestal(scene: THREE.Scene): Promise<void> {
-  const template = await loadTemplate('rengeza.glb', { floor: true });
-  instance(scene, template, [compose(0, ISLAND_TOP, 0, 0, 3)]);
+// 中島の壇(須弥壇): 上段・階段・欄干・灯籠。蓮華座と如来は巨大化の後に上段へ据える(9/4)
+async function placeDais(scene: THREE.Scene): Promise<void> {
+  const template = await loadTemplate('island_dais.glb');
+  instance(scene, template, [compose(0, ISLAND_TOP, 0, 0, 1)]);
 }
 
 // 楼閣: 近景(東側)の二隅に七宝楼閣、如来の背後(西側)の二隅に黄金八角楼。いずれも正面を池へ向ける
@@ -318,6 +318,6 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
 
 export async function createProps(scene: THREE.Scene): Promise<void> {
   await Promise.all([
-    placeBridges(scene), placePedestal(scene), placePavilions(scene), placeTrees(scene), placeLotuses(scene),
+    placeBridges(scene), placeDais(scene), placePavilions(scene), placeTrees(scene), placeLotuses(scene),
   ]);
 }

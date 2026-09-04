@@ -15,6 +15,10 @@ export const ISLAND_TOP = 4.0; // 中島の頂の高さ(0.4 → 2.4 → 4.0。�
 export const ISLAND_SLOPE = 8.0; // 中島の砂斜面の水平幅(頂 r=10 から池底 r=18 へ、勾配約38°)
 export const ISLAND_FOOT = ISLAND_RADIUS + ISLAND_SLOPE; // 斜面が池底に達する半径
 export const ISLAND_WATERLINE = ISLAND_RADIUS + ISLAND_SLOPE * (ISLAND_TOP - WATER_LEVEL) / (ISLAND_TOP - POND_DEPTH); // 斜面と水位の交点
+// 中島の壇(island_dais.glb): 上段の半径・高さと、四方の階段の水平長さ(tools/make_dais.py と揃える)
+export const DAIS_UPPER_R = 7.0;
+export const DAIS_UPPER_H = 1.2;
+export const DAIS_STAIR_LEN = 1.6;
 export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
 export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(これより先は入水)
 
@@ -56,7 +60,16 @@ export function bridgeHeight(r: number): number {
 // 足元の高さと進入可否。中島・四方の反橋・岸の砂斜面は歩けるが、水へは入れない。
 export function sampleGround(x: number, z: number): GroundSample {
   const r = Math.hypot(x, z);
-  if (r < POND_INNER) return { y: ISLAND_TOP, blocked: false };
+  if (r < POND_INNER) {
+    // 中島: 上段(壇)の上、四方の階段、下段の回廊。上段の壁は階段以外から越えられない
+    if (r < DAIS_UPPER_R - 0.4) return { y: ISLAND_TOP + DAIS_UPPER_H, blocked: false };
+    if (onCauseway(x, z)) {
+      const t = THREE.MathUtils.clamp((DAIS_UPPER_R + DAIS_STAIR_LEN - r) / DAIS_STAIR_LEN, 0, 1);
+      return { y: ISLAND_TOP + DAIS_UPPER_H * t, blocked: false };
+    }
+    if (r < DAIS_UPPER_R + 0.4) return { y: ISLAND_TOP, blocked: true };
+    return { y: ISLAND_TOP, blocked: false };
+  }
   if (r < POND_OUTER + 0.6 && onCauseway(x, z)) return { y: bridgeHeight(r), blocked: false };
   if (r < WALK_LIMIT) return { y: WATER_LEVEL, blocked: true };
   if (r < POND_OUTER) {
