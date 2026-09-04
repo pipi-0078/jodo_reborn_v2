@@ -319,10 +319,10 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
 }
 
 // 「七重羅網」: 七宝池の上空に、宝石の網を七重の環として渡す天蓋(9/4: 並木の上では広すぎたので池の上に集約)。
-// 環は半径 14〜38m(水面の上)、高さは岸側 14.8m から中心側 22m へ上がり、中央(中島の上)は空を開ける。
+// 環は半径 14〜38m(水面の上)、高さは岸側 16.8m から中心側 24m へ上がり、中央(中島の上)は空を開ける。
 // 区画は弦 ≈ 12m(外側)/ 6m(内側)で、0.4m 重ねてつなぐ
 const NET_RINGS = [14, 18, 22, 26, 30, 34, 38];
-const NET_HEIGHT_INNER = 22;
+const NET_HEIGHT_INNER = 24; // 弧を深くしたぶん 2m 上げる(9/4)
 const NET_HEIGHT_STEP = 1.2;
 async function placeNets(scene: THREE.Scene): Promise<void> {
   const [long, short] = await Promise.all([loadTemplate('ramou.glb'), loadTemplate('ramou_short.glb')]);
