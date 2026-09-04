@@ -154,15 +154,16 @@ function goldFoliage(name: string, leaf: number = GOLD_LEAF): (material: THREE.M
 }
 
 // 七重行樹。内から: 宝樹(最内周)→名木・柳→針葉樹・広葉樹・枝垂れ→軽量宝樹4周
+// 9/4: すべての木を宝飾版(houju_*.glb: 金の幹、真珠の鎖、淡い宝石の雫と実)に差し替え
 async function placeTrees(scene: THREE.Scene): Promise<void> {
   const [takara, meiboku, yanagi, conifer, broadleaf, weeping, lod, houju] = await Promise.all([
-    loadTemplate('takara_tree.glb', { floor: true, recenter: true }),
-    loadTemplate('tree_meiboku.glb', { floor: true }),
-    loadTemplate('tree_yanagi.glb', { floor: true }),
-    loadTemplate('tree_conifer.glb', { floor: true }),
-    loadTemplate('tree_broadleaf.glb', { floor: true }),
-    loadTemplate('tree_weeping.glb', { floor: true }),
-    loadTemplate('tree_lod.glb', { floor: true }),
+    loadTemplate('houju_takara.glb', { floor: true, recenter: true }),
+    loadTemplate('houju_tree.glb', { floor: true }),
+    loadTemplate('houju_yanagi.glb', { floor: true }),
+    loadTemplate('houju_conifer.glb', { floor: true }),
+    loadTemplate('houju_broadleaf.glb', { floor: true }),
+    loadTemplate('houju_weeping.glb', { floor: true }),
+    loadTemplate('houju_lod.glb', { floor: true }),
     loadTemplate('houju_tree.glb', { floor: true }),
   ]);
   const pavilions = pavilionPositions();

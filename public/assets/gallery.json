@@ -61,6 +61,52 @@
       }
     },
     {
+      "id": "houju_takara",
+      "name": "宝樹(宝飾・最内周)",
+      "file": "houju_takara.glb",
+      "desc": "最内周の宝樹に宝飾を施した版。幹は金、枝先から真珠と水晶の鎖、桜色・水色・藤色の雫と実",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
+    },
+    {
+      "id": "houju_yanagi",
+      "name": "宝樹(宝飾・柳)",
+      "file": "houju_yanagi.glb",
+      "desc": "柳に宝飾を施した版。金の幹と枝、垂れる枝先に真珠の鎖と淡い宝石",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
+    },
+    {
+      "id": "houju_conifer",
+      "name": "宝樹(宝飾・針葉樹)",
+      "file": "houju_conifer.glb",
+      "desc": "針葉樹に宝飾を施した版。金の幹、真珠の鎖と淡い宝石の実",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
+    },
+    {
+      "id": "houju_broadleaf",
+      "name": "宝樹(宝飾・広葉樹)",
+      "file": "houju_broadleaf.glb",
+      "desc": "広葉樹に宝飾を施した版。金の幹、真珠の鎖と淡い宝石の実",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
+    },
+    {
+      "id": "houju_weeping",
+      "name": "宝樹(宝飾・枝垂れ)",
+      "file": "houju_weeping.glb",
+      "desc": "枝垂れの木に宝飾を施した版。金の幹、真珠の鎖と淡い宝石の実",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
+    },
+    {
+      "id": "houju_lod",
+      "name": "宝樹(宝飾・外周軽量)",
+      "file": "houju_lod.glb",
+      "desc": "外周4周の軽量宝樹に軽い宝飾(40点)を施した版。本数が多いので飾りは控えめ",
+      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)",
+      "tint": {
+        "materialName": "foliage",
+        "color": "#f0c050"
+      }
+    },
+    {
       "id": "pavilion",
       "name": "七宝楼閣",
       "file": "pavilion.glb",
