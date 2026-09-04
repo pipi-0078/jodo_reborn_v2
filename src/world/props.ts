@@ -252,7 +252,8 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   const petalTint = (tint: number, glow?: number) => (material: THREE.Material) =>
     material.name === 'petal' ? tintPetal(material, tint, glow) : material;
 
-  // 花の芯に置く、同色の淡い光(常にカメラを向く)
+  // 花の芯に置く、同色の淡い光(常にカメラを向く)。水面下にも鏡像の光を置き、
+  // 半透明の水を透かして「水に映る光」に見せる(後処理の反射には光のスプライトが滲まないため)
   const glows = (tint: number, matrices: THREE.Matrix4[], sizeOf: (i: number) => number, height: number, opacity: number) => {
     const position = new THREE.Vector3();
     const quaternion = new THREE.Quaternion();
@@ -260,8 +261,12 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
     matrices.forEach((m, i) => {
       m.decompose(position, quaternion, scale);
       const sprite = makeGlowSprite(tint, sizeOf(i), opacity);
-      sprite.position.set(position.x, position.y + height * scale.y, position.z);
+      const y = position.y + height * scale.y;
+      sprite.position.set(position.x, y, position.z);
       scene.add(sprite);
+      const mirrored = makeGlowSprite(tint, sizeOf(i) * 1.3, opacity * 0.8);
+      mirrored.position.set(position.x, WATER_LEVEL - (y - WATER_LEVEL), position.z);
+      scene.add(mirrored);
     });
   };
 
@@ -271,7 +276,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   haloGeometry.rotateX(-Math.PI / 2);
   const halo = (tint: number, matrices: THREE.Matrix4[], radiusOf: (i: number) => number) => {
     const material = new THREE.MeshBasicMaterial({
-      map: haloTexture, color: tint, transparent: true, opacity: 0.5,
+      map: haloTexture, color: tint, transparent: true, opacity: 0.75,
       blending: THREE.AdditiveBlending, depthWrite: false,
     });
     const mesh = new THREE.InstancedMesh(haloGeometry, material, matrices.length);
@@ -297,8 +302,8 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
       scales.push(scale);
     }
     instance(scene, bloom, matrices, petalTint(tint));
-    halo(tint, matrices, (i) => scales[i] * 1.35);
-    glows(tint, matrices, (i) => scales[i] * 1.2, 0.2, 0.22);
+    halo(tint, matrices, (i) => scales[i] * 1.9);
+    glows(tint, matrices, (i) => scales[i] * 1.3, 0.2, 0.32);
   });
 
   // 蕾: 茎を水中に下ろして水面から立ち上げる
@@ -308,7 +313,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
     buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 1.2 + random() * 1.4));
   }
   instance(scene, bud, buds, petalTint(BUD_TINT, 0.4));
-  glows(BUD_TINT, buds, () => 1.1, 0.85, 0.16);
+  glows(BUD_TINT, buds, () => 1.2, 0.85, 0.22);
 }
 
 export async function createProps(scene: THREE.Scene): Promise<void> {

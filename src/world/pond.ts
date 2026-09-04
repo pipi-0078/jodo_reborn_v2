@@ -112,7 +112,7 @@ export function createPond(scene: THREE.Scene): void {
     cos(positionWorld.z.mul(0.8).sub(positionWorld.x.mul(0.6)).add(time.mul(0.9))),
   ).mul(0.006);
   mirror.uvNode = mirror.uvNode!.add(distortion);
-  const reflectance = fresnel.mul(0.55).add(0.35);
+  const reflectance = fresnel.mul(0.5).add(0.45); // 蓮の光が水に映るよう、見下ろしても反射を残す
   const waterColor = vec3(0.10, 0.40, 0.46);
   waterMaterial.colorNode = mix(waterColor, mirror.rgb, reflectance).add(vec3(0.16, 0.42, 0.50).mul(fresnel).mul(0.35));
   waterMaterial.opacityNode = fresnel.mul(0.4).add(0.6);
