@@ -14,6 +14,7 @@ import {
 const LOTUS_TINTS = [0x6f8cf5, 0xf2c452, 0xf07a7a, 0xf7faff]; // 青・黄・赤・白
 const BUD_TINT = 0xf2a8c0;
 const GOLD_LEAF = 0xf0c050;
+const PALE_LEAF = 0xf3e4bc; // 宝樹の葉: 淡い金(施主の指示で優しい色に 9/4)
 const BRIDGE_ANGLES = [0, Math.PI / 2, Math.PI, Math.PI * 1.5]; // 東・南・西・北
 const PAVILION_ANGLES = [Math.PI / 4, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
 const SIGHT_LANE = 5; // 四方の階道の延長線上に空ける半幅
@@ -142,12 +143,12 @@ async function placePavilions(scene: THREE.Scene): Promise<void> {
 }
 
 // 葉の色を四宝の金に染める(名木・軽量宝樹)
-function goldFoliage(name: string): (material: THREE.Material) => THREE.Material {
+function goldFoliage(name: string, leaf: number = GOLD_LEAF): (material: THREE.Material) => THREE.Material {
   return (material) => {
     if (material.name !== name) return material;
     const gold = (material as THREE.MeshStandardMaterial).clone();
-    gold.color.set(GOLD_LEAF);
-    gold.emissive.set(GOLD_LEAF).multiplyScalar(0.18);
+    gold.color.set(leaf);
+    gold.emissive.set(leaf).multiplyScalar(0.18);
     return gold;
   };
 }
@@ -176,7 +177,7 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
     if (i === 0) {
       // 試作の宝樹(宝飾)を一本だけ、スタート地点にいちばん近い最内周の位置に(9/4)
       instance(scene, houju, [compose(Math.cos(theta) * TREE_RINGS[0], 0, Math.sin(theta) * TREE_RINGS[0], 0.6, 1.15)],
-        goldFoliage('foliage'));
+        goldFoliage('foliage', PALE_LEAF));
       continue;
     }
     heroByTint[i % 4].push(compose(Math.cos(theta) * TREE_RINGS[0], 0, Math.sin(theta) * TREE_RINGS[0], i * 2.399, scale));

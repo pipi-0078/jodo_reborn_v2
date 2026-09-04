@@ -74,6 +74,10 @@ const GEM_PRESETS: Record<string, { tint: number[]; attenuation: number[]; dista
   hari_gem: { tint: [1.0, 1.0, 1.0], attenuation: [0.85, 0.95, 1.0], distance: 1.0 },     // 玻璃: 無色透明
   lapis_gem: { tint: [0.58, 0.70, 1.0], attenuation: [0.03, 0.12, 0.90], distance: 0.15 }, // 瑠璃: 透けるサファイア。縁は透け、厚い所は濃い青
   shuju_gem: { tint: [1.0, 0.22, 0.22], attenuation: [0.85, 0.004, 0.008], distance: 0.06 }, // 赤珠: 深紅のルビー。透過も反射も赤に染める
+  // 宝樹の淡い宝石(9/4): 吸収を弱く(明るい色・長い距離)して、光が抜ける優しい色にする
+  sakura_gem: { tint: [1.0, 0.86, 0.90], attenuation: [0.95, 0.55, 0.65], distance: 0.35 }, // 桜色
+  mizu_gem: { tint: [0.86, 0.96, 1.0], attenuation: [0.55, 0.85, 0.95], distance: 0.35 },   // 水色
+  fuji_gem: { tint: [0.93, 0.88, 1.0], attenuation: [0.72, 0.62, 0.95], distance: 0.35 },   // 藤色
 };
 
 function applyGem(material: THREE.MeshPhysicalMaterial): void {

@@ -2,7 +2,7 @@
 """宝樹(ほうじゅ): 承認済みの名木(tree_meiboku.glb)に宝飾を施した木をglb出力する。
 
 「七重行樹 皆是四宝」— 幹と枝は金、葉は金(空間側で四宝の色に染める)、
-枝先から真珠と水晶の鎖が垂れ、先にルビー・サファイア・水晶の雫。枝には宝石の実。
+枝先から真珠と水晶の鎖が垂れ、先に桜色・水色・藤色の淡い宝石の雫。枝には宝石の実。
 参考図(9/4)の、枝から瓔珞が下がる宝樹に寄せる。
 
 手順:
@@ -37,9 +37,11 @@ def build(path):
 
     gold = plain_material("gold_polished", GOLD, 1.0, 0.22)
     pearl = plain_material("pearl", (0.97, 0.95, 0.91), 0.0, 0.22, (0.30, 0.28, 0.25), 0.3)
-    lapis = gem_material("lapis_gem", (0.04, 0.10, 0.52), 1.72, (0.03, 0.06, 0.25), 0.25)
+    # 淡く優しい色の宝石(9/4 施主の指示「もっとおとなしい色」): 桜色・水色・藤色。空間側の *_gem プリセットで透けさせる
     hari = gem_material("hari_gem", (0.92, 0.96, 1.0), 1.95, (0.6, 0.7, 0.9), 0.12)
-    shuju = gem_material("shuju_gem", (0.60, 0.04, 0.05), 1.78, (0.35, 0.02, 0.02), 0.3)
+    sakura = gem_material("sakura_gem", (0.98, 0.80, 0.84), 1.55, (0.5, 0.3, 0.33), 0.1)
+    mizu = gem_material("mizu_gem", (0.80, 0.93, 0.98), 1.55, (0.35, 0.48, 0.55), 0.1)
+    fuji = gem_material("fuji_gem", (0.88, 0.82, 0.97), 1.55, (0.42, 0.36, 0.55), 0.1)
 
     # --- 幹と枝を金に(名前で空間側の純金処理に載せる) ---
     foliage = None
@@ -80,9 +82,9 @@ def build(path):
     wire = Batch("gold_wire", gold)
     fitting = Batch("gold_fitting", gold, smooth=False)
     pearls = Batch("pearl_batch", pearl)
-    gems = {"lapis": Batch("lapis_batch", lapis, smooth=False), "hari": Batch("hari_batch", hari, smooth=False),
-            "shuju": Batch("shuju_batch", shuju, smooth=False)}
-    colored = [gems["shuju"], gems["lapis"], gems["hari"]]
+    gems = {"hari": Batch("hari_batch", hari, smooth=False), "sakura": Batch("sakura_batch", sakura, smooth=False),
+            "mizu": Batch("mizu_batch", mizu, smooth=False), "fuji": Batch("fuji_batch", fuji, smooth=False)}
+    colored = [gems["sakura"], gems["mizu"], gems["fuji"]]
 
     # --- 瓔珞の鎖: 真珠と水晶を連ね、先に色石の雫 ---
     n_strings = int(len(chosen) * 0.6)  # 6 割を鎖、4 割を実に
