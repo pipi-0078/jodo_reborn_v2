@@ -73,7 +73,7 @@ const GEM_PRESETS: Record<string, { tint: number[]; attenuation: number[]; dista
   // 吸収距離が短い(0.05)と黒く濁る。0.2〜0.3 で「明るい色ガラス」になる(9/4)
   hari_gem: { tint: [1.0, 1.0, 1.0], attenuation: [0.85, 0.95, 1.0], distance: 1.0 },     // 玻璃: 無色透明
   lapis_gem: { tint: [0.85, 0.92, 1.0], attenuation: [0.10, 0.28, 0.95], distance: 0.28 }, // 瑠璃: 透けて青
-  shuju_gem: { tint: [1.0, 0.62, 0.66], attenuation: [0.90, 0.012, 0.03], distance: 0.13 }, // 赤珠: ルビー。桃色に寄らないよう吸収を深く、緑を強く切る
+  shuju_gem: { tint: [1.0, 0.42, 0.44], attenuation: [0.85, 0.006, 0.012], distance: 0.09 }, // 赤珠: 深紅のルビー。表面の色も赤に寄せ、青緑をほぼ切る
 };
 
 function applyGem(material: THREE.MeshPhysicalMaterial): void {
@@ -88,7 +88,7 @@ function applyGem(material: THREE.MeshPhysicalMaterial): void {
   material.metalness = 0.0;
   // 内部反射で光をためる感じを、色の弱い発光で代用
   material.emissive.setRGB(preset.attenuation[0], preset.attenuation[1], preset.attenuation[2], THREE.LinearSRGBColorSpace);
-  material.emissiveIntensity = material.name === 'hari_gem' ? 0.12 : material.name === 'shuju_gem' ? 0.16 : 0.22;
+  material.emissiveIntensity = material.name === 'hari_gem' ? 0.12 : material.name === 'shuju_gem' ? 0.12 : 0.22;
   material.envMapIntensity = 1.4;
   material.needsUpdate = true;
 }
