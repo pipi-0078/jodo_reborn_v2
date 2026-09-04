@@ -3,6 +3,7 @@ import {
   positionLocal, positionWorld, time, sin, vec2, vec3, color, uv, texture, mix, smoothstep,
   mx_noise_float, normalMap as normalMapNode, normalView, positionViewDirection, reflector, cos,
 } from 'three/tsl';
+import { NO_REFLECT_LAYER } from './layout';
 import {
   POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, ISLAND_FOOT, ISLAND_WATERLINE, BANK_INNER,
 } from './layout';
@@ -10,7 +11,7 @@ import { applyPureGold } from './gold';
 
 // 「七宝池 八功徳水充満其中 池底純以金沙布地」
 // 池底には四宝(金・銀・瑠璃・玻璃)の砂が吹き溜まりを作って敷かれる。
-export function createPond(scene: THREE.Scene): void {
+export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
   // 斜面と水位(-0.5m)の交点
   const bankWaterline = POND_OUTER - (-WATER_LEVEL) * (POND_OUTER - BANK_INNER) / -POND_DEPTH;
   const islandWaterline = ISLAND_WATERLINE;
@@ -107,7 +108,9 @@ export function createPond(scene: THREE.Scene): void {
 
   // 鏡面反射: 水面の平面で世界を映し、波でわずかに歪ませる。見下ろすほど水色が勝ち、
   // 遠くを見るほど鏡になる(フレネル)。反射は照明を受けない emissive に乗せる
-  const mirror = reflector({ resolutionScale: 0.5 });
+  const mirror = reflector({ resolutionScale: 0.4 });
+  // 遠くの並木(第2周以降)は水面に映さない(軽量化 9/4)。反射用の仮想カメラから NO_REFLECT_LAYER を外す
+  mirror.reflector.getVirtualCamera(camera).layers.disable(NO_REFLECT_LAYER);
   const distortion = vec2(
     sin(positionWorld.x.mul(0.9).add(positionWorld.z.mul(0.75)).add(time.mul(1.2))),
     cos(positionWorld.z.mul(0.8).sub(positionWorld.x.mul(0.6)).add(time.mul(0.9))),

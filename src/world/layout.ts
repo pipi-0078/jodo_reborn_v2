@@ -79,3 +79,6 @@ export function sampleGround(x: number, z: number): GroundSample {
   }
   return { y: 0, blocked: false };
 }
+
+// 水面の反射から外す物体のレイヤー(遠くの並木。軽量化 9/4)。メインカメラは 0 と両方を見る
+export const NO_REFLECT_LAYER = 1;

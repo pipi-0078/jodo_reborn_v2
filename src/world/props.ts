@@ -7,6 +7,7 @@ import {
   BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
   POND_OUTER, TREE_RINGS, WATER_LEVEL,
 } from './layout';
+import { NO_REFLECT_LAYER } from './layout';
 
 // 完成予想図(docs/reference_concept.png)に沿って、承認済みアセットを据える。
 // 阿弥陀如来坐像と蓮華座は巨大化の後に据える(中島には壇を先に置く)。
@@ -82,12 +83,14 @@ async function loadTemplate(file: string, options: { floor?: boolean; recenter?:
 function instance(
   scene: THREE.Scene, template: Template, matrices: THREE.Matrix4[],
   materialFor?: (material: THREE.Material) => THREE.Material,
+  noReflect = false, // 水面の反射に映さない(遠景の軽量化)
 ): void {
   if (matrices.length === 0) return;
   for (const part of template.parts) {
     const material = materialFor ? materialFor(part.material) : part.material;
     const mesh = new THREE.InstancedMesh(part.geometry, material, matrices.length);
     matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+    if (noReflect) mesh.layers.set(NO_REFLECT_LAYER);
     scene.add(mesh);
   }
 }
@@ -217,8 +220,8 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
     const kind = i % 2;
     ring1[kind].push(compose(s.x, 0, s.z, random() * Math.PI * 2, (kind === 0 ? 1.0 : 1.3) * (0.9 + random() * 0.2)));
   });
-  instance(scene, meiboku, ring1[0], goldFoliage('foliage'));
-  instance(scene, yanagi, ring1[1]);
+  instance(scene, meiboku, ring1[0], goldFoliage('foliage'), true);
+  instance(scene, yanagi, ring1[1], undefined, true);
 
   // 第3周: 針葉樹・広葉樹・名木(銀の葉)を巡回(枝垂れは施主の指示で名木に差し替え 9/4)
   const ring2: THREE.Matrix4[][] = [[], [], []];
@@ -227,9 +230,9 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
     const kind = i % 3;
     ring2[kind].push(compose(s.x, 0, s.z, random() * Math.PI * 2, ring2Scale[kind] * (0.9 + random() * 0.2)));
   });
-  instance(scene, conifer, ring2[0]);
-  instance(scene, broadleaf, ring2[1]);
-  instance(scene, houju, ring2[2], goldFoliage('foliage', SILVER_LEAF));
+  instance(scene, conifer, ring2[0], undefined, true);
+  instance(scene, broadleaf, ring2[1], undefined, true);
+  instance(scene, houju, ring2[2], goldFoliage('foliage', SILVER_LEAF), true);
 
   // 第4〜7周: 軽量宝樹(金の葉)。外周ほどわずかに大きく
   const outer: THREE.Matrix4[] = [];
@@ -238,7 +241,7 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
       outer.push(compose(s.x, 0, s.z, random() * Math.PI * 2, (1 + (ring - 3) * 0.08) * (0.9 + random() * 0.3)));
     });
   }
-  instance(scene, lod, outer, goldFoliage('foliage'));
+  instance(scene, lod, outer, goldFoliage('foliage'), true);
 }
 
 // 「池中蓮華大如車輪 青色青光 黄色黄光 赤色赤光 白色白光」

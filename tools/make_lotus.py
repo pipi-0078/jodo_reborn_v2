@@ -8,7 +8,7 @@
   - 幅方向: お椀状のふくらみ(カップ)、外面に走る中肋の畝、縁のごく浅い揺らぎ
   - 先端は倒卵形に丸く納め、わずかに尖る(尖りすぎは「クワガタ」になる)
   - 1枚ごとに大きさ・傾き・ねじれの揺らぎ。同じ輪の隣どうしは開き角を互い違いにして重なりを自然に(覆瓦状)
-構成: 外輪9枚 + 第2輪9枚 + 第3輪7枚 + 内輪5枚(花托を抱く)+ 花托(逆円錐・実19粒)+ 雄しべ120本
+構成: 外輪9枚 + 第2輪9枚 + 第3輪7枚 + 内輪5枚(花托を抱く)+ 花托(逆円錐・実19粒)+ 雄しべ78本
 マテリアル: petal は色(petal.png)+法線(petal_normal.png)+発光マップ(petal_emit.png)。
   色は実行時に乗算(青・黄・赤・白の4色はギャラリー/空間側で指定)。発光も同じ色で、芯から先端へ薄れる
 
@@ -32,8 +32,8 @@ from make_trees import export, plain_material, reset_scene  # noqa: E402
 
 rand = random.Random(17)
 
-PETAL_U = 28  # 長さ方向の分割
-PETAL_V = 16  # 幅方向の分割
+PETAL_U = 20  # 28 → 20(軽量化 9/4。滑らか表示なので見た目はほぼ同じ)  # 長さ方向の分割
+PETAL_V = 11  # 幅方向の分割
 
 
 def petal_material():
@@ -283,11 +283,11 @@ def build_lotus(path, whorls, with_center=True, stem_height=0.0, cup=0.5):
             golden = k * math.tau * 0.381966
             r = 0.098 * math.sqrt((k + 0.5) / 19)
             c = Vector((math.cos(golden) * r, math.sin(golden) * r, top + 0.004 - 0.005))
-            ellipsoid_geo(c, Vector((0, 0, 1)), 0.0135, 0.030, seed_v, seed_f, segments=12, rings=8)
+            ellipsoid_geo(c, Vector((0, 0, 1)), 0.0135, 0.030, seed_v, seed_f, segments=8, rings=5)  # 12x8 → 8x5(軽量化 9/4)
             # 縁の環: 平たいトーラス
             ring_r, ring_w = 0.0165, 0.0035
             base = len(sock_v)
-            seg, sub = 16, 6
+            seg, sub = 10, 4  # 16x6 → 10x4(軽量化 9/4)
             for i in range(seg):
                 a = i / seg * math.tau
                 for j in range(sub):
@@ -308,7 +308,7 @@ def build_lotus(path, whorls, with_center=True, stem_height=0.0, cup=0.5):
         # 雄しべ: 花托の周りに三重の輪。根元から外へ膨らみつつ立ち上がる糸+先端の葯(楕円体)
         fil_v, fil_f = [], []
         ant_v, ant_f = [], []
-        rings = [(0.118, 40, 0.0), (0.132, 40, 0.5), (0.146, 40, 1.0)]
+        rings = [(0.118, 26, 0.0), (0.132, 26, 0.5), (0.146, 26, 1.0)]  # 120 → 78 本(軽量化 9/4)
         for r0, count, ph in rings:
             for k in range(count):
                 theta = (k + ph) / count * math.tau + rand.uniform(-0.03, 0.03)
@@ -322,9 +322,9 @@ def build_lotus(path, whorls, with_center=True, stem_height=0.0, cup=0.5):
                     pts.append(Vector((math.cos(theta) * (r0 + bulge) + rand.uniform(-0.002, 0.002),
                                        math.sin(theta) * (r0 + bulge) + rand.uniform(-0.002, 0.002),
                                        start.z + height * (t ** 0.85))))
-                tube_geo(pts, 0.0026, 5, fil_v, fil_f)
+                tube_geo(pts, 0.0026, 4, fil_v, fil_f)
                 axis = (pts[-1] - pts[-2]).normalized()
-                ellipsoid_geo(pts[-1] + axis * 0.008, axis, 0.0055, 0.024, ant_v, ant_f, segments=8, rings=6)
+                ellipsoid_geo(pts[-1] + axis * 0.008, axis, 0.0055, 0.024, ant_v, ant_f, segments=6, rings=4)
         mesh_object("filaments", fil_v, fil_f, filament_mat)
         mesh_object("anthers", ant_v, ant_f, anther_mat)
 

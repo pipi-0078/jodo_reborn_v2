@@ -40,7 +40,7 @@ TREES = [
     ("tree_conifer.glb", "houju_conifer.glb", 120, 0.42, 1.1),
     ("tree_broadleaf.glb", "houju_broadleaf.glb", 120, 0.42, 1.3),
     ("tree_weeping.glb", "houju_weeping.glb", 120, 0.42, 1.4),
-    ("tree_lod.glb", "houju_lod.glb", 40, 0.6, 1.1),
+    ("tree_lod.glb", "houju_lod.glb", 24, 0.7, 1.1),  # 40 → 24 点(軽量化 9/4)
 ]
 
 
@@ -81,6 +81,16 @@ def build(src, dst, count, spacing, place_scale):
     sakura = gem_material("sakura_gem", (0.98, 0.80, 0.84), 1.55, (0.5, 0.3, 0.33), 0.1)
     mizu = gem_material("mizu_gem", (0.80, 0.93, 0.98), 1.55, (0.35, 0.48, 0.55), 0.1)
     fuji = gem_material("fuji_gem", (0.88, 0.82, 0.97), 1.55, (0.42, 0.36, 0.55), 0.1)
+
+    # --- 外周の軽量宝樹(約180本)は遠景なので、幹と枝の面を半分に間引く(軽量化 9/4) ---
+    if src == "tree_lod.glb":
+        for obj in list(bpy.context.scene.objects):
+            if obj.type == "MESH" and any(sl.material and sl.material.name.split(".")[0] in TRUNK_NAMES + TWIG_NAMES
+                                          for sl in obj.material_slots):
+                mod = obj.modifiers.new("decimate", "DECIMATE")
+                mod.ratio = 0.5
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.modifier_apply(modifier=mod.name)
 
     # --- 幹と枝を金に ---
     top = 0.0
@@ -136,7 +146,7 @@ def build(src, dst, count, spacing, place_scale):
         for k in range(n):
             q = p + Vector((0, 0, -(0.08 + k * 0.14) * K))
             if k % 3 == 2:
-                gems["hari"].gem(q, 0.05 * K, elong=1.3, facets=8)
+                gems["hari"].gem(q, 0.05 * K, elong=1.3, facets=6)
             else:
                 pearls.sphere(q, 0.042 * K)
         fitting.petal_disc(p + Vector((0, 0, -length + 0.06 * K)), 0.07 * K, 6, tilt=-0.7, width=0.5)

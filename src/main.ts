@@ -8,12 +8,12 @@ import { createPond } from './world/pond';
 import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
 import { createPurpleClouds } from './world/clouds';
-import { sampleGround } from './world/layout';
+import { NO_REFLECT_LAYER, sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
   const renderer = new THREE.WebGPURenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // 2 だと高精細画面で画素が 4 倍。1.5 で軽く(9/4)
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.78;
@@ -22,13 +22,14 @@ async function main(): Promise<void> {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+  camera.layers.enable(NO_REFLECT_LAYER); // 反射に映さない遠景も、メインカメラは描く
 
   // 空・黄金の大地・七宝池の骨格に、ギャラリーで承認済みのアセットを据える(如来は別途)
   const { sunDirection } = createSky(scene, renderer);
   createGoldEnvironment(renderer, sunDirection); // 金専用の暖色の環境マップ(部材の読み込み前に)
   const clouds = createPurpleClouds(scene, sunDirection); // 西の空の紫雲
   createGround(scene, true);
-  createPond(scene);
+  createPond(scene, camera);
   await createProps(scene);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 

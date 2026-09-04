@@ -90,7 +90,7 @@ class Batch:
         self.verts.extend(verts)
         self.faces.extend(tuple(i + base for i in f) for f in faces)
 
-    def sphere(self, center, r, segments=5, rings=3):
+    def sphere(self, center, r, segments=5, rings=2):  # 5x3 → 5x2 で 30 → 20 tris(軽量化 9/4)
         verts, faces = [], []
         for i in range(rings + 1):
             phi = i / rings * math.pi
@@ -235,7 +235,7 @@ def build_ramou(path, rich=True, length=LENGTH):
         return lambda p: pearls.sphere(p, r)
 
     def gem_at(batch, r, elong=1.2):
-        return lambda p: batch.gem(p, r, elong=elong, facets=8)
+        return lambda p: batch.gem(p, r, elong=elong, facets=6)
 
     def pendant(p, length, big_color):
         """支点から垂れる飾り: 真珠と水晶を交互に連ね、先に色石の雫。"""
@@ -244,7 +244,7 @@ def build_ramou(path, rich=True, length=LENGTH):
         for i in range(n):
             q = p + Vector((0, 0, -0.1 - i * 0.13 * K))
             if i % 3 == 2:
-                gems["hari"].gem(q, 0.055 * K, elong=1.3, facets=8)
+                gems["hari"].gem(q, 0.055 * K, elong=1.3, facets=6)
             else:
                 pearls.sphere(q, 0.045 * K)
         goldsmith.petal_disc(p + Vector((0, 0, -length + 0.08 * K)), 0.09 * K, 6, tilt=-0.7, width=0.5)
