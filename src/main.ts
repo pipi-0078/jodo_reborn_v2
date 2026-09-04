@@ -6,6 +6,7 @@ import { createGoldEnvironment } from './world/gold';
 import { createGround } from './world/ground';
 import { createPond } from './world/pond';
 import { createProps } from './world/props';
+import { createFallingFlowers } from './world/petals';
 import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -27,6 +28,7 @@ async function main(): Promise<void> {
   createGround(scene, true);
   createPond(scene);
   await createProps(scene);
+  const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
   // 後処理: 発光(蓮の光・灯籠)だけを滲ませるブルーム。
   // 輝度しきい値で選ぶと日向の金の地面まで滲んで全体が白飛びするので、発光チャンネル(MRT)だけを使う(9/3)
@@ -59,6 +61,7 @@ async function main(): Promise<void> {
     timer.update();
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
+    flowers.update(dt);
     postProcessing.render();
   });
 }
