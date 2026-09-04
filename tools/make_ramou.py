@@ -7,7 +7,7 @@
 (環ごとに区画数を 2πR/12 に丸め、弦 ≈ 12m。0.4m 重ねてつなぎ目を隠す)。
 
 9/4 初版は「針金に玉」で「チープ、豪華さゼロ」と却下 → 宝飾品として作り直し → 参考図に合わせてスワッグ構造へ:
-  - 支点(華鬘の金具+大きな色石)を 6.2m おき、支点のあいだに真珠・水晶の鎖が深い弧(4.0/5.5/7.0m)を描いて垂れる(三本重ね)
+  - 支点(華鬘の金具+大きな色石)は区画の始端だけ(12.4m / 6.2m おき)。鎖は懸垂線(電線のたるみ)で、深さは間隔の 30/38/46%(三本重ね)
   - 幅方向に 3 列、高さをずらして重ねる。列どうしは斜めの鎖でつなぐ
   - 支点から長さ違い(1.3〜2.4m)の垂れ飾り。真珠と水晶を連ね、先に色石の雫
 以下は旧版の構成メモ:
@@ -196,26 +196,37 @@ def build_ramou(path, rich=True, length=LENGTH):
     colored = [gems["shuju"], gems["lapis"], gems["hari"]]
 
     half_l = length / 2
-    span = 6.2  # 支点の間隔。広くして弧に余裕を持たせる(9/4 参考図)
     rows = [(1.4, 0.0), (0.0, -1.5), (-1.4, -3.0)] if rich else [(0.0, -0.4)]  # 幅 4m。列の高さ差 1.5m で層を見せる
 
     def chain(p0, p1, sag, spacing, pattern, wire_r=0.012):
-        """p0→p1 を放物線で垂らした鎖。pattern は珠の種類の並び(関数のリスト)。"""
-        n = 24
+        """p0→p1 を懸垂線(カテナリー: 電線のたるみの形)で垂らした鎖。pattern は珠の種類の並び。"""
+        n = 32
+        horizontal = Vector((p1.x - p0.x, p1.y - p0.y, 0)).length
+        # sag = a (cosh(L/2a) - 1) を満たす a を二分法で求める
+        lo, hi = 0.01, 1000.0
+        for _ in range(60):
+            a = (lo + hi) / 2
+            if a * (math.cosh(horizontal / (2 * a)) - 1) > sag:
+                lo = a
+            else:
+                hi = a
+        a = (lo + hi) / 2
+        top = a * math.cosh(horizontal / (2 * a))
         pts = []
         for i in range(n + 1):
             t = i / n
             p = p0.lerp(p1, t)
-            pts.append(Vector((p.x, p.y, p.z - sag * (1 - (2 * t - 1) ** 2))))
+            x = (t - 0.5) * horizontal
+            pts.append(Vector((p.x, p.y, p.z + a * math.cosh(x / a) - top)))
         wire.add(*tube(pts, wire_r, sides=4))
-        length = sum((pts[i + 1] - pts[i]).length for i in range(n))
-        count = max(2, int(length / spacing))
+        length_total = sum((pts[i + 1] - pts[i]).length for i in range(n))
+        count = max(2, int(length_total / spacing))
         k = 0
         for i in range(count + 1):
             t = i / count
             seg = t * n
-            a = min(int(seg), n - 1)
-            p = pts[a].lerp(pts[a + 1], seg - a)
+            a_i = min(int(seg), n - 1)
+            p = pts[a_i].lerp(pts[a_i + 1], seg - a_i)
             pattern[k % len(pattern)](p)
             k += 1
 
@@ -239,46 +250,36 @@ def build_ramou(path, rich=True, length=LENGTH):
         big_color.gem(p + Vector((0, 0, -length - 0.08)), 0.11, elong=1.8, facets=8)
 
     gem_idx = 0
+    sag_ratios = (0.30, 0.38, 0.46)  # 弧の深さ / 支点間隔(電線のように長くしなる 9/4)
     for row, (y, z_row) in enumerate(rows):
-        offset = span / 2 if row % 2 == 1 else 0.0
-        anchors = []
-        x = -half_l + offset
-        while x <= half_l + 0.01:
-            anchors.append(Vector((x, y, z_row)))
-            x += span
+        a = Vector((-half_l, y, z_row))              # 支点は区画の始端だけ(次の区画の始端が終点になる)
+        b = Vector((half_l - 0.3, y, z_row))         # 区画の重なり分だけ手前で終える
         # 支持線(細い金の綱)
         wire.add(*tube([Vector((-half_l, y, z_row)), Vector((half_l, y, z_row))], 0.03, sides=6))
         # 支点: 華鬘の金具 + 大きな色石 + 垂れ飾り
-        for k, a in enumerate(anchors):
-            goldsmith.petal_disc(a, 0.30, 8, tilt=0.3, width=0.4)
-            goldsmith.petal_disc(a + Vector((0, 0, 0.03)), 0.17, 8, tilt=0.5, width=0.5)
-            colored[gem_idx % 3].gem(a + Vector((0, 0, 0.08)), 0.14, elong=1.0, facets=8)
-            if rich:
-                drop = 5.0 + 1.5 * ((k * 5 + row * 2) % 3)  # 5.0〜8.0m(枝垂れ 9/4)
-                pendant(a + Vector((0, 0, -0.05)), drop, colored[(gem_idx + 1) % 3])
+        goldsmith.petal_disc(a, 0.30, 8, tilt=0.3, width=0.4)
+        goldsmith.petal_disc(a + Vector((0, 0, 0.03)), 0.17, 8, tilt=0.5, width=0.5)
+        colored[gem_idx % 3].gem(a + Vector((0, 0, 0.08)), 0.14, elong=1.0, facets=8)
+        if rich:
+            drop = 5.0 + 1.5 * (row % 3)  # 5.0〜8.0m
+            pendant(a + Vector((0, 0, -0.05)), drop, colored[(gem_idx + 1) % 3])
+        gem_idx += 1
+        # 花綱: 三本の鎖(真珠 / 水晶 / 真珠+色石)を深さ違いで
+        chain(a, b, sag_ratios[0] * length, 0.11, [pearl_at(0.045)])
+        if rich:
+            chain(a, b, sag_ratios[1] * length, 0.14, [gem_at(gems["hari"], 0.05), pearl_at(0.035)])
+            chain(a, b, sag_ratios[2] * length, 0.11, [pearl_at(0.04)] * 4 + [gem_at(colored[gem_idx % 3], 0.06)])
+            # 弧の底の雫
+            low = (a + b) / 2 + Vector((0, 0, -sag_ratios[2] * length))
+            wire.add(*tube([low, low + Vector((0, 0, -1.2))], 0.008, sides=4))
+            for i in range(6):
+                pearls.sphere(low + Vector((0, 0, -0.15 - i * 0.16)), 0.04)
+            gems["hari"].gem(low + Vector((0, 0, -1.25)), 0.10, elong=1.8, facets=8)
             gem_idx += 1
-        # スワッグ: 支点のあいだに三本の鎖(真珠 / 水晶 / 真珠+色石)
-        for a, b in zip(anchors[:-1], anchors[1:]):
-            chain(a, b, 4.0, 0.11, [pearl_at(0.045)])
-            if rich:
-                chain(a, b, 5.5, 0.14, [gem_at(gems["hari"], 0.05), pearl_at(0.035)])
-                chain(a, b, 7.0, 0.11, [pearl_at(0.04)] * 4 + [gem_at(colored[gem_idx % 3], 0.06)])
-                # 弧の底の雫(枝垂れるように深く 9/4)
-                low = (a + b) / 2 + Vector((0, 0, -7.0))
-                wire.add(*tube([low, low + Vector((0, 0, -1.5))], 0.008, sides=4))
-                for i in range(8):
-                    pearls.sphere(low + Vector((0, 0, -0.15 - i * 0.16)), 0.04)
-                gems["hari"].gem(low + Vector((0, 0, -1.55)), 0.10, elong=1.8, facets=8)
-                gem_idx += 1
-        # 列どうしをつなぐ斜めの鎖(網らしさ)
+        # 列どうしをつなぐ鎖(支点から次の列の支点へ)
         if rich and row + 1 < len(rows):
             y2, z2 = rows[row + 1]
-            offset2 = span / 2 if (row + 1) % 2 == 1 else 0.0
-            for a in anchors:
-                for dx in (-span / 2, span / 2):
-                    bx = a.x + dx
-                    if -half_l - 0.01 <= bx <= half_l + 0.01 and abs(((bx - offset2 + half_l) / span) % 1) < 0.01:
-                        chain(a, Vector((bx, y2, z2)), 2.0, 0.13, [pearl_at(0.035), gem_at(gems["hari"], 0.04)])
+            chain(a, Vector((-half_l, y2, z2)), 0.12 * length, 0.13, [pearl_at(0.035), gem_at(gems["hari"], 0.04)])
 
     wire.finish()
     goldsmith.finish()
