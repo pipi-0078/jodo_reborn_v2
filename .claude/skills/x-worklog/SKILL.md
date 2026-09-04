@@ -18,6 +18,9 @@ description: 浄土再現プロジェクトの作業記録をX(旧Twitter)投稿
 - 記事は、そのリポジトリの**直下**に置く(`diary/` のような下位フォルダは作らない)
 - このリポジトリがヨシボウさんのObsidian Vaultそのものなので、
   `jodo_diary` へのコミット&プッシュが「Obsidianへの投稿」を意味する
+- スマホの Obsidian Git で pull しても降りてこないときは、まず GitHub 側にファイルがあるかを API で確認し、
+  あればスマホ側の問題。2026-09-04 の原因は Obsidian Git の「Author name / email」未設定で、
+  pull 前の自動コミットで止まっていた(設定に両方入れれば直る)
 - **プロジェクト本体のリポジトリに日記を置かないこと。** 以前は `jodo_reborn_v2/diary/` に
   置いていたが、Obsidian Gitの同期が転ぶと3Dアセットまで巻き添えで消える事故が起きたため分離した
 
