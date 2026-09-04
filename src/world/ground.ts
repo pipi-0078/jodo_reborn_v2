@@ -20,7 +20,7 @@ export function createGround(scene: THREE.Scene, withPondHole = false): void {
     roughnessMap: makeNoiseTexture(),
   });
   applyPureGold(material); // 純金の反射(9/4)
-  material.roughness = 0.5; // 地面は広いので、照り返しの塊が出ない程度に粗く
+  material.roughness = 0.55; // 地面は広いので、照り返しの塊が出ない程度に粗く
 
   const ground = new THREE.Mesh(geometry, material);
   scene.add(ground);

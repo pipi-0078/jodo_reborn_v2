@@ -6,7 +6,8 @@ import { positionLocal, vec3, mix, smoothstep } from 'three/tsl';
 // 金専用の暖色の環境マップ(天頂は深い琥珀、中空は金、地平は白金の光、足元は暗い琥珀)を焼き、
 // 純金の反射色(線形 1.0, 0.766, 0.336)・金属度 1.0 で統一する(9/4)。
 
-export const PURE_GOLD = new THREE.Color().setRGB(1.0, 0.766, 0.336, THREE.LinearSRGBColorSpace);
+// 純金の反射色。少し赤みに寄せると古金のように重く見える(9/4 「もう少し重厚に」)
+export const PURE_GOLD = new THREE.Color().setRGB(1.0, 0.71, 0.29, THREE.LinearSRGBColorSpace);
 
 // 金として扱うマテリアル名(glb 側の命名)。宝樹の幹・枝も金
 const GOLD_NAMES = /^(gold|paving|floor|wall|goldfloor|goldcol|kinpaku|tsuchime|migaki|hameita|gtiles|shippo_gold|petal_gold|bark|twig)/;
@@ -26,15 +27,15 @@ export function createGoldEnvironment(renderer: THREE.WebGPURenderer, sunDirecti
     );
     const dir = positionLocal.normalize();
     const up = dir.y;
-    const below = vec3(0.22, 0.12, 0.035);     // 足元: 暗い琥珀(金の底に重みが出る)
-    const horizon = vec3(1.0, 0.86, 0.50);     // 地平: 白金の光
-    const mid = vec3(0.92, 0.58, 0.20);        // 中空: 金
-    const zenith = vec3(0.30, 0.17, 0.05);     // 天頂: 深い琥珀
+    const below = vec3(0.10, 0.055, 0.015);    // 足元: 暗い琥珀(金の底に重みが出る)
+    const horizon = vec3(0.98, 0.78, 0.42);    // 地平: 金の光
+    const mid = vec3(0.68, 0.40, 0.13);        // 中空: 深い金
+    const zenith = vec3(0.16, 0.09, 0.025);    // 天頂: ほぼ黒に近い琥珀(映り込みの陰が重さになる)
     const upper = mix(mix(horizon, mid, smoothstep(0.03, 0.30, up)), zenith, smoothstep(0.28, 0.85, up));
     const lower = mix(horizon, below, smoothstep(0.0, 0.35, up.negate()));
     const base = mix(lower, upper, smoothstep(-0.02, 0.02, up));
     const sunDot = dir.dot(vec3(sunDirection.x, sunDirection.y, sunDirection.z)).clamp(0.0, 1.0);
-    const glow = vec3(1.0, 0.95, 0.85).mul(sunDot.pow(40.0)).mul(3.0).add(vec3(1.0, 0.8, 0.45).mul(sunDot.pow(6.0)).mul(0.5));
+    const glow = vec3(1.0, 0.95, 0.85).mul(sunDot.pow(40.0)).mul(2.6).add(vec3(1.0, 0.8, 0.45).mul(sunDot.pow(6.0)).mul(0.4));
     (dome.material as THREE.MeshBasicNodeMaterial).colorNode = base.add(glow);
 
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -57,13 +58,14 @@ export function applyPureGold(material: THREE.Material): void {
     gold.envMap = goldEnvironment;
     gold.envMapIntensity = 1.0;
   }
+  // 粗さは 0.36〜0.42: 鏡のように磨いた金より、少し鈍い方が厚みを感じる
   if (gold.map) {
-    gold.metalness = Math.max(gold.metalness, 0.92);
-    gold.roughness = Math.min(gold.roughness, 0.42);
+    gold.metalness = Math.max(gold.metalness, 0.95);
+    gold.roughness = Math.min(gold.roughness, 0.45);
   } else {
     gold.color.copy(PURE_GOLD);
     gold.metalness = 1.0;
-    gold.roughness = Math.min(Math.max(gold.roughness, 0.26), 0.34);
+    gold.roughness = Math.min(Math.max(gold.roughness, 0.36), 0.42);
   }
   gold.needsUpdate = true;
 }
