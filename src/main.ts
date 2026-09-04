@@ -7,6 +7,7 @@ import { createGround } from './world/ground';
 import { createPond } from './world/pond';
 import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
+import { createPurpleClouds } from './world/clouds';
 import { sampleGround } from './world/layout';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
   // 空・黄金の大地・七宝池の骨格に、ギャラリーで承認済みのアセットを据える(如来は別途)
   const { sunDirection } = createSky(scene, renderer);
   createGoldEnvironment(renderer, sunDirection); // 金専用の暖色の環境マップ(部材の読み込み前に)
+  const clouds = createPurpleClouds(scene, sunDirection); // 西の空の紫雲
   createGround(scene, true);
   createPond(scene);
   await createProps(scene);
@@ -62,6 +64,7 @@ async function main(): Promise<void> {
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
     flowers.update(dt);
+    clouds.update(dt);
     postProcessing.render();
   });
 }
