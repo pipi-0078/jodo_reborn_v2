@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
+import { applyPureGold } from './gold';
 import {
   BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
   POND_OUTER, TREE_RINGS, WATER_LEVEL,
@@ -57,6 +58,7 @@ async function loadTemplate(file: string, options: { floor?: boolean; recenter?:
     const geometry = (object.geometry as THREE.BufferGeometry).clone().applyMatrix4(object.matrixWorld);
     geometry.translate(shift.x, shift.y, shift.z);
     const material = object.material as THREE.Material;
+    applyPureGold(material); // 金の部材は純金の反射に(名前で判定)
     const list = byMaterial.get(material) ?? [];
     list.push(geometry);
     byMaterial.set(material, list);

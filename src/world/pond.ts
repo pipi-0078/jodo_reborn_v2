@@ -6,6 +6,7 @@ import {
 import {
   POND_OUTER, WATER_LEVEL, POND_DEPTH, ISLAND_RADIUS, ISLAND_TOP, ISLAND_FOOT, ISLAND_WATERLINE, BANK_INNER,
 } from './layout';
+import { applyPureGold } from './gold';
 
 // 「七宝池 八功徳水充満其中 池底純以金沙布地」
 // 池底には四宝(金・銀・瑠璃・玻璃)の砂が吹き溜まりを作って敷かれる。
@@ -82,10 +83,10 @@ export function createPond(scene: THREE.Scene): void {
   );
   islandWet.position.y = WATER_LEVEL - 0.85;
   scene.add(islandWet);
-  const islandTop = new THREE.Mesh(
-    new THREE.CircleGeometry(ISLAND_RADIUS + 0.05, 64),
-    new THREE.MeshStandardMaterial({ color: 0xc9a13b, metalness: 0.5, roughness: 0.5 }),
-  );
+  const islandTopMaterial = new THREE.MeshStandardMaterial({ name: 'gold_island', color: 0xc9a13b, metalness: 0.5, roughness: 0.5 });
+  applyPureGold(islandTopMaterial);
+  islandTopMaterial.roughness = 0.45;
+  const islandTop = new THREE.Mesh(new THREE.CircleGeometry(ISLAND_RADIUS + 0.05, 64), islandTopMaterial);
   islandTop.geometry.rotateX(-Math.PI / 2);
   islandTop.position.y = ISLAND_TOP;
   scene.add(islandTop);

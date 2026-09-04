@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { pass, mrt, output, emissive } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { createSky } from './world/sky';
+import { createGoldEnvironment } from './world/gold';
 import { createGround } from './world/ground';
 import { createPond } from './world/pond';
 import { createProps } from './world/props';
@@ -21,7 +22,8 @@ async function main(): Promise<void> {
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
 
   // 空・黄金の大地・七宝池の骨格に、ギャラリーで承認済みのアセットを据える(如来は別途)
-  createSky(scene, renderer);
+  const { sunDirection } = createSky(scene, renderer);
+  createGoldEnvironment(renderer, sunDirection); // 金専用の暖色の環境マップ(部材の読み込み前に)
   createGround(scene, true);
   createPond(scene);
   await createProps(scene);

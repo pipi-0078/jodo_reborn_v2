@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSky } from './world/sky';
 import { makeGlowSprite, makeHaloMesh, tintPetal } from './world/glow';
+import { applyPureGold, createGoldEnvironment } from './world/gold';
 
 interface GalleryItem {
   id: string;
@@ -25,7 +26,8 @@ async function main(): Promise<void> {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.05, 3000);
-  createSky(scene, renderer);
+  const { sunDirection } = createSky(scene, renderer);
+  createGoldEnvironment(renderer, sunDirection);
   scene.fog = null; // 陳列室では靄をかけない
 
   // 展示台(小さな金の circular 台座)
@@ -60,6 +62,9 @@ async function main(): Promise<void> {
     const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${item.file}`);
     if (token !== showToken) return;
     const model = gltf.scene;
+    model.traverse((object) => {
+      if (object instanceof THREE.Mesh) applyPureGold(object.material as THREE.Material); // 金の部材は純金の反射に
+    });
 
     if (item.tint) {
       const color = new THREE.Color(item.tint.color);

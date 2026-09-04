@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { POND_OUTER } from './layout';
+import { applyPureGold } from './gold';
 
 export const WORLD_RADIUS = 1000;
 
@@ -12,11 +13,14 @@ export function createGround(scene: THREE.Scene, withPondHole = false): void {
   geometry.rotateX(-Math.PI / 2);
 
   const material = new THREE.MeshStandardMaterial({
+    name: 'gold_ground',
     color: 0xc9a13b,
     metalness: 0.4,
     roughness: 0.68, // 西日の照り返しが地面に白い塊を作らない程度に粗く(9/3)
     roughnessMap: makeNoiseTexture(),
   });
+  applyPureGold(material); // 純金の反射(9/4)
+  material.roughness = 0.5; // 地面は広いので、照り返しの塊が出ない程度に粗く
 
   const ground = new THREE.Mesh(geometry, material);
   scene.add(ground);
