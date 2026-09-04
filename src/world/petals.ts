@@ -10,6 +10,7 @@ const SPAWN_RADIUS = 60;
 const SPAWN_TOP = 48;
 const SPAWN_BOTTOM = 28;
 const TINTS = [0xfff6ee, 0xffd6dc, 0xfff0b8, 0xdce8ff]; // 白・淡い紅・淡い金・淡い青
+const FALL_SPEED = 0.5; // 落下速度は一定(m/s)。大きさと揺れだけをランダムに(9/4)
 
 interface Petal {
   x: number; y: number; z: number;
@@ -72,13 +73,13 @@ export function createFallingFlowers(scene: THREE.Scene): { update(dt: number): 
       x: Math.cos(angle) * radius,
       y: random(WATER_LEVEL, SPAWN_TOP),  // 最初は空間全体に散らしておく(湧き待ちの空白を作らない)
       z: Math.sin(angle) * radius,
-      fall: random(0.35, 0.7),
-      swayAmp: random(0.3, 0.9),
-      swayFreq: random(0.4, 0.9),
+      fall: FALL_SPEED,
+      swayAmp: random(0.15, 1.5),
+      swayFreq: random(0.25, 1.2),
       phase: Math.random() * Math.PI * 2,
-      spin: new THREE.Vector3(random(-1.2, 1.2), random(-0.8, 0.8), random(-1.2, 1.2)),
+      spin: new THREE.Vector3(random(-1.6, 1.6), random(-1.0, 1.0), random(-1.6, 1.6)),
       angle: new THREE.Vector3(random(0, 6.28), random(0, 6.28), random(0, 6.28)),
-      size: random(0.7, 1.4),
+      size: random(0.45, 1.7),
     });
     color.set(TINTS[i % TINTS.length]);
     mesh.setColorAt(i, color);
