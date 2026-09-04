@@ -14,6 +14,7 @@ import {
 const LOTUS_TINTS = [0x6f8cf5, 0xf2c452, 0xf07a7a, 0xf7faff]; // 青・黄・赤・白
 const BUD_TINT = 0xf2a8c0;
 const GOLD_LEAF = 0xf0c050;
+const SILVER_LEAF = 0xe2eaf2; // 第3周の名木の葉: 銀
 const PALE_LEAF = 0xf3e4bc; // 宝樹の葉: 淡い金(施主の指示で優しい色に 9/4)
 const BRIDGE_ANGLES = [0, Math.PI / 2, Math.PI, Math.PI * 1.5]; // 東・南・西・北
 const PAVILION_ANGLES = [Math.PI / 4, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
@@ -153,16 +154,15 @@ function goldFoliage(name: string, leaf: number = GOLD_LEAF): (material: THREE.M
   };
 }
 
-// 七重行樹。内から: 宝樹(最内周)→名木・柳→針葉樹・広葉樹・枝垂れ→軽量宝樹4周
+// 七重行樹。内から: 宝樹(最内周)→名木・柳→針葉樹・広葉樹・名木(銀)→軽量宝樹4周
 // 9/4: すべての木を宝飾版(houju_*.glb: 金の幹、真珠の鎖、淡い宝石の雫と実)に差し替え
 async function placeTrees(scene: THREE.Scene): Promise<void> {
-  const [takara, meiboku, yanagi, conifer, broadleaf, weeping, lod, houju] = await Promise.all([
+  const [takara, meiboku, yanagi, conifer, broadleaf, lod, houju] = await Promise.all([
     loadTemplate('houju_takara.glb', { floor: true, recenter: true }),
     loadTemplate('houju_tree.glb', { floor: true }),
     loadTemplate('houju_yanagi.glb', { floor: true }),
     loadTemplate('houju_conifer.glb', { floor: true }),
     loadTemplate('houju_broadleaf.glb', { floor: true }),
-    loadTemplate('houju_weeping.glb', { floor: true }),
     loadTemplate('houju_lod.glb', { floor: true }),
     loadTemplate('houju_tree.glb', { floor: true }),
   ]);
@@ -220,16 +220,16 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
   instance(scene, meiboku, ring1[0], goldFoliage('foliage'));
   instance(scene, yanagi, ring1[1]);
 
-  // 第3周: 針葉樹・広葉樹・枝垂れを巡回
+  // 第3周: 針葉樹・広葉樹・名木(銀の葉)を巡回(枝垂れは施主の指示で名木に差し替え 9/4)
   const ring2: THREE.Matrix4[][] = [[], [], []];
-  const ring2Scale = [1.1, 1.3, 1.4];
+  const ring2Scale = [1.1, 1.3, 1.0];
   ringSlots(TREE_RINGS[2], 13, 0.08).forEach((s, i) => {
     const kind = i % 3;
     ring2[kind].push(compose(s.x, 0, s.z, random() * Math.PI * 2, ring2Scale[kind] * (0.9 + random() * 0.2)));
   });
   instance(scene, conifer, ring2[0]);
   instance(scene, broadleaf, ring2[1]);
-  instance(scene, weeping, ring2[2]);
+  instance(scene, houju, ring2[2], goldFoliage('foliage', SILVER_LEAF));
 
   // 第4〜7周: 軽量宝樹(金の葉)。外周ほどわずかに大きく
   const outer: THREE.Matrix4[] = [];
