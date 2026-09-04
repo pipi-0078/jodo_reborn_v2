@@ -5,7 +5,7 @@ import { WATER_LEVEL } from './layout';
 // 花弁はインスタンス化した小さな板(花弁形のアルファ)。落下・横揺れ・回転を CPU で毎フレーム更新する。
 // 池と中島の上空(半径 SPAWN_RADIUS、高さ 28〜48m)に湧き、水面・地面に着いたら上空へ戻す。
 
-const COUNT = 2000;
+const COUNT = 3000;
 const SPAWN_RADIUS = 60;
 const SPAWN_TOP = 48;
 const SPAWN_BOTTOM = 28;
@@ -53,7 +53,7 @@ function makePetalTexture(): THREE.Texture {
 }
 
 export function createFallingFlowers(scene: THREE.Scene): { update(dt: number): void } {
-  const geometry = new THREE.PlaneGeometry(0.28, 0.4);
+  const geometry = new THREE.PlaneGeometry(0.45, 0.6); // 摩訶曼陀羅華: 大きめの花弁(遠目にも見えるように)
   const material = new THREE.MeshStandardMaterial({
     map: makePetalTexture(), alphaMap: makePetalTexture(), transparent: true, alphaTest: 0.4,
     side: THREE.DoubleSide, roughness: 0.6, metalness: 0.0,
