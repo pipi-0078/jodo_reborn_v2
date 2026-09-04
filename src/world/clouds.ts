@@ -64,9 +64,9 @@ export function createPurpleClouds(scene: THREE.Scene, sunDirection: THREE.Vecto
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
     return seed / 0x7fffffff;
   };
-  const gold = new THREE.Color(0xffd08a);
-  const violet = new THREE.Color(0xb48ad0);
-  const deep = new THREE.Color(0x7a5a9e);
+  const gold = new THREE.Color(0xffd9a4);
+  const violet = new THREE.Color(0xd9c2e6); // 薄紫(9/4「紫が濃すぎる」→ 淡く)
+  const deep = new THREE.Color(0xb59ccb);
 
   for (let i = 0; i < CLOUD_COUNT; i++) {
     // 西を中心に ±55° の範囲。太陽に近いほど金、離れるほど紫
@@ -74,10 +74,10 @@ export function createPurpleClouds(scene: THREE.Scene, sunDirection: THREE.Vecto
     const elevation = THREE.MathUtils.degToRad(5 + Math.pow(random(), 1.4) * 20);
     const near = 1 - Math.min(1, Math.abs(offset) / THREE.MathUtils.degToRad(35));
     const tint = new THREE.Color().copy(violet).lerp(gold, near * near * 0.85);
-    if (random() < 0.35) tint.lerp(deep, 0.5); // 手前の濃い層
+    if (random() < 0.35) tint.lerp(deep, 0.4); // 手前のやや濃い層
     const material = new THREE.SpriteMaterial({
       map: textures[i % textures.length], color: tint, transparent: true,
-      opacity: 0.8 + random() * 0.2, depthWrite: false, fog: false,
+      opacity: 0.7 + random() * 0.2, depthWrite: false, fog: false,
     });
     const sprite = new THREE.Sprite(material);
     const width = 260 + random() * 420;
