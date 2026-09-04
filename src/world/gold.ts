@@ -12,7 +12,7 @@ export const PURE_GOLD = new THREE.Color().setRGB(1.0, 0.71, 0.29, THREE.LinearS
 // 金として扱うマテリアル名(glb 側の命名)。宝樹の幹・枝も金
 const GOLD_NAMES = /^(gold|paving|floor|wall|goldfloor|goldcol|kinpaku|tsuchime|migaki|hameita|gtiles|shippo|petal_gold|bark|twig)/;
 // 銀と玻璃(七宝楼閣の欄干・壁・階段)。空を映すと白く軽いので、銀専用の暗めの無彩色環境を映す
-const SILVER_NAMES = /^(silver|hari)/;
+const SILVER_NAMES = /^(silver|hari(?!_gem))/; // 玻璃の宝石(hari_gem)は透過ガラスなので空を映させる
 export const PURE_SILVER = new THREE.Color().setRGB(0.95, 0.93, 0.88, THREE.LinearSRGBColorSpace);
 
 let goldEnvironment: THREE.Texture | null = null;
@@ -85,6 +85,10 @@ export function applyPureGold(material: THREE.Material): void {
   if (gold.map) {
     gold.metalness = Math.max(gold.metalness, 0.95);
     gold.roughness = Math.min(gold.roughness, 0.45);
+  } else if (gold.name.startsWith('gold_polished')) {
+    gold.color.copy(PURE_GOLD);   // 宝飾の金具・珠: 磨いた金(羅網など)
+    gold.metalness = 1.0;
+    gold.roughness = 0.2;
   } else {
     gold.color.copy(PURE_GOLD);
     gold.metalness = 1.0;

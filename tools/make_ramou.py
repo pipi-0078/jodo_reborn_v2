@@ -7,7 +7,8 @@
 (環ごとに区画数を 2πR/12 に丸め、弦 ≈ 12m。0.4m 重ねてつなぎ目を隠す)。
 
 9/4 初版は「針金に玉」で「チープ、豪華さゼロ」と却下 → 宝飾品として作り直し:
-  - 糸: 金の芯線に 0.2m おきに面取りした宝石(金珠・玻璃・瑠璃)を連ねた瓔珞の鎖
+  - 糸: 金の芯線に 0.2m おきにブリリアントカットの宝石(金珠・玻璃・瑠璃)を連ねた瓔珞の鎖
+  - 宝石は透過ガラス(屈折率 1.7〜1.95、粗さ 0.04)。塗った面に発光を足すとプラスチックに見える(9/4)
   - 交点: 八弁の華鬘(けまん)の金具。中央に大きめの宝石。一つおきに配置し、残りは金の珠
   - 縁: 太い金の綱に、宝石を留めた金の帯(0.35m おき)
   - 垂れ飾り: 縁から 0.75m おきに、長(1.3m)短(0.7m)を交互に。珠を連ねて赤珠の錘で終わる
@@ -100,17 +101,30 @@ class Batch:
                 faces.append((a, b, b + segments, a + segments))
         self.add(verts, faces)
 
-    def gem(self, center, r, elong=1.4, facets=6):
-        """面取りした宝石: 上下に尖った双錐(facets 面 × 2)。"""
-        verts = [center + Vector((0, 0, r * elong))]
+    def gem(self, center, r, elong=1.4, facets=8):
+        """ブリリアントカット風の宝石: 上のテーブル面 + クラウンの斜面 + ガードル + パビリオン(下の尖り)。
+        面が多いほど光を細かく返す。elong はパビリオンの深さ。"""
+        crown_h = r * 0.45
+        table_r = r * 0.55
+        base = len(self.verts)
+        verts, faces = [], []
+        # テーブル(上面)
         for k in range(facets):
             a = k / facets * math.tau + 0.3
-            verts.append(center + Vector((math.cos(a) * r, math.sin(a) * r, 0)))
-        verts.append(center + Vector((0, 0, -r * elong)))
-        faces = []
+            verts.append(center + Vector((math.cos(a) * table_r, math.sin(a) * table_r, crown_h)))
+        # ガードル(最大径)
         for k in range(facets):
-            faces.append((0, 1 + k, 1 + (k + 1) % facets))
-            faces.append((1 + facets, 1 + (k + 1) % facets, 1 + k))
+            a = (k + 0.5) / facets * math.tau + 0.3
+            verts.append(center + Vector((math.cos(a) * r, math.sin(a) * r, 0)))
+        apex = len(verts)
+        verts.append(center + Vector((0, 0, -r * elong)))
+        faces.append(tuple(range(facets)))  # テーブル
+        for k in range(facets):
+            t0, t1 = k, (k + 1) % facets
+            g0, g1 = facets + (k - 1) % facets, facets + k
+            faces.append((t0, g1, g0))            # クラウン: テーブルの頂点から下の二つのガードル点へ
+            faces.append((t0, t1, g1))            # クラウンのつなぎ
+            faces.append((apex, g1, g0))          # パビリオン
         self.add(verts, faces)
 
     def petal_disc(self, center, r, petals, tilt=0.35, width=0.42):
@@ -142,16 +156,34 @@ class Batch:
         return obj
 
 
+def gem_material(name, color, ior=1.78, emission=None, strength=0.0):
+    """宝石: 透過するガラス。屈折率を高く、面は鏡のように滑らかに。色は内部に沈む(base color)。
+    glTF には KHR_materials_transmission / ior として出る。発光は控えめ(強いとプラスチックに見える 9/4)"""
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+    bsdf.inputs["Metallic"].default_value = 0.0
+    bsdf.inputs["Roughness"].default_value = 0.04
+    bsdf.inputs["IOR"].default_value = ior
+    bsdf.inputs["Transmission Weight"].default_value = 0.8
+    bsdf.inputs["Specular IOR Level"].default_value = 1.0
+    if emission:
+        bsdf.inputs["Emission Color"].default_value = (*emission, 1.0)
+        bsdf.inputs["Emission Strength"].default_value = strength
+    return mat
+
+
 def build_ramou(path, rich=True):
     reset_scene()
-    gold = plain_material("gold", GOLD, 0.9, 0.3, (1.0, 0.8, 0.4), 0.12)
-    silver = plain_material("silver", (0.9, 0.92, 0.95), 0.95, 0.25)
-    lapis = plain_material("lapis", LAPIS, 0.3, 0.15, (0.10, 0.18, 0.55), 0.7)
-    hari = plain_material("hari", (0.95, 0.98, 1.0), 0.1, 0.05, (0.85, 0.92, 1.0), 0.9)
-    shuju = plain_material("shuju", (0.85, 0.12, 0.10), 0.3, 0.15, (0.6, 0.06, 0.03), 0.7)
+    gold = plain_material("gold_polished", GOLD, 1.0, 0.22)  # 磨いた金(空間側で純金の反射に。磨きは粗さ 0.22)
+    silver = plain_material("silver", (0.92, 0.93, 0.95), 1.0, 0.18)
+    lapis = gem_material("lapis_gem", (0.04, 0.10, 0.52), 1.72, (0.03, 0.06, 0.25), 0.25)
+    hari = gem_material("hari_gem", (0.92, 0.96, 1.0), 1.95, (0.6, 0.7, 0.9), 0.12)
+    shuju = gem_material("shuju_gem", (0.60, 0.04, 0.05), 1.78, (0.35, 0.02, 0.02), 0.3)
     wire = Batch("gold_wire", gold)              # 芯線・綱(滑らか)
     goldsmith = Batch("gold_fitting", gold, smooth=False)  # 華鬘・面取り珠(角を出す)
-    gems = {m.name: Batch(m.name + "_gem", m, smooth=False) for m in (silver, lapis, hari, shuju)}
+    gems = {m.name.replace("_gem", ""): Batch(m.name + "_batch", m, smooth=False) for m in (silver, lapis, hari, shuju)}
     pearls = Batch("gold_pearl", gold)           # 丸い金珠
 
     half_l, half_w = LENGTH / 2, WIDTH / 2
@@ -188,7 +220,7 @@ def build_ramou(path, rich=True):
                     if kind is pearls:
                         pearls.sphere(p, 0.05)
                     else:
-                        kind.gem(p, 0.045 if kind is goldsmith else 0.05)
+                        kind.gem(p, 0.05 if kind is goldsmith else 0.06)
                     t += 0.2 / math.sqrt(2) * 1.4
                     k += 1
 
@@ -203,7 +235,7 @@ def build_ramou(path, rich=True):
             if rich and (i + j) % 2 == 0:
                 goldsmith.petal_disc(p, 0.2, 8)
                 gem = [gems["hari"], gems["lapis"], gems["shuju"]][idx % 3]
-                gem.gem(p + Vector((0, 0, 0.05)), 0.075, elong=1.1, facets=8)
+                gem.gem(p + Vector((0, 0, 0.06)), 0.10, elong=1.0, facets=8)
                 idx += 1
             else:
                 pearls.sphere(p, 0.07)
@@ -220,7 +252,7 @@ def build_ramou(path, rich=True):
             while x < half_l - 0.1:
                 p = Vector((x, y, sag_z(y, x) + 0.04))
                 goldsmith.petal_disc(p, 0.09, 6, tilt=0.5, width=0.6)
-                [gems["hari"], gems["lapis"]][k % 2].gem(p + Vector((0, 0, 0.04)), 0.05, elong=1.0, facets=6)
+                [gems["hari"], gems["lapis"]][k % 2].gem(p + Vector((0, 0, 0.045)), 0.065, elong=0.9, facets=8)
                 x += 0.35
                 k += 1
         # 垂れ飾り: 0.75m おきに長短交互。珠を連ねて赤珠の錘で終わる
@@ -238,8 +270,8 @@ def build_ramou(path, rich=True):
                 if kind is pearls:
                     pearls.sphere(Vector((x, y, zz)), 0.055)
                 else:
-                    kind.gem(Vector((x, y, zz)), 0.06)
-            gems["shuju"].gem(Vector((x, y, z0 - length - 0.02)), 0.09, elong=1.3, facets=8)
+                    kind.gem(Vector((x, y, zz)), 0.07)
+            gems["shuju"].gem(Vector((x, y, z0 - length - 0.02)), 0.11, elong=1.4, facets=8)
             if rich and long:
                 goldsmith.petal_disc(Vector((x, y, z0 - length + 0.1)), 0.11, 6, tilt=-0.6, width=0.5)  # 錘の上の受け皿(逆さの華)
             x += 0.75
@@ -262,7 +294,7 @@ def build_ramou(path, rich=True):
             p = Vector((x, 0, sag_z(0, x)))
             goldsmith.petal_disc(p, 0.42, 16, tilt=0.25, width=0.35)
             goldsmith.petal_disc(p + Vector((0, 0, 0.03)), 0.26, 8, tilt=0.45, width=0.5)
-            gems["hari"].gem(p + Vector((0, 0, 0.1)), 0.13, elong=1.0, facets=8)
+            gems["hari"].gem(p + Vector((0, 0, 0.1)), 0.16, elong=1.0, facets=10)
             # 宝珠の鎖: 1.5m 垂れる
             wire.add(*tube([p, p + Vector((0, 0, -1.5))], 0.012, sides=4))
             for b in range(7):
@@ -273,7 +305,7 @@ def build_ramou(path, rich=True):
                 else:
                     kind.gem(Vector((x, 0, zz)), 0.07)
             goldsmith.petal_disc(Vector((x, 0, p.z - 1.38)), 0.14, 8, tilt=-0.6, width=0.5)
-            gems["shuju"].gem(Vector((x, 0, p.z - 1.55)), 0.14, elong=1.3, facets=8)
+            gems["shuju"].gem(Vector((x, 0, p.z - 1.55)), 0.17, elong=1.4, facets=10)
             x += 3.0
 
     for b in (wire, goldsmith, pearls, *gems.values()):
