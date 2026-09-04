@@ -154,7 +154,7 @@ function goldFoliage(name: string): (material: THREE.Material) => THREE.Material
 
 // 七重行樹。内から: 宝樹(最内周)→名木・柳→針葉樹・広葉樹・枝垂れ→軽量宝樹4周
 async function placeTrees(scene: THREE.Scene): Promise<void> {
-  const [takara, meiboku, yanagi, conifer, broadleaf, weeping, lod] = await Promise.all([
+  const [takara, meiboku, yanagi, conifer, broadleaf, weeping, lod, houju] = await Promise.all([
     loadTemplate('takara_tree.glb', { floor: true, recenter: true }),
     loadTemplate('tree_meiboku.glb', { floor: true }),
     loadTemplate('tree_yanagi.glb', { floor: true }),
@@ -162,6 +162,7 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
     loadTemplate('tree_broadleaf.glb', { floor: true }),
     loadTemplate('tree_weeping.glb', { floor: true }),
     loadTemplate('tree_lod.glb', { floor: true }),
+    loadTemplate('houju_tree.glb', { floor: true }),
   ]);
   const pavilions = pavilionPositions();
   const random = makeRandom(77);
@@ -172,6 +173,12 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
   for (let i = 0; i < 8; i++) {
     const theta = Math.PI / 8 + (i / 8) * Math.PI * 2;
     const scale = 0.55 * (0.92 + (i % 3) * 0.07); // 原形15.8m → 約8.7m
+    if (i === 0) {
+      // 試作の宝樹(宝飾)を一本だけ、スタート地点にいちばん近い最内周の位置に(9/4)
+      instance(scene, houju, [compose(Math.cos(theta) * TREE_RINGS[0], 0, Math.sin(theta) * TREE_RINGS[0], 0.6, 1.15)],
+        goldFoliage('foliage'));
+      continue;
+    }
     heroByTint[i % 4].push(compose(Math.cos(theta) * TREE_RINGS[0], 0, Math.sin(theta) * TREE_RINGS[0], i * 2.399, scale));
   }
   tints.forEach((tint, t) => {
