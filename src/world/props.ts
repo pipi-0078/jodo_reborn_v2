@@ -285,14 +285,14 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
     scene.add(mesh);
   };
 
-  // 満開: 四色×13株。車輪ほどの大きさ(直径0.8〜1.1m)。東岸の手前には四色一株ずつやや大きめに
+  // 満開: 四色×13株。大きさは 1.5〜3.3m(小さめが多く、大株は少ない)。東岸の手前には四色一株ずつ 3.6〜4.1m の大株
   LOTUS_TINTS.forEach((tint) => {
     const matrices: THREE.Matrix4[] = [];
     const scales: number[] = [];
     for (let i = 0; i < 13; i++) {
       const giant = i === 12;
       const p = giant ? spot(29, bankWaterline - 3, 0, Math.PI / 3) : spot(ISLAND_WATERLINE + 2, bankWaterline - 2.5);
-      const scale = giant ? 2.7 + random() * 0.3 : 1.8 + random() * 0.7;
+      const scale = giant ? 2.8 + random() * 0.4 : 1.2 + Math.pow(random(), 1.6) * 1.4;
       matrices.push(compose(p.x, WATER_LEVEL - 0.03 * scale, p.z, random() * Math.PI * 2, scale));
       scales.push(scale);
     }
@@ -305,7 +305,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   const buds: THREE.Matrix4[] = [];
   for (let i = 0; i < 14; i++) {
     const p = spot(ISLAND_WATERLINE + 2, bankWaterline - 2.5);
-    buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 1.7 + random() * 0.8));
+    buds.push(compose(p.x, WATER_LEVEL + 0.02, p.z, random() * Math.PI * 2, 1.2 + random() * 1.4));
   }
   instance(scene, bud, buds, petalTint(BUD_TINT, 0.4));
   glows(BUD_TINT, buds, () => 1.1, 0.85, 0.16);
