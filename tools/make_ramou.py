@@ -6,7 +6,11 @@
 一区画 = 長さ 12.4m × 幅 6m の網の帯。空間側で各環の弦の長さに合わせて環状に並べる
 (環ごとに区画数を 2πR/12 に丸め、弦 ≈ 12m。0.4m 重ねてつなぎ目を隠す)。
 
-9/4 初版は「針金に玉」で「チープ、豪華さゼロ」と却下 → 宝飾品として作り直し:
+9/4 初版は「針金に玉」で「チープ、豪華さゼロ」と却下 → 宝飾品として作り直し → 参考図に合わせてスワッグ構造へ:
+  - 支点(華鬘の金具+大きな色石)を 3.1m おき、支点のあいだに真珠・水晶の鎖が弧を描いて垂れる(三本重ね)
+  - 幅方向に 3 列、高さをずらして重ねる。列どうしは斜めの鎖でつなぐ
+  - 支点から長さ違い(1.3〜2.4m)の垂れ飾り。真珠と水晶を連ね、先に色石の雫
+以下は旧版の構成メモ:
   - 糸: 金の芯線に 0.2m おきにブリリアントカットの宝石(金珠・玻璃・瑠璃)を連ねた瓔珞の鎖
   - 宝石は透過ガラス(屈折率 1.7〜1.95、粗さ 0.04)。塗った面に発光を足すとプラスチックに見える(9/4)
   - 交点: 八弁の華鬘(けまん)の金具。中央に大きめの宝石。一つおきに配置し、残りは金の珠
@@ -175,140 +179,111 @@ def gem_material(name, color, ior=1.78, emission=None, strength=0.0):
 
 
 def build_ramou(path, rich=True):
+    """スワッグ(花綱)構造の羅網。9/4 の参考図に合わせて作り直し:
+    支点(華鬘の金具+大きな色石)を 3.1m おきに置き、支点のあいだに真珠と水晶の鎖が弧を描いて垂れる。
+    幅方向に 3 列(高さをずらして重ねる)、支点からは長さ違いの垂れ飾り。色石は支点と垂れ飾りの先に集める。"""
     reset_scene()
-    gold = plain_material("gold_polished", GOLD, 1.0, 0.22)  # 磨いた金(空間側で純金の反射に。磨きは粗さ 0.22)
-    silver = plain_material("silver", (0.92, 0.93, 0.95), 1.0, 0.12)
+    gold = plain_material("gold_polished", GOLD, 1.0, 0.22)
+    pearl = plain_material("pearl", (0.97, 0.95, 0.91), 0.0, 0.22, (0.30, 0.28, 0.25), 0.3)
     lapis = gem_material("lapis_gem", (0.04, 0.10, 0.52), 1.72, (0.03, 0.06, 0.25), 0.25)
     hari = gem_material("hari_gem", (0.92, 0.96, 1.0), 1.95, (0.6, 0.7, 0.9), 0.12)
     shuju = gem_material("shuju_gem", (0.60, 0.04, 0.05), 1.78, (0.35, 0.02, 0.02), 0.3)
-    wire = Batch("gold_wire", gold)              # 芯線・綱(滑らか)
-    goldsmith = Batch("gold_fitting", gold, smooth=False)  # 華鬘・面取り珠(角を出す)
-    gems = {m.name.replace("_gem", ""): Batch(m.name + "_batch", m, smooth=False) for m in (silver, lapis, hari, shuju)}
-    pearls = Batch("gold_pearl", gold)           # 丸い金珠
+    wire = Batch("gold_wire", gold)
+    goldsmith = Batch("gold_fitting", gold, smooth=False)
+    pearls = Batch("pearl_batch", pearl)
+    gems = {"lapis": Batch("lapis_batch", lapis, smooth=False), "hari": Batch("hari_batch", hari, smooth=False),
+            "shuju": Batch("shuju_batch", shuju, smooth=False)}
+    colored = [gems["shuju"], gems["lapis"], gems["hari"]]
 
-    half_l, half_w = LENGTH / 2, WIDTH / 2
-    step = CELL * math.sqrt(2)
-    cs = []
-    c = -half_l - half_w
-    while c <= half_l + half_w:
-        cs.append(c)
-        c += step
+    half_l = LENGTH / 2
+    span = 3.1
+    rows = [(2.4, 0.0), (0.0, -0.55), (-2.4, -1.1)] if rich else [(0.0, -0.4)]
 
-    # --- 糸: 金の芯線 + 瓔珞の鎖(面取りした宝石を 0.2m おきに連ねる) ---
-    chain_kinds = [pearls, gems["hari"], goldsmith, gems["lapis"]]
-    for sign in (1, -1):
-        for c in cs:
-            pts = []
-            for i in range(25):
-                x = -half_l + LENGTH * i / 24
-                y = sign * (x - c)
-                if -half_w <= y <= half_w:
-                    pts.append(Vector((x, y, sag_z(y, x))))
-            if len(pts) < 2:
-                continue
-            wire.add(*tube(pts, WIRE_R, sides=4))
-            if rich:
-                # 鎖の珠: 糸に沿って等間隔
-                x0 = max(-half_l, c - half_w) if sign == 1 else max(-half_l, c - half_w)
-                x1 = min(half_l, c + half_w)
-                t = x0 + 0.1
-                k = 0
-                while t < x1 - 0.05:
-                    y = sign * (t - c)
-                    p = Vector((t, y, sag_z(y, t)))
-                    kind = chain_kinds[k % 4]
-                    if kind is pearls:
-                        pearls.sphere(p, 0.05)
-                    else:
-                        kind.gem(p, 0.05 if kind is goldsmith else 0.06)
-                    t += 0.2 / math.sqrt(2) * 1.4
-                    k += 1
-
-    # --- 交点: 一つおきに八弁の華鬘、残りは金珠 ---
-    idx = 0
-    for i, c1 in enumerate(cs):
-        for j, c2 in enumerate(cs):
-            x, y = (c1 + c2) / 2, (c2 - c1) / 2
-            if abs(x) > half_l - 0.15 or abs(y) > half_w - 0.05:
-                continue
-            p = Vector((x, y, sag_z(y, x)))
-            if rich and (i + j) % 2 == 0:
-                goldsmith.petal_disc(p, 0.2, 8)
-                gem = [gems["hari"], gems["lapis"], gems["shuju"]][idx % 3]
-                gem.gem(p + Vector((0, 0, 0.06)), 0.10, elong=1.0, facets=8)
-                idx += 1
-            else:
-                pearls.sphere(p, 0.07)
-
-    # --- 縁: 太い綱 + 宝石を留めた帯 + 垂れ飾り + 宝鈴 ---
-    for side in (-1, 1):
-        y = side * half_w
-        pts = [Vector((-half_l + LENGTH * i / 24, y, sag_z(y, -half_l + LENGTH * i / 24))) for i in range(25)]
-        wire.add(*tube(pts, ROPE_R, sides=6))
-        if rich:
-            # 帯の宝石: 0.35m おき、玻璃と瑠璃を交互に、金の台座付き
-            x = -half_l + 0.2
-            k = 0
-            while x < half_l - 0.1:
-                p = Vector((x, y, sag_z(y, x) + 0.04))
-                goldsmith.petal_disc(p, 0.09, 6, tilt=0.5, width=0.6)
-                [gems["hari"], gems["lapis"]][k % 2].gem(p + Vector((0, 0, 0.045)), 0.065, elong=0.9, facets=8)
-                x += 0.35
-                k += 1
-        # 垂れ飾り: 0.75m おきに長短交互。珠を連ねて赤珠の錘で終わる
-        x = -half_l + 0.4
+    def chain(p0, p1, sag, spacing, pattern, wire_r=0.012):
+        """p0→p1 を放物線で垂らした鎖。pattern は珠の種類の並び(関数のリスト)。"""
+        n = 24
+        pts = []
+        for i in range(n + 1):
+            t = i / n
+            p = p0.lerp(p1, t)
+            pts.append(Vector((p.x, p.y, p.z - sag * (1 - (2 * t - 1) ** 2))))
+        wire.add(*tube(pts, wire_r, sides=4))
+        length = sum((pts[i + 1] - pts[i]).length for i in range(n))
+        count = max(2, int(length / spacing))
         k = 0
-        while x < half_l - 0.2:
-            z0 = sag_z(y, x)
-            long = k % 2 == 0
-            length = 1.3 if long else 0.7
-            wire.add(*tube([Vector((x, y, z0)), Vector((x, y, z0 - length))], 0.01, sides=4))
-            n_beads = 6 if long else 3
-            for b in range(n_beads):
-                zz = z0 - 0.12 - b * (length - 0.3) / n_beads
-                kind = [gems["hari"], pearls, gems["lapis"], pearls, gems["silver"], pearls][b % 6]
-                if kind is pearls:
-                    pearls.sphere(Vector((x, y, zz)), 0.055)
-                else:
-                    kind.gem(Vector((x, y, zz)), 0.07)
-            gems["shuju"].gem(Vector((x, y, z0 - length - 0.02)), 0.11, elong=1.4, facets=8)
-            if rich and long:
-                goldsmith.petal_disc(Vector((x, y, z0 - length + 0.1)), 0.11, 6, tilt=-0.6, width=0.5)  # 錘の上の受け皿(逆さの華)
-            x += 0.75
+        for i in range(count + 1):
+            t = i / count
+            seg = t * n
+            a = min(int(seg), n - 1)
+            p = pts[a].lerp(pts[a + 1], seg - a)
+            pattern[k % len(pattern)](p)
             k += 1
-        # 宝鈴: 3m おき
-        x = -half_l + 1.5
-        while x < half_l:
-            z0 = sag_z(y - side * 0.25, x)
-            bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=0.12, radius2=0.045, depth=0.17,
-                                            location=(x, y - side * 0.25, z0 - 0.15))
-            bell = bpy.context.active_object
-            bell.data.materials.append(gold)
-            pearls.sphere(Vector((x, y - side * 0.25, z0 - 0.26)), 0.035)
-            x += 3.0
 
-    # --- 飾り房: 中心線に 3m おきの大きな華鬘と宝珠の鎖 ---
-    if rich:
-        x = -half_l + 1.55
-        while x < half_l:
-            p = Vector((x, 0, sag_z(0, x)))
-            goldsmith.petal_disc(p, 0.42, 16, tilt=0.25, width=0.35)
-            goldsmith.petal_disc(p + Vector((0, 0, 0.03)), 0.26, 8, tilt=0.45, width=0.5)
-            gems["hari"].gem(p + Vector((0, 0, 0.1)), 0.16, elong=1.0, facets=10)
-            # 宝珠の鎖: 1.5m 垂れる
-            wire.add(*tube([p, p + Vector((0, 0, -1.5))], 0.012, sides=4))
-            for b in range(7):
-                zz = p.z - 0.2 - b * 0.17
-                kind = [pearls, gems["lapis"], pearls, gems["hari"], pearls, gems["silver"], pearls][b]
-                if kind is pearls:
-                    pearls.sphere(Vector((x, 0, zz)), 0.06)
-                else:
-                    kind.gem(Vector((x, 0, zz)), 0.07)
-            goldsmith.petal_disc(Vector((x, 0, p.z - 1.38)), 0.14, 8, tilt=-0.6, width=0.5)
-            gems["shuju"].gem(Vector((x, 0, p.z - 1.55)), 0.17, elong=1.4, facets=10)
-            x += 3.0
+    def pearl_at(r):
+        return lambda p: pearls.sphere(p, r)
 
-    for b in (wire, goldsmith, pearls, *gems.values()):
+    def gem_at(batch, r, elong=1.2):
+        return lambda p: batch.gem(p, r, elong=elong, facets=8)
+
+    def pendant(p, length, big_color):
+        """支点から垂れる飾り: 真珠と水晶を交互に連ね、先に色石の雫。"""
+        wire.add(*tube([p, p + Vector((0, 0, -length))], 0.01, sides=4))
+        n = int(length / 0.13)
+        for i in range(n):
+            q = p + Vector((0, 0, -0.1 - i * 0.13))
+            if i % 3 == 2:
+                gems["hari"].gem(q, 0.055, elong=1.3, facets=8)
+            else:
+                pearls.sphere(q, 0.045)
+        goldsmith.petal_disc(p + Vector((0, 0, -length + 0.08)), 0.09, 6, tilt=-0.7, width=0.5)
+        big_color.gem(p + Vector((0, 0, -length - 0.08)), 0.11, elong=1.8, facets=8)
+
+    gem_idx = 0
+    for row, (y, z_row) in enumerate(rows):
+        offset = span / 2 if row % 2 == 1 else 0.0
+        anchors = []
+        x = -half_l + offset
+        while x <= half_l + 0.01:
+            anchors.append(Vector((x, y, z_row)))
+            x += span
+        # 支持線(細い金の綱)
+        wire.add(*tube([Vector((-half_l, y, z_row)), Vector((half_l, y, z_row))], 0.03, sides=6))
+        # 支点: 華鬘の金具 + 大きな色石 + 垂れ飾り
+        for k, a in enumerate(anchors):
+            goldsmith.petal_disc(a, 0.30, 8, tilt=0.3, width=0.4)
+            goldsmith.petal_disc(a + Vector((0, 0, 0.03)), 0.17, 8, tilt=0.5, width=0.5)
+            colored[gem_idx % 3].gem(a + Vector((0, 0, 0.08)), 0.14, elong=1.0, facets=8)
+            if rich:
+                length = 1.3 + 0.55 * ((k * 5 + row * 2) % 3)
+                pendant(a + Vector((0, 0, -0.05)), length, colored[(gem_idx + 1) % 3])
+            gem_idx += 1
+        # スワッグ: 支点のあいだに三本の鎖(真珠 / 水晶 / 真珠+色石)
+        for a, b in zip(anchors[:-1], anchors[1:]):
+            chain(a, b, 0.7, 0.11, [pearl_at(0.045)])
+            if rich:
+                chain(a, b, 0.95, 0.14, [gem_at(gems["hari"], 0.05), pearl_at(0.035)])
+                chain(a, b, 1.2, 0.11, [pearl_at(0.04)] * 4 + [gem_at(colored[gem_idx % 3], 0.06)])
+                # 弧の底の小さな雫
+                low = (a + b) / 2 + Vector((0, 0, -1.2))
+                wire.add(*tube([low, low + Vector((0, 0, -0.45))], 0.008, sides=4))
+                pearls.sphere(low + Vector((0, 0, -0.15)), 0.04)
+                pearls.sphere(low + Vector((0, 0, -0.3)), 0.04)
+                gems["hari"].gem(low + Vector((0, 0, -0.5)), 0.07, elong=1.8, facets=8)
+                gem_idx += 1
+        # 列どうしをつなぐ斜めの鎖(網らしさ)
+        if rich and row + 1 < len(rows):
+            y2, z2 = rows[row + 1]
+            offset2 = span / 2 if (row + 1) % 2 == 1 else 0.0
+            for a in anchors:
+                for dx in (-span / 2, span / 2):
+                    bx = a.x + dx
+                    if -half_l - 0.01 <= bx <= half_l + 0.01 and abs(((bx - offset2 + half_l) / span) % 1) < 0.01:
+                        chain(a, Vector((bx, y2, z2)), 0.45, 0.13, [pearl_at(0.035), gem_at(gems["hari"], 0.04)])
+
+    wire.finish()
+    goldsmith.finish()
+    pearls.finish()
+    for b in gems.values():
         b.finish()
     export(path)
 
