@@ -72,7 +72,7 @@ export function createGoldEnvironment(renderer: THREE.WebGPURenderer, sunDirecti
 const GEM_PRESETS: Record<string, { tint: number[]; attenuation: number[]; distance: number }> = {
   // 吸収距離が短い(0.05)と黒く濁る。0.2〜0.3 で「明るい色ガラス」になる(9/4)
   hari_gem: { tint: [1.0, 1.0, 1.0], attenuation: [0.85, 0.95, 1.0], distance: 1.0 },     // 玻璃: 無色透明
-  lapis_gem: { tint: [0.85, 0.92, 1.0], attenuation: [0.10, 0.28, 0.95], distance: 0.28 }, // 瑠璃: 透けて青
+  lapis_gem: { tint: [0.30, 0.42, 1.0], attenuation: [0.02, 0.10, 0.85], distance: 0.08 }, // 瑠璃: 濃い青(サファイア)。透過も反射も青に染める
   shuju_gem: { tint: [1.0, 0.22, 0.22], attenuation: [0.85, 0.004, 0.008], distance: 0.06 }, // 赤珠: 深紅のルビー。透過も反射も赤に染める
 };
 
@@ -93,6 +93,9 @@ function applyGem(material: THREE.MeshPhysicalMaterial): void {
   if (material.name === 'shuju_gem') {
     // 面の映り込み(空の白)まで赤く染めて、桃色のハイライトを消す
     material.specularColor.setRGB(1.0, 0.25, 0.25, THREE.LinearSRGBColorSpace);
+    material.specularIntensity = 1.0;
+  } else if (material.name === 'lapis_gem') {
+    material.specularColor.setRGB(0.35, 0.5, 1.0, THREE.LinearSRGBColorSpace);
     material.specularIntensity = 1.0;
   }
   material.needsUpdate = true;
