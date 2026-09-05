@@ -586,10 +586,10 @@ def build_pavilion(path):
     hanabishi = textured("hanabishi_gold", "hanabishi.png", normal="hanabishi_normal.png",
                          metallic=0.85, roughness=0.35, tile=(6, 1))
     ruri_maru = plain_material("ruri_maru", (0.08, 0.16, 0.50), 0.35, 0.22, (0.02, 0.05, 0.20), 0.25)  # 丸瓦: 艶のある瑠璃
-    glow = plain_material("lantern_glow", (1.0, 0.86, 0.58), 0.0, 0.5, (1.0, 0.72, 0.36), 3.0)      # 灯籠の火袋
+    glow = plain_material("lantern_glow", (1.0, 0.86, 0.58), 0.0, 0.5, (1.0, 0.72, 0.36), 1.1)      # 灯籠の火袋(3.0 は白飛び)
     shuju_gem = gem_material("shuju_gem", (0.60, 0.04, 0.05), 1.78, (0.35, 0.02, 0.02), 0.3)
-    lapis_gem = gem_material("lapis_gem", (0.04, 0.10, 0.52), 1.72, (0.03, 0.06, 0.25), 0.25)
-    studs = [Batch("stud_shuju", shuju_gem), Batch("stud_lapis", lapis_gem)]
+    pearl = plain_material("pearl", (0.97, 0.95, 0.91), 0.0, 0.22, (0.30, 0.28, 0.25), 0.3)
+    studs = [Batch("stud_shuju", shuju_gem), Batch("stud_pearl", pearl)]  # 赤珠と真珠を交互に(青の点は施主の好みでない)
     _MAT_CACHE.clear()
 
     # ---- 基壇(碼碯の帯+石の上段) ----
@@ -642,7 +642,7 @@ def build_pavilion(path):
             box_at("nuki", (0, sy * 3.8, bz), (5.95, th, th), gold)
             for sx in (-1, 1):
                 sphere((sx * 3.05, sy * 3.8, bz), th * 0.75, gold, segments=10, rings=8)
-    # 内法貫の上に宝石の鋲(赤珠と瑠璃を交互に)
+    # 内法貫の上に宝石の鋲(赤珠と真珠を交互に)
     for sx in (-1, 1):
         gem_studs((sx * 2.7 + sx * 0.07, -3.6), (sx * 2.7 + sx * 0.07, 3.6), 4.30, studs)
     for sy in (-1, 1):
