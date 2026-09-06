@@ -29,16 +29,6 @@
       "credit": "生成: 施主が fal.ai の Hitem3D で作成 / 改変: Blender で減面のみ"
     },
     {
-      "id": "kohai",
-      "name": "光背(二重円光の舟形)",
-      "file": "kohai.glb",
-      "desc": "坐像の背に立てる光背。頭光は蓮華文の中心盤と宝石の環に三十二条の放射光、身光は二重の環に四十八条の放射光。舟形の枠に火焔が立ち、枠と身光のあいだに唐草の透かし、七つの宝珠。Hitem3D の坐像(1/8 版)を添えて表示",
-      "credit": "制作: 本プロジェクト(Blender で生成)/ 添え物の坐像: 施主が Hitem3D で作成",
-      "attach": [
-        "amida_hitem3d_eighth.glb"
-      ]
-    },
-    {
       "id": "amida",
       "name": "阿弥陀如来坐像",
       "file": "amida_gold.glb",
