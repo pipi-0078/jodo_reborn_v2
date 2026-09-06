@@ -15,6 +15,7 @@ interface GalleryItem {
   credit: string;
   tint?: { materialName: string; color: string };
   glow?: boolean; // 蓮など、tint の色で淡く光らせる(発光マップ+光のスプライト+床の光輪)
+  attach?: string[]; // 同じ座標系の添え物(光背の後ろに坐像を置く等)。一緒に読み込んで同じ枠で見せる
 }
 
 async function main(): Promise<void> {
@@ -70,6 +71,11 @@ async function main(): Promise<void> {
     const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${item.file}`);
     if (token !== showToken) return;
     const model = gltf.scene;
+    for (const file of item.attach ?? []) {
+      const extra = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${file}`);
+      if (token !== showToken) return;
+      model.add(extra.scene);
+    }
     model.traverse((object) => {
       if (object instanceof THREE.Mesh) applyPureGold(object.material as THREE.Material); // 金の部材は純金の反射に
     });
