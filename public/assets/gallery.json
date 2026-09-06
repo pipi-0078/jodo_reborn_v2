@@ -8,6 +8,27 @@
       "credit": "生成: 施主が fal.ai の Hitem3D multi-view-to-3d で作成 / 未改変"
     },
     {
+      "id": "amida_hitem3d_half",
+      "name": "阿弥陀如来坐像(Hitem3D・1/2 減面)",
+      "file": "amida_hitem3d_half.glb",
+      "desc": "Hitem3D 生成像を減面で約100万三角形・34MBに。テクスチャと形はそのまま",
+      "credit": "生成: 施主が fal.ai の Hitem3D で作成 / 改変: Blender で減面のみ"
+    },
+    {
+      "id": "amida_hitem3d_quarter",
+      "name": "阿弥陀如来坐像(Hitem3D・1/4 減面)",
+      "file": "amida_hitem3d_quarter.glb",
+      "desc": "Hitem3D 生成像を減面で約50万三角形・20MBに。空間に据える候補",
+      "credit": "生成: 施主が fal.ai の Hitem3D で作成 / 改変: Blender で減面のみ"
+    },
+    {
+      "id": "amida_hitem3d_eighth",
+      "name": "阿弥陀如来坐像(Hitem3D・1/8 減面)",
+      "file": "amida_hitem3d_eighth.glb",
+      "desc": "Hitem3D 生成像を減面で約25万三角形に。既存の坐像と同程度の重さ",
+      "credit": "生成: 施主が fal.ai の Hitem3D で作成 / 改変: Blender で減面のみ"
+    },
+    {
       "id": "amida",
       "name": "阿弥陀如来坐像",
       "file": "amida_gold.glb",
