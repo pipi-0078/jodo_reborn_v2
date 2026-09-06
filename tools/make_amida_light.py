@@ -5,6 +5,10 @@
 教訓(LESSONS 2-2): スキャン像は減面で彫りが消えた。今回は元が 200 万面あるので、1/2 と 1/4 を作って
 ギャラリーで原型と並べ、施主に選んでもらう。
 出力: amida_hitem3d_half.glb(1/2) / amida_hitem3d_quarter.glb(1/4) / amida_hitem3d_eighth.glb(1/8)
+9/6: 比較の結果 1/8 でも彫りは崩れず、施主が「一番軽いもの」を採用。原型・1/2・1/4 はリポジトリから外した。
+原型(50MB)を再取得するには fal の結果 URL から:
+  https://v3b.fal.media/files/b/0aa8fd08/AOuoEFY87QwYK4THYZ_CG_model.glb
+  (fal の request id 01a06912-b791-7a70-b368-9842f3944327、endpoint hitem3d/hi3d/v3.0/multi-view-to-3d)
 """
 import os
 import sys
