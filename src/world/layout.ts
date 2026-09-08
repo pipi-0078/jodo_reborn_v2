@@ -21,7 +21,7 @@ export const DAIS_UPPER_H = 1.2;
 export const DAIS_STAIR_LEN = 1.6;
 // 阿弥陀如来坐像(amida_hitem3d_eighth.glb: 蓮華座・台座つき一体、原型は高さ 1.0・幅 0.77・奥行 0.70、正面 +Z)。
 // 上段の中央 y = ISLAND_TOP + DAIS_UPPER_H に据え、東(+X、スポーン側)を向ける。総高 = AMIDA_SCALE [m]
-export const AMIDA_SCALE = 10;
+export const AMIDA_SCALE = 7; // 10 → 7(「大きすぎる」9/8)
 export const AMIDA_FOOT_R = 0.39 * AMIDA_SCALE; // 台座の最下段の半径(歩行を止める)
 export const BANK_INNER = 34.5; // 外岸の砂斜面が池底の平場に達する半径
 export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(これより先は入水)
