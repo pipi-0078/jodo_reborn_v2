@@ -130,9 +130,15 @@ async function placeDais(scene: THREE.Scene): Promise<void> {
 }
 
 // 阿弥陀如来坐像(蓮華座・台座つき一体、正面 +Z)。壇の上段(y = ISLAND_TOP + DAIS_UPPER_H)の中央に、
-// 東(スポーン側)を向けて据える。マテリアルは生成物のまま(色・法線・粗さを触らない: LESSONS 2-7)
+// 東(スポーン側)を向けて据える。色(テクスチャ)・形・法線は生成物のまま(LESSONS 2-7)。
+// 材質は金属(metallic 0.88)なので映り込む環境が無いと真っ黒になる(WebGPU で再現 9/8)。
+// 他の金の部材と同じく名前を gold_ にして、金専用の環境マップを持たせる
 async function placeAmida(scene: THREE.Scene): Promise<void> {
   const template = await loadTemplate('amida_hitem3d_eighth.glb', { floor: true, recenter: true });
+  for (const part of template.parts) {
+    part.material.name = 'gold_amida';
+    applyPureGold(part.material);
+  }
   instance(scene, template, [compose(0, ISLAND_TOP + DAIS_UPPER_H, 0, Math.PI / 2, AMIDA_SCALE)]);
 }
 
