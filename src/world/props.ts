@@ -4,13 +4,13 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
 import { applyPureGold } from './gold';
 import {
-  BRIDGE_CENTER, BRIDGE_HALF, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
+  AMIDA_SCALE, BRIDGE_CENTER, BRIDGE_HALF, DAIS_UPPER_H, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
   POND_OUTER, TREE_RINGS, WATER_LEVEL,
 } from './layout';
 import { NO_REFLECT_LAYER } from './layout';
 
 // 完成予想図(docs/reference_concept.png)に沿って、承認済みアセットを据える。
-// 阿弥陀如来坐像と蓮華座は巨大化の後に据える(中島には壇を先に置く)。
+// 阿弥陀如来坐像(Hitem3D、蓮華座つき)は中島の壇の上段中央に据える(9/8)。
 
 const LOTUS_TINTS = [0x6f8cf5, 0xf2c452, 0xf07a7a, 0xf7faff]; // 青・黄・赤・白
 const BUD_TINT = 0xf2a8c0;
@@ -123,10 +123,17 @@ async function placeBridges(scene: THREE.Scene): Promise<void> {
   instance(scene, template, matrices);
 }
 
-// 中島の壇(須弥壇): 上段・階段・欄干・灯籠。蓮華座と如来は巨大化の後に上段へ据える(9/4)
+// 中島の壇(須弥壇): 上段・階段・欄干・灯籠。上段の中央に如来を据える
 async function placeDais(scene: THREE.Scene): Promise<void> {
   const template = await loadTemplate('island_dais.glb');
   instance(scene, template, [compose(0, ISLAND_TOP, 0, 0, 1)]);
+}
+
+// 阿弥陀如来坐像(蓮華座・台座つき一体、正面 +Z)。壇の上段(y = ISLAND_TOP + DAIS_UPPER_H)の中央に、
+// 東(スポーン側)を向けて据える。マテリアルは生成物のまま(色・法線・粗さを触らない: LESSONS 2-7)
+async function placeAmida(scene: THREE.Scene): Promise<void> {
+  const template = await loadTemplate('amida_hitem3d_eighth.glb', { floor: true, recenter: true });
+  instance(scene, template, [compose(0, ISLAND_TOP + DAIS_UPPER_H, 0, Math.PI / 2, AMIDA_SCALE)]);
 }
 
 // 楼閣: 近景(東側)の二隅に七宝楼閣、如来の背後(西側)の二隅に黄金八角楼。いずれも正面を池へ向ける
@@ -355,6 +362,6 @@ async function placeNets(scene: THREE.Scene): Promise<void> {
 
 export async function createProps(scene: THREE.Scene): Promise<void> {
   await Promise.all([
-    placeBridges(scene), placeDais(scene), placePavilions(scene), placeTrees(scene), placeLotuses(scene), placeNets(scene),
+    placeBridges(scene), placeDais(scene), placeAmida(scene), placePavilions(scene), placeTrees(scene), placeLotuses(scene), placeNets(scene),
   ]);
 }
