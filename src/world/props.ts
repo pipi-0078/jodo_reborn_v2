@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
-import { applyPureGold } from './gold';
+import { applyPureGold, getStatueEnvironment } from './gold';
 import {
   AMIDA_SCALE, BRIDGE_CENTER, BRIDGE_HALF, DAIS_UPPER_H, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
   POND_OUTER, TREE_RINGS, WATER_LEVEL,
@@ -147,7 +147,8 @@ async function placeAmida(scene: THREE.Scene): Promise<void> {
     gold.color.setRGB(1.0, 0.75, 0.33, THREE.LinearSRGBColorSpace);
     gold.metalness = 1.0;
     gold.roughness = 0.42;
-    gold.envMapIntensity = 1.5;
+    gold.envMap = getStatueEnvironment() ?? gold.envMap; // 足元まで明るい如来専用の環境(顎の下の影対策)
+    gold.envMapIntensity = 1.3;
     gold.needsUpdate = true;
   }
   instance(scene, template, [compose(0, ISLAND_TOP + DAIS_UPPER_H, 0, Math.PI / 2, AMIDA_SCALE)]);

@@ -17,6 +17,11 @@ export const PURE_SILVER = new THREE.Color().setRGB(0.95, 0.93, 0.88, THREE.Line
 
 let goldEnvironment: THREE.Texture | null = null;
 let silverEnvironment: THREE.Texture | null = null;
+let statueEnvironment: THREE.Texture | null = null; // 如来専用: 足元が明るい金(顎の下・掌の下が暗くならない 9/10)
+
+export function getStatueEnvironment(): THREE.Texture | null {
+  return statueEnvironment;
+}
 
 export function isGoldMaterial(material: THREE.Material): boolean {
   return GOLD_NAMES.test(material.name);
@@ -60,6 +65,14 @@ export function createGoldEnvironment(renderer: THREE.WebGPURenderer, sunDirecti
       [0.50, 0.47, 0.44],     // 中空: 灰
       [0.14, 0.13, 0.13],     // 天頂: 濃い灰
     ], [1.0, 0.9, 0.7]);
+    // 如来は下向きの面(顎の下・伏せた目・掌の下)が正面から見える。共通の金環境だと足元の暗い琥珀を映して
+    // 「顎下の影がひどい」(9/10)。像だけ足元まで明るい金の環境を映す
+    statueEnvironment = bakeEnvironment(renderer, sunDirection, [
+      [0.80, 0.56, 0.24],     // 足元: 明るい金(壇の敷石の照り返し)
+      [0.98, 0.80, 0.46],     // 地平: 金の光
+      [0.78, 0.50, 0.18],     // 中空: 金
+      [0.36, 0.22, 0.08],     // 天頂: 琥珀(少し陰を残して形が出るように)
+    ], [1.0, 0.85, 0.5]);
     return goldEnvironment;
   } catch (error) {
     console.warn('金の環境マップの生成に失敗(空の反射で続行):', error);
