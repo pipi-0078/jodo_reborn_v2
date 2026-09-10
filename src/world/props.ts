@@ -138,12 +138,16 @@ async function placeAmida(scene: THREE.Scene): Promise<void> {
   for (const part of template.parts) {
     part.material.name = 'gold_amida';
     applyPureGold(part.material);
-    // 生成物のテクスチャは茶系の暗い金(平均 sRGB 147,100,24)。「黒みがかっている」(9/9)ので、
-    // 色の倍率を緑・青寄りに掛けて黄金へ振り、反射も強める。テクスチャ・法線はそのまま
+    // 生成物のテクスチャは陰影が焼き込まれていて、倍率でも染め直しでも鼻の下が「ヒゲ」に残る(9/9〜9/10)。
+    // 壇や橋と同じく写真を捨てて金一色にする(0-4「一色にして」は「全部剥がして」)。造形は 25 万 tris の形が担う
     const gold = part.material as THREE.MeshStandardMaterial;
-    gold.color.setRGB(1.6, 2.0, 2.0, THREE.LinearSRGBColorSpace);
-    gold.envMapIntensity = 1.8;
-    gold.roughness = 0.38;
+    gold.map = null;
+    gold.metalnessMap = null;
+    gold.roughnessMap = null;
+    gold.color.setRGB(1.0, 0.75, 0.33, THREE.LinearSRGBColorSpace);
+    gold.metalness = 1.0;
+    gold.roughness = 0.42;
+    gold.envMapIntensity = 1.5;
     gold.needsUpdate = true;
   }
   instance(scene, template, [compose(0, ISLAND_TOP + DAIS_UPPER_H, 0, Math.PI / 2, AMIDA_SCALE)]);
