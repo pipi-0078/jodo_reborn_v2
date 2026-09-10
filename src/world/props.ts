@@ -149,9 +149,16 @@ async function placeAmida(scene: THREE.Scene): Promise<void> {
     gold.roughness = 0.42;
     gold.envMap = getStatueEnvironment() ?? gold.envMap; // 足元まで明るい如来専用の環境(顎の下の影対策)
     gold.envMapIntensity = 1.3;
+    gold.roughness = 0.36;
     gold.needsUpdate = true;
   }
   instance(scene, template, [compose(0, ISLAND_TOP + DAIS_UPPER_H, 0, Math.PI / 2, AMIDA_SCALE)]);
+
+  // 像だけを照らす絞ったスポット(東の上方から)。西日は背後なので、正面の顔と衣に左右・前後の陰影を付けて輪郭を出す
+  const key = new THREE.SpotLight(0xfff1d6, 3200, 70, 0.20, 0.6, 2);
+  key.position.set(26, 30, 10);
+  key.target.position.set(0, ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.55, 0);
+  scene.add(key, key.target);
 }
 
 // 楼閣: 近景(東側)の二隅に七宝楼閣、如来の背後(西側)の二隅に黄金八角楼。いずれも正面を池へ向ける
