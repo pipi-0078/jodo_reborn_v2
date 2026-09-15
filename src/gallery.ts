@@ -13,6 +13,7 @@ interface GalleryItem {
   file: string;
   desc: string;
   credit: string;
+  preview?: string; // 行動付きアセットは専用の展示ページで確認する
   tint?: { materialName: string; color: string };
   glow?: boolean; // 蓮など、tint の色で淡く光らせる(発光マップ+光のスプライト+床の光輪)
   attach?: string[]; // 同じ座標系の添え物(光背の後ろに坐像を置く等)。一緒に読み込んで同じ枠で見せる
@@ -60,6 +61,19 @@ async function main(): Promise<void> {
   const captionName = document.querySelector('#caption .name')!;
   const captionDesc = document.querySelector('#caption .desc')!;
   const captionCredit = document.querySelector('#caption .credit')!;
+  const preview = document.createElement('iframe');
+  preview.id = 'asset-preview';
+  preview.hidden = true;
+  document.body.appendChild(preview);
+  const listElement = document.getElementById('list')!;
+  const captionElement = document.getElementById('caption')!;
+  const fitPreview = (): void => {
+    preview.style.top = `${listElement.getBoundingClientRect().bottom}px`;
+    preview.style.bottom = `${captionElement.getBoundingClientRect().height}px`;
+    preview.style.height = `${Math.max(120, window.innerHeight - listElement.getBoundingClientRect().bottom - captionElement.getBoundingClientRect().height)}px`;
+  };
+  new ResizeObserver(fitPreview).observe(listElement);
+  new ResizeObserver(fitPreview).observe(captionElement);
 
   async function show(item: GalleryItem): Promise<void> {
     loading.classList.remove('hidden');
@@ -68,6 +82,22 @@ async function main(): Promise<void> {
       current = null;
     }
     const token = ++showToken;
+    preview.hidden = true;
+    preview.removeAttribute('src'); // 他の品目では孔雀の描画・行動を停止
+    renderer.domElement.style.display = '';
+    if (item.preview) {
+      captionName.textContent = item.name;
+      captionDesc.textContent = item.desc;
+      captionCredit.textContent = item.credit;
+      preview.title = `${item.name}の動作展示`;
+      preview.src = `${import.meta.env.BASE_URL}${item.preview}?embedded=1`;
+      preview.hidden = false;
+      renderer.domElement.style.display = 'none';
+      fitPreview();
+      loading.classList.add('hidden');
+      (window as unknown as { __model?: unknown }).__model = null;
+      return;
+    }
     const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${item.file}`);
     if (token !== showToken) return;
     const model = gltf.scene;
@@ -133,7 +163,8 @@ async function main(): Promise<void> {
     .then((r) => r.json());
   const items: GalleryItem[] = manifest.items;
   const list = document.getElementById('list')!;
-  items.forEach((item, index) => {
+  const initialId = new URLSearchParams(location.search).get('asset') ?? items[0]?.id;
+  items.forEach((item) => {
     const button = document.createElement('button');
     button.textContent = item.name;
     button.addEventListener('click', () => {
@@ -142,8 +173,9 @@ async function main(): Promise<void> {
       void show(item);
     });
     list.appendChild(button);
-    if (index === 0) button.click();
+    if (item.id === initialId) button.click();
   });
+  if (!list.querySelector('.active')) list.querySelector('button')?.click();
 
   // 動作検証用フック
   (window as unknown as { __camera?: THREE.PerspectiveCamera; __show?: (id: string) => void }).__camera = camera;
@@ -154,12 +186,14 @@ async function main(): Promise<void> {
   };
 
   window.addEventListener('resize', () => {
+    fitPreview();
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
   renderer.setAnimationLoop(() => {
+    if (!preview.hidden) return;
     controls.update();
     postProcessing.render();
   });

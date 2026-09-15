@@ -8,9 +8,13 @@
     html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1408;
       font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
     canvas { display: block; }
+    #asset-preview { position: fixed; left: 0; width: 100%; border: 0;
+      height: auto; z-index: 4; background: #e8e3d7; }
+    #asset-preview[hidden] { display: none; }
     #list {
       position: fixed; top: 0; left: 0; right: 96px; z-index: 10;
       display: flex; flex-wrap: wrap; gap: 8px; padding: 14px;
+      max-height: 30vh; overflow-y: auto;
       background: linear-gradient(to bottom, rgba(26,20,8,0.85), rgba(26,20,8,0.35) 70%, transparent);
     }
     #list button {

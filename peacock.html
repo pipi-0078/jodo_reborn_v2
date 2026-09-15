@@ -1,0 +1,17 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>孔雀の小さな庭</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e8e3d7;color:#493f32;font:15px system-ui}canvas{display:block}aside{position:absolute;left:22px;top:22px;z-index:2;width:290px;padding:20px;background:#fcfaf3ed;border:1px solid #ddd4c3;border-radius:16px}h1{font-size:21px;margin:0 0 7px}p{font-size:13px;line-height:1.7;margin:8px 0}#state{font-size:17px;color:#75613c;margin:20px 0 5px}button{font:inherit;font-size:13px;border:1px solid #bcaf95;border-radius:7px;padding:9px 11px;background:#fffdf6;color:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}button[aria-pressed=true]{background:#75613c;color:white}.actions{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}a{color:#75613c;font-size:12px}.note{color:#8a8070;font-size:12px}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#e8e3d7;z-index:5}.view{margin-top:12px}label{font-size:12px}footer{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-size:12px;color:#786c5a;pointer-events:none}@media(max-width:600px){aside{left:10px;top:10px;width:250px;padding:12px}h1{font-size:17px}.note{display:none}#state{margin-top:8px}footer{width:95%;text-align:center}}
+.embedded aside{top:10px;left:10px;width:240px;padding:12px}.embedded aside>p,.embedded .note,.embedded aside>a,.embedded footer{display:none}.embedded #state{margin-top:8px}.embedded h1{font-size:17px}.embedded .view{margin-top:8px}@media(max-width:600px){.embedded aside{width:calc(100% - 20px)}.embedded h1,.embedded .view,.embedded #reason{display:none}.embedded .actions{margin:6px 0}.embedded #state{font-size:14px;margin:0}}
+</style>
+<div id="loading" role="status">孔雀を迎えています…</div>
+<aside><h1>孔雀の小さな庭</h1><p>歩いたり、ひと休みしたり。<br>一羽の過ごし方を眺める試作です。</p>
+<div id="state" aria-live="polite">準備中</div><p id="reason"></p>
+<div class="actions"><button data-mode="auto" aria-pressed="true" disabled>おまかせ</button><button data-mode="walk" aria-pressed="false" disabled>歩く</button><button data-mode="display" aria-pressed="false" disabled>羽を広げる</button><button data-mode="rest" aria-pressed="false" disabled>休む</button></div>
+<button id="pause" disabled>一時停止</button><label><input type="checkbox" id="follow" checked>孔雀を追う</label>
+<div class="view"><button id="front">正面</button> <button id="side">側面</button> <button id="overview">庭全体</button></div>
+<p class="note">歩行と首の動きは仮の骨組みで調整中。<br>飛行・浄土本体への配置はまだ行っていません。</p>
+<a href="./gallery.html">アセット一覧へ戻る</a></aside>
+<footer>ドラッグで回転・スクロールで拡大</footer>
+
+<script type="module" src="/src/birds/peacock/living.js"></script></html>

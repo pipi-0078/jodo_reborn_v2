@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "peacock",
+      "name": "極楽鳥・孔雀（行動試作）",
+      "file": "peacock/peacock-body.glb",
+      "preview": "peacock.html",
+      "desc": "真珠色と淡い宝石色の孔雀。57枚の飾り羽を開閉し、歩く・周囲を見る・休む行動を選ぶ試作。飛行と本体空間への配置は未実施。",
+      "credit": "デザイン: 本プロジェクトの画像生成 / 胴体: fal.ai経由 Hunyuan 3D Pro / 飾り羽・仮の骨組み・行動: 本プロジェクト"
+    },
+    {
       "id": "amida_hitem3d_eighth",
       "name": "阿弥陀如来坐像・蓮華座付き(Hitem3D)",
       "file": "amida_hitem3d_eighth.glb?v=3",

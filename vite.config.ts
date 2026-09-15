@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         gallery: resolve(import.meta.dirname, 'gallery.html'),
+        peacock: resolve(import.meta.dirname, 'peacock.html'),
       },
     },
   },
