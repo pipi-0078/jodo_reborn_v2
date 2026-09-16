@@ -9,6 +9,7 @@ import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
 import { createPurpleClouds } from './world/clouds';
 import { NO_REFLECT_LAYER, sampleGround } from './world/layout';
+import { createWorldPeacock } from './birds/peacock/world.js';
 import { FirstPersonWalker } from './controls/firstPerson';
 
 async function main(): Promise<void> {
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
   createGround(scene, true);
   createPond(scene, camera);
   await createProps(scene);
+  const peacock = await createWorldPeacock(scene);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
   // 後処理: 発光(蓮の光・灯籠)だけを滲ませるブルーム。
@@ -64,6 +66,7 @@ async function main(): Promise<void> {
     timer.update();
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
+    peacock.update(dt);
     flowers.update(dt);
     clouds.update(dt);
     postProcessing.render();

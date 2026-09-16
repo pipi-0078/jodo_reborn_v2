@@ -29,6 +29,10 @@ export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(こ�
 // 七重行樹のリング半径(欄楯はその内側に添える)
 export const TREE_RINGS = [44, 54, 64, 74, 84, 94, 104];
 
+// 東側の岸。最内周の宝樹と次の周の間で、池・欄楯から離して配置。
+export const PEACOCK_HOME = { x: TREE_RINGS[0] + 2, z: CAUSEWAY_HALF_WIDTH * 2 };
+export const PEACOCK_SCALE = 1.1;
+
 // 楼閣の据え付け(岸の外、四隅の斜め方向)
 export const PAVILION_RADIUS = 52;
 export const PAVILION_SCALE = 1.35; // 楼閣の据え付け倍率(高さ約15〜16m)

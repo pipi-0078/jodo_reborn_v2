@@ -1,5 +1,4 @@
-// Bounded ground behavior for a single bird in the preview arena.
-// Navigation for the actual Pure Land layout is a later integration step.
+// Bounded local ground behavior, shared by the gallery and the Pure Land actor.
 export class PeacockBehavior {
   constructor(seed=916){
     this.seed=seed;this.position={x:0,z:0};this.heading=0;this.speed=0;
