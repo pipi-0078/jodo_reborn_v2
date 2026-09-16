@@ -57,5 +57,5 @@ function view(offset){controls.target.copy(bird.position).add(new T.Vector3(0,.6
 document.querySelector('#front').onclick=()=>view(new T.Vector3(-4.8,.4,0));
 document.querySelector('#side').onclick=()=>view(new T.Vector3(0,.5,-4.8));
 document.querySelector('#overview').onclick=()=>{document.querySelector('#follow').checked=false;controls.target.set(0,0,0);camera.position.set(-5,5,-6);controls.update();};
-let last=performance.now();renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.04);last=now;if(ready&&!paused&&!document.hidden)update(dt);controls.update();renderer.render(scene,camera);});
+let last=performance.now();renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.04);last=now;if(document.hidden)return;if(ready&&!paused&&!document.hidden)update(dt);controls.update();renderer.render(scene,camera);});
 addEventListener('resize',resize);

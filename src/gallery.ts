@@ -193,7 +193,7 @@ async function main(): Promise<void> {
   });
 
   renderer.setAnimationLoop(() => {
-    if (!preview.hidden) return;
+    if (document.hidden || !preview.hidden) return;
     controls.update();
     postProcessing.render();
   });

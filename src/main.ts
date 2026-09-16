@@ -64,6 +64,7 @@ async function main(): Promise<void> {
   const timer = new THREE.Timer();
   renderer.setAnimationLoop(() => {
     timer.update();
+    if (document.hidden) return;
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
     peacock.update(dt);

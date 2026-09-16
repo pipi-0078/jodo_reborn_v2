@@ -20,7 +20,7 @@ export async function createTrain(body) {
     for(let i=0;i<row.count;i++) {
       const t=i/(row.count-1), angle=(t-.5)*Math.PI*.94;
       const length=h*row.length*(1-.035*Math.cos(i*2.399+r));
-      const geometry=new T.PlaneGeometry(h*row.width,length,12,40);
+      const geometry=new T.PlaneGeometry(h*row.width,length,6,20);
       geometry.translate(0,length/2,0);
       const pos=geometry.attributes.position;
       for(let v=0;v<pos.count;v++){
@@ -47,10 +47,10 @@ export async function createTrain(body) {
           new T.Vector3(side*reach*.25,length*(.89-.025*u),-.018*h),
           new T.Vector3(side*reach,endY+.055*length,-.012*h),
           new T.Vector3(side*reach*.90,endY,-.01*h));
-        const tube=new T.TubeGeometry(curve,12,h*.0007,3,false);
+        const tube=new T.TubeGeometry(curve,6,h*.0007,3,false);
         const fp=tube.attributes.position;
         for(let k=0;k<fp.count;k++){
-          const q=Math.floor(k/4)/12, c=curve.getPointAt(q);
+          const q=Math.floor(k/4)/6, c=curve.getPointAt(q);
           const scale=1-.92*q*q;
           fp.setXYZ(k,c.x+(fp.getX(k)-c.x)*scale,c.y+(fp.getY(k)-c.y)*scale,c.z+(fp.getZ(k)-c.z)*scale);
         }
