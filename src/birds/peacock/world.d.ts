@@ -1,2 +1,2 @@
-import type { Scene } from 'three';
-export function createWorldPeacock(scene: Scene): Promise<{ update(dt: number): void }>;
+import type { Scene, Object3D } from 'three';
+export function createWorldPeacock(scene: Scene): Promise<{ bird: Object3D; update(dt: number): void }>;

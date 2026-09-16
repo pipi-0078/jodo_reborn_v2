@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, emissive } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { createPeacockShadow } from './world/peacockShadow';
 import { createWorldShadows } from './world/shadows';
 import { createSky } from './world/sky';
 import { createGoldEnvironment } from './world/gold';
@@ -37,6 +38,7 @@ async function main(): Promise<void> {
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
   const shadows = createWorldShadows(scene, renderer, sun);
+  const peacockShadow = createPeacockShadow(scene, peacock.bird, sunDirection);
 
   // 後処理: 発光(蓮の光・灯籠)だけを滲ませるブルーム。
   // 輝度しきい値で選ぶと日向の金の地面まで滲んで全体が白飛びするので、発光チャンネル(MRT)だけを使う(9/3)
@@ -71,6 +73,7 @@ async function main(): Promise<void> {
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
     peacock.update(dt);
+    peacockShadow.update(dt);
     flowers.update(dt);
     clouds.update(dt);
     shadows.update(dt);
