@@ -5,7 +5,7 @@ import { positionLocal, vec3, mix, smoothstep } from 'three/tsl';
 const SUN_ELEVATION_DEG = 7;
 const SUN_AZIMUTH_DEG = 270;
 
-export function createSky(scene: THREE.Scene, renderer: THREE.WebGPURenderer): { sunDirection: THREE.Vector3 } {
+export function createSky(scene: THREE.Scene, renderer: THREE.WebGPURenderer): { sunDirection: THREE.Vector3; sun: THREE.DirectionalLight } {
   const phi = THREE.MathUtils.degToRad(90 - SUN_ELEVATION_DEG);
   const theta = THREE.MathUtils.degToRad(SUN_AZIMUTH_DEG);
   const sunDirection = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
@@ -61,7 +61,7 @@ export function createSky(scene: THREE.Scene, renderer: THREE.WebGPURenderer): {
   // 金色の靄で遠景を溶かす(空気遠近: 遠い並木ほど光に溶ける)
   scene.fog = new THREE.Fog(0xf4dca6, 30, 300);
 
-  return { sunDirection };
+  return { sunDirection, sun };
 }
 
 // 光源の輝き(中心は白、外へ金色に薄れる)

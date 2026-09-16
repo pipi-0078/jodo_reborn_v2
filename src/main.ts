@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, emissive } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { createWorldShadows } from './world/shadows';
 import { createSky } from './world/sky';
 import { createGoldEnvironment } from './world/gold';
 import { createGround } from './world/ground';
@@ -26,7 +27,7 @@ async function main(): Promise<void> {
   camera.layers.enable(NO_REFLECT_LAYER); // 反射に映さない遠景も、メインカメラは描く
 
   // 空・黄金の大地・七宝池の骨格に、ギャラリーで承認済みのアセットを据える(如来は別途)
-  const { sunDirection } = createSky(scene, renderer);
+  const { sunDirection, sun } = createSky(scene, renderer);
   createGoldEnvironment(renderer, sunDirection); // 金専用の暖色の環境マップ(部材の読み込み前に)
   const clouds = createPurpleClouds(scene, sunDirection); // 西の空の紫雲
   createGround(scene, true);
@@ -34,6 +35,8 @@ async function main(): Promise<void> {
   await createProps(scene);
   const peacock = await createWorldPeacock(scene);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
+
+  const shadows = createWorldShadows(scene, renderer, sun);
 
   // 後処理: 発光(蓮の光・灯籠)だけを滲ませるブルーム。
   // 輝度しきい値で選ぶと日向の金の地面まで滲んで全体が白飛びするので、発光チャンネル(MRT)だけを使う(9/3)
@@ -70,6 +73,7 @@ async function main(): Promise<void> {
     peacock.update(dt);
     flowers.update(dt);
     clouds.update(dt);
+    shadows.update(dt);
     postProcessing.render();
   });
 }
