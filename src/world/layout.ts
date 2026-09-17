@@ -32,8 +32,8 @@ export const TREE_RINGS = [44, 54, 64, 74, 84, 94, 104];
 // 東側の岸。最内周の宝樹と次の周の間で、池・欄楯から離して配置。
 export const PEACOCK_HOME = { x: TREE_RINGS[0] + 2, z: CAUSEWAY_HALF_WIDTH * 2 };
 export const PEACOCK_SCALE = 1.1;
-// Eastern bridge, outer approach, between the posts on the left-hand rail.
-export const PARROT_PERCH = { x: BRIDGE_CENTER + BRIDGE_HALF * 0.74, z: CAUSEWAY_HALF_WIDTH - 0.05 };
+// Eastern bridge midpoint, between the posts on the left-hand rail.
+export const PARROT_PERCH = { x: BRIDGE_CENTER, z: CAUSEWAY_HALF_WIDTH - 0.05 };
 export const PARROT_SCALE = 1.1;
 
 // 楼閣の据え付け(岸の外、四隅の斜め方向)
