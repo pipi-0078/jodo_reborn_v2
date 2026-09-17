@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "parrot",
+      "name": "極楽鳥・鸚鵡（止まり木）",
+      "file": "parrot/parrot.glb",
+      "preview": "parrot.html",
+      "desc": "真珠色・翡翠色・藤色の鸚鵡。周囲を見る・首をかしげる・休む動作を1.5倍のテンポで選びます。東側の橋の欄干に配置。約10万面・5.4MB。飛行は未実装。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Hunyuan 3D Pro / 骨格・動作: 本プロジェクト"
+    },
+    {
       "id": "peacock",
       "name": "極楽鳥・孔雀（行動試作）",
       "file": "peacock/peacock-body.glb",

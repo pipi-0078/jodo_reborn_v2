@@ -84,11 +84,13 @@ function instance(
   scene: THREE.Scene, template: Template, matrices: THREE.Matrix4[],
   materialFor?: (material: THREE.Material) => THREE.Material,
   noReflect = false, // 水面の反射に映さない(遠景の軽量化)
+  name = '',
 ): void {
   if (matrices.length === 0) return;
   for (const part of template.parts) {
     const material = materialFor ? materialFor(part.material) : part.material;
     const mesh = new THREE.InstancedMesh(part.geometry, material, matrices.length);
+    mesh.name = name;
     matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
     if (noReflect) mesh.layers.set(NO_REFLECT_LAYER);
     scene.add(mesh);
@@ -120,7 +122,7 @@ async function placeBridges(scene: THREE.Scene): Promise<void> {
   const matrices = BRIDGE_ANGLES.map((theta) => compose(
     Math.cos(theta) * BRIDGE_CENTER, ISLAND_TOP / 2, Math.sin(theta) * BRIDGE_CENTER, -theta, 1, -tilt,
   ));
-  instance(scene, template, matrices);
+  instance(scene, template, matrices, undefined, false, 'BridgeAsset');
 }
 
 // 中島の壇(須弥壇): 上段・階段・欄干・灯籠。上段の中央に如来を据える
