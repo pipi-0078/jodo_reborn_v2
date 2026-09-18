@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "crane",
+      "name": "極楽鳥・白鵠（浅瀬の歩行）",
+      "file": "crane/crane.glb",
+      "preview": "crane.html",
+      "desc": "白い翼と赤い頭頂の白鵠。池の浅瀬を歩き、ときどき立ち止まります。足元の波紋と水面の反射。約5MB。翼の折り畳みは近似、飛行は未実装。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Hunyuan 3D Pro / 頭部調整・骨格・動作: 本プロジェクト"
+    },
+    {
       "id": "parrot",
       "name": "極楽鳥・鸚鵡（止まり木）",
       "file": "parrot/parrot.glb",

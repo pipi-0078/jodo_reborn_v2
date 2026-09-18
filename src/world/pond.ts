@@ -1,3 +1,4 @@
+import { pondWave, craneWaterFocus } from './waterSurface';
 import * as THREE from 'three/webgpu';
 import {
   positionLocal, positionWorld, time, sin, vec2, vec3, color, uv, texture, mix, smoothstep,
@@ -68,6 +69,7 @@ export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
     new THREE.CylinderGeometry(bankWaterline, BANK_INNER, WATER_LEVEL - POND_DEPTH, 160, 3, true),
     makeSand(120, 1.6, THREE.BackSide, true),
   );
+  bankWet.name = 'ShallowBank';
   bankWet.position.y = (WATER_LEVEL + POND_DEPTH) / 2;
   scene.add(bankWet);
 
@@ -99,10 +101,7 @@ export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
   // 水面は照明を受けない素材にして、鏡面反射(reflector)で中島・宝樹・如来を映す(9/3)。
   // 発光チャンネルに反射を載せるとブルームで水面全体が滲むので、colorNode に置く
   const waterMaterial = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
-  const wave = sin(positionLocal.x.mul(0.24).add(time.mul(0.7)))
-    .mul(sin(positionLocal.z.mul(0.21).add(time.mul(0.55))))
-    .mul(0.16)
-    .add(sin(positionLocal.x.mul(0.9).add(positionLocal.z.mul(0.75)).add(time.mul(1.2))).mul(0.045));
+  const wave = pondWave(positionLocal);
   waterMaterial.positionNode = positionLocal.add(vec3(0, wave, 0));
   const fresnel = normalView.dot(positionViewDirection.negate()).saturate().oneMinus().pow(3.0);
 
@@ -119,7 +118,8 @@ export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
   const reflectance = fresnel.mul(0.5).add(0.45); // 蓮の光が水に映るよう、見下ろしても反射を残す
   const waterColor = vec3(0.10, 0.40, 0.46);
   waterMaterial.colorNode = mix(waterColor, mirror.rgb, reflectance).add(vec3(0.16, 0.42, 0.50).mul(fresnel).mul(0.35));
-  waterMaterial.opacityNode = fresnel.mul(0.4).add(0.6);
+  const clearShallows = smoothstep(.5,2.3,positionWorld.xz.sub(craneWaterFocus.xz).length()).mul(.60).add(.40);
+  waterMaterial.opacityNode = fresnel.mul(0.4).add(0.6).mul(clearShallows);
   const water = new THREE.Mesh(waterGeometry, waterMaterial);
   water.position.y = WATER_LEVEL;
   mirror.target.rotateX(-Math.PI / 2); // 反射面の法線(target の +Z)を上に向ける

@@ -1,3 +1,4 @@
+import {createWorldCrane} from './birds/crane/world.js';
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, emissive } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
   await createProps(scene);
   const peacock = await createWorldPeacock(scene);
   const parrot = await createWorldParrot(scene);
+  const crane = await createWorldCrane(scene, sunDirection);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
   const shadows = createWorldShadows(scene, renderer, sun);
@@ -76,6 +78,7 @@ async function main(): Promise<void> {
     if (document.hidden) return;
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
+    crane.update(dt);
     parrot.update(dt);
     parrotShadow.update(dt);
     peacock.update(dt);
