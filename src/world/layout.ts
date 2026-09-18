@@ -95,7 +95,7 @@ export function sampleGround(x: number, z: number): GroundSample {
 // 水面の反射から外す物体のレイヤー(遠くの並木。軽量化 9/4)。メインカメラは 0 と両方を見る
 export const NO_REFLECT_LAYER = 1;
 
-// 東の橋から見える外岸の浅瀬。
+// 開始地点（東岸）から見て池の右奥、北西側の浅瀬。
 export const CRANE_RADIUS = 36.85;
-export const CRANE_ANGLE = 0.15;
+export const CRANE_ANGLE = -Math.PI * 3 / 4;
 export const CRANE_SCALE = 2.2;
