@@ -1,0 +1,10 @@
+{
+  "source": "karyobinga-floating.glb / float-2",
+  "sha256": "cd5f32ee404f422eff9bc1389c878dd1902d42750b06e4d1e380eabd4269c61d",
+  "sourceBytes": 53411608,
+  "compressedBytes": 22125237,
+  "compression": "gzip (lossless)",
+  "triangles": 541525,
+  "animation": "FloatingIdle",
+  "duration": 21.6
+}

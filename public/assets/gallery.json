@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "karyobinga",
+      "name": "極楽鳥・迦陵頻伽（浮遊）",
+      "file": "karyobinga/karyobinga-floating.glb.gz",
+      "preview": "karyobinga.html",
+      "desc": "横笛を携えた極彩色の迦陵頻伽。体を少し前へ傾けて漂い、瞬き・呼吸・翼・薄布・両手が穏やかに動きます。浮遊姿勢の展示。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 / 顔・姿勢調整・アニメーション: 本プロジェクト"
+    },
+    {
       "id": "crane",
       "name": "極楽鳥・白鵠（浅瀬の歩行）",
       "file": "crane/crane.glb",

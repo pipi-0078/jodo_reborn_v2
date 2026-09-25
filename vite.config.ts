@@ -12,6 +12,7 @@ export default defineConfig({
         gallery: resolve(import.meta.dirname, 'gallery.html'),
         peacock: resolve(import.meta.dirname, 'peacock.html'),
         crane: resolve(import.meta.dirname, 'crane.html'),
+        karyobinga: resolve(import.meta.dirname, 'karyobinga.html'),
         parrot: resolve(import.meta.dirname, 'parrot.html'),
       },
     },
