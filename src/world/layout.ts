@@ -99,3 +99,11 @@ export const NO_REFLECT_LAYER = 1;
 export const CRANE_RADIUS = 36.85;
 export const CRANE_ANGLE = -Math.PI * 3 / 4;
 export const CRANE_SCALE = 2.2;
+
+// 東の参拝位置から見て阿弥陀さまの右上・後方。浮遊クリップの高さも倍率に含む。
+export const KARYOBINGA_SCALE = AMIDA_SCALE * 0.47;
+export const KARYOBINGA_HOME = {
+  x: -AMIDA_SCALE * 0.8,
+  y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.95,
+  z: -AMIDA_SCALE * 1.1,
+};
