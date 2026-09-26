@@ -100,10 +100,10 @@ export const CRANE_RADIUS = 36.85;
 export const CRANE_ANGLE = -Math.PI * 3 / 4;
 export const CRANE_SCALE = 2.2;
 
-// 東の参拝位置から見て右奥の八角楼の東側、岸の陸上。浮遊クリップの高さも倍率に含む。
+// 東の参拝位置から見て右奥の八角楼の北東側（前回より右奥）、岸の陸上。浮遊クリップの高さも倍率に含む。
 export const KARYOBINGA_SCALE = AMIDA_SCALE * 0.47;
 export const KARYOBINGA_HOME = {
-  x: -PAVILION_RADIUS / Math.SQRT2 + PAVILION_CLEARANCE * 0.6,
+  x: -PAVILION_RADIUS / Math.SQRT2 + PAVILION_CLEARANCE * 0.4,
   y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.5,
-  z: -PAVILION_RADIUS / Math.SQRT2,
+  z: -PAVILION_RADIUS / Math.SQRT2 - AMIDA_SCALE,
 };
