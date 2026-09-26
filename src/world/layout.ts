@@ -103,7 +103,7 @@ export const CRANE_SCALE = 2.2;
 // 東の参拝位置から見て阿弥陀さまの左上・後方。浮遊クリップの高さも倍率に含む。
 export const KARYOBINGA_SCALE = AMIDA_SCALE * 0.47;
 export const KARYOBINGA_HOME = {
-  x: -AMIDA_SCALE * 0.4,
+  x: -AMIDA_SCALE * 0.3,
   y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.5,
-  z: AMIDA_SCALE * 0.9,
+  z: AMIDA_SCALE * 0.65,
 };
