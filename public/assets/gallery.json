@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "shari",
+      "name": "極楽鳥・舎利（飛翔）",
+      "file": "shari/shari-flight.glb.gz",
+      "preview": "shari.html",
+      "desc": "真珠色と淡い金の舎利。翼を滑らかに上下させ、ときおり瞬きし、尾羽が柔らかく波打ちます。七宝池の上空を、高さと進路を変えながら巡ります。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 多視点 / 骨格・瞬き・尾羽・飛行: 本プロジェクト"
+    },
+    {
       "id": "karyobinga",
       "name": "極楽鳥・迦陵頻伽（浮遊）",
       "file": "karyobinga/karyobinga-floating.glb.gz",

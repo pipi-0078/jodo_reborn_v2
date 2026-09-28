@@ -13,6 +13,7 @@ export default defineConfig({
         peacock: resolve(import.meta.dirname, 'peacock.html'),
         crane: resolve(import.meta.dirname, 'crane.html'),
         karyobinga: resolve(import.meta.dirname, 'karyobinga.html'),
+        shari: resolve(import.meta.dirname, 'shari.html'),
         parrot: resolve(import.meta.dirname, 'parrot.html'),
       },
     },

@@ -107,3 +107,13 @@ export const KARYOBINGA_HOME = {
   y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.5,
   z: -PAVILION_RADIUS / Math.SQRT2 - AMIDA_SCALE * 2.5,
 };
+
+// 舎利は七宝池の上空、羅網の下を巡る。中島・外岸から翼幅の余裕を取る。
+export const SHARI_SCALE = AMIDA_SCALE * 0.34;
+export const SHARI_FLIGHT_AREA = {
+  // 外側の長い羅網は低く垂れるため、翼端も含めて内側の空間に収める。
+  radius: ISLAND_FOOT + (POND_OUTER - ISLAND_FOOT) * 0.13,
+  radialRange: (POND_OUTER - ISLAND_FOOT) * 0.06,
+  height: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.48,
+  heightRange: AMIDA_SCALE * 0.16,
+};

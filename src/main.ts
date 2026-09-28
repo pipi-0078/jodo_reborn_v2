@@ -1,4 +1,5 @@
 import { createWorldKaryobinga } from './birds/karyobinga/world';
+import { createWorldShari } from './birds/shari/world';
 import {createWorldCrane} from './birds/crane/world.js';
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, emissive } from 'three/tsl';
@@ -14,7 +15,7 @@ import { createPond } from './world/pond';
 import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
 import { createPurpleClouds } from './world/clouds';
-import { NO_REFLECT_LAYER, sampleGround } from './world/layout';
+import { NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround } from './world/layout';
 import { createWorldPeacock } from './birds/peacock/world.js';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
   const parrot = await createWorldParrot(scene);
   const crane = await createWorldCrane(scene, sunDirection);
   const karyobinga = await createWorldKaryobinga(scene);
+  const shari = await createWorldShari(scene);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
   const shadows = createWorldShadows(scene, renderer, sun);
@@ -64,6 +66,13 @@ async function main(): Promise<void> {
   const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
   scene.add(walker.controls.object);
 
+  // 展示ページから来たときは東の橋から舎利を見上げる。通常の入場位置は維持する。
+  if (new URLSearchParams(location.search).get('view') === 'shari') {
+    const viewpoint = BRIDGE_CENTER + AMIDA_SCALE;
+    camera.position.set(viewpoint, bridgeHeight(viewpoint) + 1.6, 0);
+    camera.lookAt(shari.bird.position.x, shari.bird.position.y, 0);
+  }
+
   // 動作検証用フック(ヘッドレステストからカメラを動かす)
   (window as unknown as { __camera?: THREE.PerspectiveCamera }).__camera = camera;
   (window as unknown as { __scene?: THREE.Scene }).__scene = scene;
@@ -80,6 +89,7 @@ async function main(): Promise<void> {
     if (document.hidden) return;
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
+    shari.update(dt);
     karyobinga.update(dt);
     crane.update(dt);
     parrot.update(dt);

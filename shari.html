@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>舎利・空を渡る姿</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#e9e7ee;color:#39343e;font:14px/1.65 system-ui}canvas{display:block}
+    header{position:absolute;left:24px;top:20px;z-index:2;max-width:470px;pointer-events:none}h1{font-size:22px;margin:0}p{margin:6px 0 12px}
+    nav{display:flex;gap:7px;flex-wrap:wrap}button,a{pointer-events:auto}button{font:inherit;color:inherit;border:1px solid #c6bdcd;border-radius:7px;background:#fffd;padding:6px 12px;cursor:pointer}button:hover{background:white}button:focus-visible,a:focus-visible{outline:3px solid #946b35}
+    small{display:block;margin-top:10px}a{color:#795522}#status{position:absolute;bottom:16px;left:24px;font-size:12px;background:#e9e7eedd;padding:4px 8px;border-radius:5px}
+    body.embedded header{top:8px;left:12px}body.embedded h1,body.embedded header p{display:none}body.embedded small{margin-top:5px}body.embedded #status{bottom:6px}
+    @media(max-width:600px){header{left:14px;right:14px;top:12px}h1{font-size:18px}p{font-size:12px;margin:3px 0 8px}button{font-size:12px;padding:5px 9px}#status{left:14px;bottom:10px}}
+  </style>
+</head>
+<body>
+  <header><h1>舎利・空を渡る姿</h1><p>真珠色の翼で羽ばたき、ときおり瞬きします。<br>尾羽は風に乗るように、先端まで柔らかく揺れます。</p>
+    <nav><button id="side">全身・側面</button><button id="front">正面</button><button id="back">背面</button><button id="face">目元</button><button id="pause" aria-pressed="false">一時停止</button></nav>
+    <small><a href="./index.html?view=shari" target="_top">浄土の空を飛ぶ姿を見る</a> ／ <a id="download" hidden download="shari-flight.glb">動くモデルを保存</a></small>
+  </header>
+  <div id="status" role="status">読み込み中…</div>
+  <script type="module" src="/src/birds/shari/viewer.ts"></script>
+</body>
+</html>

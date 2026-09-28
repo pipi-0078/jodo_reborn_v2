@@ -1,0 +1,19 @@
+{
+  "name": "舎利",
+  "source": "shari-flight-v6.glb",
+  "file": "shari-flight.glb.gz",
+  "sha256": "2caee9e9590e30df1d88506826b557837d9d1003c180430ed517bb2b1a26c020",
+  "bytes": 19647964,
+  "gzipBytes": 13883537,
+  "animation": "Living flight",
+  "durationSeconds": 12,
+  "morphTargets": [
+    "Blink",
+    "Tail wave sine",
+    "Tail wave cosine",
+    "Tail sway sine",
+    "Tail sway cosine"
+  ],
+  "generator": "fal.ai tripo3d/h3.1/multiview-to-3d",
+  "generationRequestId": "01a0e4ab-2e08-7763-ae42-6a234ceb9c75"
+}
