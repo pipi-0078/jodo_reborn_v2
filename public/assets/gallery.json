@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "gumyocho",
+      "name": "極楽鳥・共命之鳥（白蓮上）",
+      "file": "gumyocho-on-lotus.glb",
+      "animation": "Everyday life",
+      "tint": { "materialName": "petal", "color": "#f7faff" },
+      "glow": true,
+      "desc": "紅と金の二つの頭を持つ共命之鳥。池の左奥にある白い蓮の上で、左右の頭が水を飲み、羽を繕い、両翼をゆっくり広げます。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 / 骨格・動作・蓮上配置: 本プロジェクト"
+    },
+    {
       "id": "shari",
       "name": "極楽鳥・舎利（飛翔）",
       "file": "shari/shari-flight.glb.gz",

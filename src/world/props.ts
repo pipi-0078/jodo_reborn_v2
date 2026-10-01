@@ -1,11 +1,12 @@
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createWorldGumyocho } from '../birds/gumyocho/world';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
 import { applyPureGold, getStatueEnvironment } from './gold';
 import {
   AMIDA_SCALE, BRIDGE_CENTER, BRIDGE_HALF, DAIS_UPPER_H, ISLAND_TOP, ISLAND_WATERLINE, PAVILION_CLEARANCE, PAVILION_RADIUS, PAVILION_SCALE,
-  POND_OUTER, TREE_RINGS, WATER_LEVEL,
+  POND_OUTER, TREE_RINGS, WATER_LEVEL, GUMYOCHO_PERCH, GUMYOCHO_NEIGHBOR,
 } from './layout';
 import { NO_REFLECT_LAYER } from './layout';
 
@@ -279,7 +280,7 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
 }
 
 // 「池中蓮華大如車輪 青色青光 黄色黄光 赤色赤光 白色白光」
-async function placeLotuses(scene: THREE.Scene): Promise<void> {
+async function placeLotuses(scene: THREE.Scene) {
   const [bloom, bud] = await Promise.all([loadTemplate('lotus.glb'), loadTemplate('lotus_bud.glb')]);
   const random = makeRandom(2026);
   const bankWaterline = POND_OUTER - (-WATER_LEVEL) * 3.5 / 2.2;
@@ -339,6 +340,7 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   };
 
   // 満開: 四色×13株。大きさは 1.5〜3.3m(小さめが多く、大株は少ない)。東岸の手前には四色一株ずつ 3.6〜4.1m の大株
+  let gumyochoPerch: THREE.Matrix4 | undefined;
   LOTUS_TINTS.forEach((tint) => {
     const matrices: THREE.Matrix4[] = [];
     const scales: number[] = [];
@@ -349,7 +351,14 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
       matrices.push(compose(p.x, WATER_LEVEL - 0.03 * scale, p.z, random() * Math.PI * 2, scale));
       scales.push(scale);
     }
-    instance(scene, bloom, matrices, petalTint(tint));
+    if (tint === GUMYOCHO_NEIGHBOR.tint) {
+      matrices[GUMYOCHO_NEIGHBOR.bloomIndex].elements[12] += GUMYOCHO_NEIGHBOR.offsetX;
+    }
+    // 乱数列と光の配置は維持し、承認済みの鳥・蓮一体アセットへこの一株だけを置き換える。
+    const isGumyochoLotus = tint === GUMYOCHO_PERCH.tint;
+    if (isGumyochoLotus) gumyochoPerch = matrices[GUMYOCHO_PERCH.bloomIndex].clone();
+    const flowers = isGumyochoLotus ? matrices.filter((_, i) => i !== GUMYOCHO_PERCH.bloomIndex) : matrices;
+    instance(scene, bloom, flowers, petalTint(tint));
     halo(tint, matrices, (i) => scales[i] * 2.2);
     glows(tint, matrices, (i) => scales[i] * 1.6, 0.2, 0.45);
   });
@@ -362,6 +371,8 @@ async function placeLotuses(scene: THREE.Scene): Promise<void> {
   }
   instance(scene, bud, buds, petalTint(BUD_TINT, 0.4));
   glows(BUD_TINT, buds, () => 1.4, 0.85, 0.3);
+  if (!gumyochoPerch) throw new Error('共命之鳥を据える白蓮がありません');
+  return createWorldGumyocho(scene, gumyochoPerch);
 }
 
 // 「七重羅網」: 七宝池の上空に、宝石の網を七重の環として渡す天蓋(9/4: 並木の上では広すぎたので池の上に集約)。
@@ -387,8 +398,9 @@ async function placeNets(scene: THREE.Scene): Promise<void> {
   });
 }
 
-export async function createProps(scene: THREE.Scene): Promise<void> {
-  await Promise.all([
-    placeBridges(scene), placeDais(scene), placeAmida(scene), placePavilions(scene), placeTrees(scene), placeLotuses(scene), placeNets(scene),
+export async function createProps(scene: THREE.Scene) {
+  const [gumyocho] = await Promise.all([
+    placeLotuses(scene), placeBridges(scene), placeDais(scene), placeAmida(scene), placePavilions(scene), placeTrees(scene), placeNets(scene),
   ]);
+  return { gumyocho };
 }

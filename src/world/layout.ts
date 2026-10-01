@@ -29,6 +29,12 @@ export const WALK_LIMIT = 37.4; // 岸を下りて水際に立てる限界(こ�
 // 七重行樹のリング半径(欄楯はその内側に添える)
 export const TREE_RINGS = [44, 54, 64, 74, 84, 94, 104];
 
+// 開始地点（東岸）から見て池左奥にある、既存の白蓮（13株のうち9株目）。
+export const GUMYOCHO_PERCH = { tint: 0xf7faff, bloomIndex: 8 };
+// 元から白蓮に重なっていた青蓮1株を脇へ寄せ、足元と飲水先を空ける。
+export const GUMYOCHO_NEIGHBOR = { tint: 0x6f8cf5, bloomIndex: 2, offsetX: -2 };
+export const GUMYOCHO_VIEW_RADIUS = POND_OUTER + 1;
+
 // 東側の岸。最内周の宝樹と次の周の間で、池・欄楯から離して配置。
 export const PEACOCK_HOME = { x: TREE_RINGS[0] + 2, z: CAUSEWAY_HALF_WIDTH * 2 };
 export const PEACOCK_SCALE = 1.1;

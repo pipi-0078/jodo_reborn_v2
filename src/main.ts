@@ -15,7 +15,7 @@ import { createPond } from './world/pond';
 import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
 import { createPurpleClouds } from './world/clouds';
-import { NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround } from './world/layout';
+import { NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround, GUMYOCHO_VIEW_RADIUS } from './world/layout';
 import { createWorldPeacock } from './birds/peacock/world.js';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   const clouds = createPurpleClouds(scene, sunDirection); // 西の空の紫雲
   createGround(scene, true);
   createPond(scene, camera);
-  await createProps(scene);
+  const { gumyocho } = await createProps(scene);
   const peacock = await createWorldPeacock(scene);
   const parrot = await createWorldParrot(scene);
   const crane = await createWorldCrane(scene, sunDirection);
@@ -67,10 +67,19 @@ async function main(): Promise<void> {
   scene.add(walker.controls.object);
 
   // 展示ページから来たときは東の橋から舎利を見上げる。通常の入場位置は維持する。
-  if (new URLSearchParams(location.search).get('view') === 'shari') {
+  const view = new URLSearchParams(location.search).get('view');
+  if (view === 'shari') {
     const viewpoint = BRIDGE_CENTER + AMIDA_SCALE;
     camera.position.set(viewpoint, bridgeHeight(viewpoint) + 1.6, 0);
     camera.lookAt(shari.bird.position.x, shari.bird.position.y, 0);
+  }
+
+  if (view === 'gumyocho') {
+    const bank = gumyocho.perch.position.clone().setY(0).normalize().multiplyScalar(GUMYOCHO_VIEW_RADIUS);
+    camera.position.set(bank.x, sampleGround(bank.x, bank.z).y + 1.6, bank.z);
+    const focus = gumyocho.bird.getWorldPosition(new THREE.Vector3());
+    focus.y += gumyocho.perch.scale.y;
+    camera.lookAt(focus);
   }
 
   // 動作検証用フック(ヘッドレステストからカメラを動かす)
@@ -89,6 +98,7 @@ async function main(): Promise<void> {
     if (document.hidden) return;
     const dt = Math.min(timer.getDelta(), 0.05);
     walker.update(dt);
+    gumyocho.update(dt);
     shari.update(dt);
     karyobinga.update(dt);
     crane.update(dt);

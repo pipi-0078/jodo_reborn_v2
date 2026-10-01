@@ -14,6 +14,7 @@ interface GalleryItem {
   desc: string;
   credit: string;
   preview?: string; // 行動付きアセットは専用の展示ページで確認する
+  animation?: string; // GLBに収録された動作をそのまま展示する
   tint?: { materialName: string; color: string };
   glow?: boolean; // 蓮など、tint の色で淡く光らせる(発光マップ+光のスプライト+床の光輪)
   attach?: string[]; // 同じ座標系の添え物(光背の後ろに坐像を置く等)。一緒に読み込んで同じ枠で見せる
@@ -55,6 +56,9 @@ async function main(): Promise<void> {
 
   const loader = new GLTFLoader();
   let current: THREE.Group | null = null;
+  let mixer: THREE.AnimationMixer | null = null;
+  let animatedFraming = false;
+  let cameraFit = 1;
   let showToken = 0; // 読み込み中に別の品目へ切り替えたとき、遅れて届いた前の品目を捨てる
 
   const loading = document.getElementById('loading')!;
@@ -68,15 +72,31 @@ async function main(): Promise<void> {
   const listElement = document.getElementById('list')!;
   const captionElement = document.getElementById('caption')!;
   const fitPreview = (): void => {
-    preview.style.top = `${listElement.getBoundingClientRect().bottom}px`;
-    preview.style.bottom = `${captionElement.getBoundingClientRect().height}px`;
-    preview.style.height = `${Math.max(120, window.innerHeight - listElement.getBoundingClientRect().bottom - captionElement.getBoundingClientRect().height)}px`;
+    const top = listElement.getBoundingClientRect().bottom;
+    const bottom = captionElement.getBoundingClientRect().height;
+    const availableHeight = Math.max(120, window.innerHeight - top - bottom);
+    preview.style.top = `${top}px`;
+    preview.style.bottom = `${bottom}px`;
+    preview.style.height = `${availableHeight}px`;
+    // Animated models need the same unobstructed display area as embedded previews.
+    const height = animatedFraming ? availableHeight : window.innerHeight;
+    renderer.domElement.style.position = animatedFraming ? 'fixed' : '';
+    renderer.domElement.style.top = animatedFraming ? `${top}px` : '';
+    camera.aspect = window.innerWidth / height;
+    const nextFit = animatedFraming ? 1.3 * Math.max(1, 1 / camera.aspect) : 1;
+    camera.position.sub(controls.target).multiplyScalar(nextFit / cameraFit).add(controls.target);
+    cameraFit = nextFit;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, height);
   };
   new ResizeObserver(fitPreview).observe(listElement);
   new ResizeObserver(fitPreview).observe(captionElement);
 
   async function show(item: GalleryItem): Promise<void> {
     loading.classList.remove('hidden');
+    mixer?.stopAllAction();
+    mixer = null;
+    animatedFraming = !!item.animation;
     if (current) {
       scene.remove(current);
       current = null;
@@ -85,6 +105,7 @@ async function main(): Promise<void> {
     preview.hidden = true;
     preview.removeAttribute('src'); // 他の品目では孔雀の描画・行動を停止
     renderer.domElement.style.display = '';
+    fitPreview();
     if (item.preview) {
       captionName.textContent = item.name;
       captionDesc.textContent = item.desc;
@@ -146,10 +167,23 @@ async function main(): Promise<void> {
     scene.add(model);
     (window as unknown as { __model?: unknown }).__model = model; // ヘッドレス検品用
     current = model;
+    if (item.animation) {
+      const clip = gltf.animations.find(animation => animation.name === item.animation);
+      if (clip) {
+        mixer = new THREE.AnimationMixer(model);
+        mixer.clipAction(clip).play();
+        model.traverse(object => {
+          if ((object as THREE.SkinnedMesh).isSkinnedMesh) object.frustumCulled = false;
+        });
+      }
+    }
 
     const radius = Math.max(size.x, size.y, size.z) / 2;
     controls.target.set(0, size.y * 0.45, 0);
     camera.position.set(radius * 1.6, size.y * 0.55, radius * 2.4);
+    // Leave room for the open wings and forward drinking pose on portrait screens.
+    cameraFit = animatedFraming ? 1.3 * Math.max(1, 1 / camera.aspect) : 1;
+    camera.position.sub(controls.target).multiplyScalar(cameraFit).add(controls.target);
     controls.update();
 
     captionName.textContent = item.name;
@@ -187,13 +221,13 @@ async function main(): Promise<void> {
 
   window.addEventListener('resize', () => {
     fitPreview();
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  const timer = new THREE.Timer();
   renderer.setAnimationLoop(() => {
+    timer.update();
     if (document.hidden || !preview.hidden) return;
+    mixer?.update(Math.min(timer.getDelta(), 0.05));
     controls.update();
     postProcessing.render();
   });
