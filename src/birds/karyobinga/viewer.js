@@ -26,10 +26,10 @@ try{
   rig={group,bodyGroup,meshes,clip,mixer,pose(t){mixer.setTime(t);group.updateMatrixWorld(true);meshes.forEach(m=>m.skeleton?.update());}};
   scene.add(group);rig.pose(0);view(new URLSearchParams(location.search).get('view')==='face'?'face':viewName);
   document.querySelector('#status').textContent='空中をゆっくり漂っています';
-  window.__karyo={variant,rig,scene,camera,renderer,controls,view,pose(t){paused=true;syncPause();const before=['face','hairback'].includes(viewName)?faceTarget():null;time=t;rig.pose(t);if(before){const delta=faceTarget().sub(before);camera.position.add(delta);controls.target.add(delta);controls.update();}renderer.render(scene,camera);},pause(v=true){paused=v;syncPause();}};
+  window.__karyo={variant,rig,scene,camera,renderer,controls,view,pose(t){paused=true;syncPause();const before=['face','hairback'].includes(viewName)?faceTarget():null;time=t;rig.pose(t);if(before){const delta=faceTarget().sub(before).multiplyScalar(variant==='biwa'?.65:1);camera.position.add(delta);controls.target.add(delta);controls.update();}renderer.render(scene,camera);},pause(v=true){paused=v;syncPause();}};
   const downloadURL=URL.createObjectURL(new Blob([data],{type:'model/gltf-binary'}));
   const link=document.querySelector('#download');link.href=downloadURL;link.hidden=false;
   addEventListener('pagehide',()=>URL.revokeObjectURL(downloadURL),{once:true});
   window.__ready=true;
 }catch(e){document.querySelector('#status').textContent='読み込みに失敗しました。再読み込みしてください。';console.error(e);}
-renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.05);last=now;if(document.hidden)return;accum+=dt;if(accum<1/30)return;const elapsed=accum;accum=0;if(rig&&!paused){const before=['face','hairback'].includes(viewName)?faceTarget():null;time+=elapsed;rig.pose(time);if(before){const delta=faceTarget().sub(before);camera.position.add(delta);controls.target.add(delta);controls.update();}dirty=true;}if(dirty){renderer.render(scene,camera);dirty=false;}});
+renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.05);last=now;if(document.hidden)return;accum+=dt;if(accum<1/30)return;const elapsed=accum;accum=0;if(rig&&!paused){const before=['face','hairback'].includes(viewName)?faceTarget():null;time+=elapsed;rig.pose(time);if(before){const delta=faceTarget().sub(before).multiplyScalar(variant==='biwa'?.65:1);camera.position.add(delta);controls.target.add(delta);controls.update();}dirty=true;}if(dirty){renderer.render(scene,camera);dirty=false;}});

@@ -26,18 +26,19 @@ fs.mkdirSync(out, { recursive:true });
       const result = await frame.evaluate(async ({variant,closed})=>{
         const k=__karyo; k.pose(0);
         const body0=k.rig.bodyGroup.getWorldPosition(k.camera.position.clone()).toArray();
+        const head=k.rig.group.getObjectByName('BiwaHead'),head0=head?.quaternion.clone();
         const mesh=k.rig.meshes.find(m=>Object.keys(m.morphTargetDictionary||{}).some(n=>/blink/i.test(n)));
         if(!mesh)throw Error('Blink mesh missing');
         const index=Object.entries(mesh.morphTargetDictionary).find(([n])=>/blink/i.test(n))[1];
         const open=mesh.morphTargetInfluences[index];k.pose(closed);const shut=mesh.morphTargetInfluences[index];k.pose(3);const reopened=mesh.morphTargetInfluences[index];
-        k.pose(1.8);const body1=k.rig.bodyGroup.getWorldPosition(k.camera.position.clone()).toArray();k.pose(0);
+        k.pose(1.8);const headRotation=head?head.quaternion.angleTo(head0):null;const body1=k.rig.bodyGroup.getWorldPosition(k.camera.position.clone()).toArray();k.pose(0);
         const data=await fetch(document.querySelector('#download').href).then(r=>r.arrayBuffer());
         const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),b=>b.toString(16).padStart(2,'0')).join('');
-        return {variant,clip:k.rig.clip.name,duration:k.rig.clip.duration,meshes:k.rig.meshes.length,triangles:k.rig.meshes.reduce((n,m)=>n+m.geometry.index.count/3,0),open,shut,reopened,body0,body1,sha256,shadow:k.renderer.shadowMap.enabled&&k.rig.meshes.every(m=>m.castShadow&&m.receiveShadow)};
+        return {variant,headRotation,clip:k.rig.clip.name,duration:k.rig.clip.duration,meshes:k.rig.meshes.length,triangles:k.rig.meshes.reduce((n,m)=>n+m.geometry.index.count/3,0),open,shut,reopened,body0,body1,sha256,shadow:k.renderer.shadowMap.enabled&&k.rig.meshes.every(m=>m.castShadow&&m.receiveShadow)};
       },{variant,closed});
       const manifest = await page.request.get(base+'assets/'+(variant==='biwa'?'karyobinga-biwa/manifest.json':'karyobinga/manifest.json')).then(r=>r.json());
       assert.equal(result.sha256,manifest.sha256);assert.equal(result.triangles,manifest.triangles);
-      assert(playing);assert.equal(result.open,0);assert(result.shut>.99);assert.equal(result.reopened,0);assert(result.shadow);assert(result.body0.some((v,i)=>Math.abs(v-result.body1[i])>.01));
+      assert(playing);if(variant==='biwa')assert(result.headRotation>.025,'Head must move relative to the body');assert.equal(result.open,0);assert(result.shut>.99);assert.equal(result.reopened,0);assert(result.shadow);assert(result.body0.some((v,i)=>Math.abs(v-result.body1[i])>.01));
       await page.screenshot({path:path.join(out,variant+'-gallery.png')});
       for (const view of ['face','hairback']) {
         await frame.evaluate(view=>{__karyo.view(view);__karyo.pose(0);},view);

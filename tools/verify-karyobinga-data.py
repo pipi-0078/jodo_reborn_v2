@@ -35,7 +35,7 @@ class GLB:
 reports = []
 for source, target in [
     ('karyobinga-design/karyobinga-floating-v11.glb','karyobinga/karyobinga-flute-v11.glb.gz'),
-    ('karyobinga-biwa-design/karyobinga-biwa-floating.glb','karyobinga-biwa/karyobinga-biwa-floating.glb.gz'),
+    ('karyobinga-biwa-design/karyobinga-biwa-floating-v2.glb','karyobinga-biwa/karyobinga-biwa-floating-v2.glb.gz'),
 ]:
     a, b = GLB(ROOT.parent/source), GLB(ROOT/'public/assets'/target)
     assert a.doc['nodes'] == b.doc['nodes'], 'Node transforms or hierarchy changed'

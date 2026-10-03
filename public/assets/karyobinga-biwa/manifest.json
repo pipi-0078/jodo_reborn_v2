@@ -1,20 +1,20 @@
 {
-  "source": "karyobinga-biwa-floating.glb",
-  "sourceSha256": "753e096fe0e25b3a0136db7f776b79caddd3fa9007c2a5fca0d90b5d5e949564",
-  "file": "karyobinga-biwa-floating.glb.gz",
-  "sourceBytes": 82218028,
-  "bytes": 47591244,
-  "gzipBytes": 30473528,
-  "sha256": "bbc5f0530f6773ffad4f94791b96255c6e1bd7f04529e296f4a77336cd7481a8",
-  "triangles": 497609,
+  "source": "karyobinga-biwa-floating-v2.glb",
+  "sourceSha256": "54cc3750531f1e41ca784f1e5f5b60900f12001fc330ce993ec637c4773b8b5c",
+  "file": "karyobinga-biwa-floating-v2.glb.gz",
+  "sourceBytes": 94890336,
+  "bytes": 55952364,
+  "gzipBytes": 31602562,
+  "sha256": "f99e639b43a935d8a200fbf02456701540a2f5819f67853086b52c24fbd10b38",
+  "triangles": 497745,
   "sourceTriangles": 834853,
   "meshes": [
     {
       "name": "Floating_Original_body_biwa_and_wings",
       "sourceTriangles": 459451,
-      "triangles": 122207,
-      "vertices": 77758,
-      "error": 0.0019832735415548086,
+      "triangles": 122343,
+      "vertices": 77845,
+      "error": 0.0019564356189221144,
       "topologyPreserved": false
     },
     {
@@ -148,7 +148,15 @@
     "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
     "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
     "e3cc5e806ae26b05c6f5f7063d2c8c4471364a48277b077484de47eafc3fd01b",
-    "6a6c4c407e51e757dcd486b7c40f0cb9eb62112f9bc892de1b7a913d4604b4b1"
+    "6a6c4c407e51e757dcd486b7c40f0cb9eb62112f9bc892de1b7a913d4604b4b1",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "7745a833ed606af42bef6ae043debb16c6db88e675f6db28e9b2039fcb8d8906",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "394e16b6fa5ab85465cee15a8db162d3492ef78ed99fed8b31e918098e742868",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "5d23248b95ca6da6c5d10ec6b7e6e6abcdccfcfd6119409be332facb74c53d0d",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "9a5c45e5db565f9ea93ce33bd2375c96577eeb099b25a5a1cdb75a4dad6c7555"
   ],
   "animations": [
     "BiwaFloatingIdle"

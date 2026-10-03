@@ -24,9 +24,9 @@
     {
       "id": "karyobinga-biwa",
       "name": "極楽鳥・迦陵頻伽（琵琶・浮遊）",
-      "file": "karyobinga-biwa/karyobinga-biwa-floating.glb.gz",
+      "file": "karyobinga-biwa/karyobinga-biwa-floating-v2.glb.gz",
       "preview": "karyobinga-biwa.html",
-      "desc": "エメラルドグリーンの衣と翼をまとい、琵琶を携えた迦陵頻伽。瞬きをしながら浮かび、細い髪と薄衣がゆっくり揺れます。如来さまに向かって左で漂います。",
+      "desc": "エメラルドグリーンの衣と翼をまとい、琵琶を携えた迦陵頻伽。瞬きをしながら浮かび、胸元に合わせて頭が緩やかに揺れ、細い髪と薄衣がなびきます。如来さまに向かって左で漂います。",
       "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 多視点 / 顔・髪の再制作・浮遊アニメーション: 本プロジェクト"
     },
     {

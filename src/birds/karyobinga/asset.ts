@@ -8,7 +8,7 @@ export const KARYOBINGA_ASSETS = {
     span: 1.8, frontOffset: 0.55,
   },
   biwa: {
-    file: 'karyobinga-biwa/karyobinga-biwa-floating.glb.gz',
+    file: 'karyobinga-biwa/karyobinga-biwa-floating-v2.glb.gz',
     clip: 'BiwaFloatingIdle', body: 'BiwaBody',
     face: [0, 0.884, 0.385], hair: [0, 0.79, 0.24],
     span: 1.75, frontOffset: 0.20,
