@@ -1,10 +1,152 @@
 {
-  "source": "karyobinga-floating.glb / float-2",
-  "sha256": "cd5f32ee404f422eff9bc1389c878dd1902d42750b06e4d1e380eabd4269c61d",
-  "sourceBytes": 53411608,
-  "compressedBytes": 22125237,
-  "compression": "gzip (lossless)",
-  "triangles": 541525,
-  "animation": "FloatingIdle",
-  "duration": 21.6
+  "source": "karyobinga-floating-v11.glb",
+  "sourceSha256": "d412e2dca82b47fbb46836394734c678e9ea900140e7cc9de6871c2d17e6c090",
+  "file": "karyobinga-flute-v11.glb.gz",
+  "sourceBytes": 80020016,
+  "bytes": 42729788,
+  "gzipBytes": 23661201,
+  "sha256": "98c1cb9dc4912909c1f9329557cd2eff244f69eb496d9d836c65e3b42bc8725f",
+  "triangles": 460139,
+  "sourceTriangles": 836931,
+  "meshes": [
+    {
+      "name": "Idle_tripo_mesh_4528fb8f-014d-4d3b-9563-f5e10dcb0108",
+      "sourceTriangles": 483066,
+      "triangles": 106274,
+      "vertices": 64054,
+      "error": 0.0015822089044377208,
+      "topologyPreserved": false
+    },
+    {
+      "name": "Idle_tripo_mesh_4528fb8f-014d-4d3b-9563-f5e10dcb0108_1",
+      "sourceTriangles": 549,
+      "triangles": 549,
+      "vertices": 392,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_RetainedHair_0",
+      "sourceTriangles": 1847,
+      "triangles": 1847,
+      "vertices": 1192,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_RetainedHair_1",
+      "sourceTriangles": 658,
+      "triangles": 658,
+      "vertices": 488,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_Face",
+      "sourceTriangles": 50155,
+      "triangles": 50155,
+      "vertices": 30781,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_Hair",
+      "sourceTriangles": 152379,
+      "triangles": 152379,
+      "vertices": 91825,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_Crown",
+      "sourceTriangles": 67303,
+      "triangles": 67303,
+      "vertices": 43051,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_FlowingLocks",
+      "sourceTriangles": 75900,
+      "triangles": 75900,
+      "vertices": 72000,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Idle_Approved_v11_head_HairDensity",
+      "sourceTriangles": 5074,
+      "triangles": 5074,
+      "vertices": 2640,
+      "error": 0,
+      "topologyPreserved": true
+    }
+  ],
+  "images": [
+    {
+      "index": 0,
+      "originalBytes": 550168,
+      "bytes": 563632,
+      "preserved": false
+    },
+    {
+      "index": 1,
+      "originalBytes": 1993280,
+      "bytes": 1664481,
+      "preserved": false
+    },
+    {
+      "index": 2,
+      "originalBytes": 815804,
+      "bytes": 725675,
+      "preserved": false
+    },
+    {
+      "index": 3,
+      "originalBytes": 3289980,
+      "bytes": 3289980,
+      "preserved": true
+    },
+    {
+      "index": 4,
+      "originalBytes": 3092576,
+      "bytes": 3092576,
+      "preserved": true
+    },
+    {
+      "index": 5,
+      "originalBytes": 5576640,
+      "bytes": 502943,
+      "preserved": false
+    },
+    {
+      "index": 6,
+      "originalBytes": 942988,
+      "bytes": 655016,
+      "preserved": false
+    }
+  ],
+  "animationTracksSha256": [
+    "06e67b536a4c36ee6356e89d1d489959f5233fbd4472e91c22d3e9071277c5ef",
+    "87da0db3aec0ac37f0f080b31aa74d45b734f64570f2f3cb9105238a3ed09449",
+    "06e67b536a4c36ee6356e89d1d489959f5233fbd4472e91c22d3e9071277c5ef",
+    "c914aa6e37667baa11e4e77d7568040025e5b87147ce15ca5dcd0afcb5088934",
+    "06e67b536a4c36ee6356e89d1d489959f5233fbd4472e91c22d3e9071277c5ef",
+    "0ebe7604d3fc81f84e408762118e5c81c179e670e29e9b9c2761573d99829aae",
+    "9cecbf132390567fab5b84300a28f60e1acc7065708b4905490f589238939049",
+    "d418166ac2325e5eafeb29d6d65a4f622ef6665e262c2dc4d86e4d45017d8751",
+    "0fbbb0976d7487055784947337f0cd7eeaeabcae420204910321d1b2865a9918",
+    "1c43902403f55100041ee43bf6fa554f7f5e28c1928eb5c13c6d5379df467b64",
+    "0fbbb0976d7487055784947337f0cd7eeaeabcae420204910321d1b2865a9918",
+    "f3a6e15bf2952ddd37b9ddc932f8e51d6197d9aac7ce1e6e681851068c643af5",
+    "0fbbb0976d7487055784947337f0cd7eeaeabcae420204910321d1b2865a9918",
+    "f3a6e15bf2952ddd37b9ddc932f8e51d6197d9aac7ce1e6e681851068c643af5",
+    "0fbbb0976d7487055784947337f0cd7eeaeabcae420204910321d1b2865a9918",
+    "0a051aa9dda11884d611c903aac65330d5c800a76775cddd13c04874de96151b",
+    "0fbbb0976d7487055784947337f0cd7eeaeabcae420204910321d1b2865a9918",
+    "8ee06dd1f4e84300016e972f32a90ca6628a19cf19441bb1266c66c871e542bb"
+  ],
+  "animations": [
+    "FloatingIdle"
+  ]
 }

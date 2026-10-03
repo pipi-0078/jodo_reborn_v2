@@ -106,13 +106,15 @@ export const CRANE_RADIUS = 36.85;
 export const CRANE_ANGLE = -Math.PI * 3 / 4;
 export const CRANE_SCALE = 2.2;
 
-// 東の参拝位置から見て右奥の八角楼の北東側（前回より右奥）、岸の陸上。浮遊クリップの高さも倍率に含む。
+// 正面の参道（東・+X）から如来を見ると、+Z が左、-Z が右。
+// 翼幅と坐像の幅の間に余裕を残し、承認済みの浮遊を外側のGroupで配置する。
 export const KARYOBINGA_SCALE = AMIDA_SCALE * 0.47;
 export const KARYOBINGA_HOME = {
-  x: -PAVILION_RADIUS / Math.SQRT2 + PAVILION_CLEARANCE * 0.1,
-  y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.5,
-  z: -PAVILION_RADIUS / Math.SQRT2 - AMIDA_SCALE * 2.5,
+  x: AMIDA_SCALE * 0.07,
+  y: ISLAND_TOP + DAIS_UPPER_H + AMIDA_SCALE * 0.19,
+  z: -AMIDA_SCALE * 0.97,
 };
+export const KARYOBINGA_BIWA_HOME = { ...KARYOBINGA_HOME, z: -KARYOBINGA_HOME.z };
 
 // 舎利は七宝池の上空、羅網の下を巡る。中島・外岸から翼幅の余裕を取る。
 export const SHARI_SCALE = AMIDA_SCALE * 0.34;

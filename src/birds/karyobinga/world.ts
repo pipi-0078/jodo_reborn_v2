@@ -1,22 +1,14 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { KARYOBINGA_HOME, KARYOBINGA_SCALE } from '../../world/layout';
+import { KARYOBINGA_HOME, KARYOBINGA_BIWA_HOME, KARYOBINGA_SCALE } from '../../world/layout';
+import { loadKaryobinga, type KaryobingaVariant } from './asset';
 
-export async function createWorldKaryobinga(scene: THREE.Scene) {
-  const response = await fetch(`${import.meta.env.BASE_URL}assets/karyobinga/karyobinga-floating.glb.gz`);
-  if (!response.ok) throw new Error(`Karyobinga HTTP ${response.status}`);
-  const packed = await response.arrayBuffer();
-  const bytes = new Uint8Array(packed);
-  const data = bytes[0] === 0x1f && bytes[1] === 0x8b
-    ? await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
-    : packed;
-  const gltf = await new GLTFLoader().parseAsync(data, '');
-  const clip = gltf.animations.find(a => a.name === 'FloatingIdle');
-  if (!clip) throw new Error('Karyobinga FloatingIdle animation is missing');
+export async function createWorldKaryobinga(scene: THREE.Scene, variant: KaryobingaVariant = 'flute') {
+  const { gltf, clip } = await loadKaryobinga(variant);
+  const home = variant === 'biwa' ? KARYOBINGA_BIWA_HOME : KARYOBINGA_HOME;
   // Keep placement outside the animated hierarchy so hover tracks retain their original pose.
   const bird = new THREE.Group();
-  bird.name = 'WorldKaryobinga';
-  bird.position.set(KARYOBINGA_HOME.x, KARYOBINGA_HOME.y, KARYOBINGA_HOME.z);
+  bird.name = variant === 'biwa' ? 'WorldKaryobingaBiwa' : 'WorldKaryobinga';
+  bird.position.set(home.x, home.y, home.z);
   bird.scale.setScalar(KARYOBINGA_SCALE);
   bird.rotation.y = Math.PI / 2;
   bird.add(gltf.scene);
@@ -40,15 +32,20 @@ export async function createWorldKaryobinga(scene: THREE.Scene) {
   });
   const mixer = new THREE.AnimationMixer(gltf.scene);
   mixer.clipAction(clip).play();
-  mixer.update(0);
+  mixer.setTime(variant === 'biwa' ? 3.6 : 0);
+  bird.updateMatrixWorld(true);
   scene.add(bird);
   let elapsed = 0;
-  const actor = { bird, mixer, clip, update(dt: number) {
+  const actor = { bird, mixer, clip, variant, seek(time: number) {
+    mixer.setTime(time);
+    bird.updateMatrixWorld(true);
+  }, update(dt: number) {
     elapsed += dt;
     if (elapsed < 1 / 30) return;
     mixer.update(elapsed);
     elapsed = 0;
   } };
-  (window as unknown as { __worldKaryobinga: typeof actor }).__worldKaryobinga = actor;
+  const key = variant === 'biwa' ? '__worldKaryobingaBiwa' : '__worldKaryobinga';
+  (window as unknown as Record<string, typeof actor>)[key] = actor;
   return actor;
 }

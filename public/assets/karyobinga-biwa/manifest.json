@@ -1,0 +1,156 @@
+{
+  "source": "karyobinga-biwa-floating.glb",
+  "sourceSha256": "753e096fe0e25b3a0136db7f776b79caddd3fa9007c2a5fca0d90b5d5e949564",
+  "file": "karyobinga-biwa-floating.glb.gz",
+  "sourceBytes": 82218028,
+  "bytes": 47591244,
+  "gzipBytes": 30473528,
+  "sha256": "bbc5f0530f6773ffad4f94791b96255c6e1bd7f04529e296f4a77336cd7481a8",
+  "triangles": 497609,
+  "sourceTriangles": 834853,
+  "meshes": [
+    {
+      "name": "Floating_Original_body_biwa_and_wings",
+      "sourceTriangles": 459451,
+      "triangles": 122207,
+      "vertices": 77758,
+      "error": 0.0019832735415548086,
+      "topologyPreserved": false
+    },
+    {
+      "name": "Floating_Original_body_biwa_and_wings_1",
+      "sourceTriangles": 8462,
+      "triangles": 8462,
+      "vertices": 6211,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Refined_flowing_hair_1",
+      "sourceTriangles": 950,
+      "triangles": 950,
+      "vertices": 1183,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Refined_flowing_hair_2",
+      "sourceTriangles": 6601,
+      "triangles": 6601,
+      "vertices": 4284,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Rebuilt_head_eyes_and_strand_hair_1",
+      "sourceTriangles": 41439,
+      "triangles": 41439,
+      "vertices": 25296,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Rebuilt_head_eyes_and_strand_hair_2",
+      "sourceTriangles": 156307,
+      "triangles": 156307,
+      "vertices": 98755,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Rebuilt_head_eyes_and_strand_hair_3",
+      "sourceTriangles": 71411,
+      "triangles": 71411,
+      "vertices": 48097,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Individual_rear_locks_and_fibers",
+      "sourceTriangles": 86020,
+      "triangles": 86020,
+      "vertices": 81600,
+      "error": 0,
+      "topologyPreserved": true
+    },
+    {
+      "name": "Floating_Thin_rear_hair_underlayer",
+      "sourceTriangles": 4212,
+      "triangles": 4212,
+      "vertices": 2200,
+      "error": 0,
+      "topologyPreserved": true
+    }
+  ],
+  "images": [
+    {
+      "index": 0,
+      "originalBytes": 2008344,
+      "bytes": 1304925,
+      "preserved": false
+    },
+    {
+      "index": 1,
+      "originalBytes": 3351628,
+      "bytes": 1870567,
+      "preserved": false
+    },
+    {
+      "index": 2,
+      "originalBytes": 7748100,
+      "bytes": 766583,
+      "preserved": false
+    },
+    {
+      "index": 3,
+      "originalBytes": 3289980,
+      "bytes": 3289980,
+      "preserved": true
+    },
+    {
+      "index": 4,
+      "originalBytes": 3093856,
+      "bytes": 3093856,
+      "preserved": true
+    },
+    {
+      "index": 5,
+      "originalBytes": 5720188,
+      "bytes": 551384,
+      "preserved": false
+    },
+    {
+      "index": 6,
+      "originalBytes": 1231492,
+      "bytes": 836373,
+      "preserved": false
+    }
+  ],
+  "animationTracksSha256": [
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "27fc2443a6721b2f2988d219522f4c1f3fbeaaf487412a99706ce56eb51de14b",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "7bdca141a3a7eaea1c3475419574f1d5608ec38b3bc8c2b4c9917363057f1c10",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "6b937f8651c3931d1a23d4fa4cab2ad1974176ec16a8b26be387de642d81b60d",
+    "274d68672553430c8523fdca5ba010bfb962629d41ab83b869fdbca4f3755de9",
+    "e3cc5e806ae26b05c6f5f7063d2c8c4471364a48277b077484de47eafc3fd01b",
+    "6a6c4c407e51e757dcd486b7c40f0cb9eb62112f9bc892de1b7a913d4604b4b1"
+  ],
+  "animations": [
+    "BiwaFloatingIdle"
+  ]
+}

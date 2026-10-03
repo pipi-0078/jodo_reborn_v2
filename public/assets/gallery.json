@@ -5,7 +5,10 @@
       "name": "極楽鳥・共命之鳥（白蓮上）",
       "file": "gumyocho-on-lotus.glb",
       "animation": "Everyday life",
-      "tint": { "materialName": "petal", "color": "#f7faff" },
+      "tint": {
+        "materialName": "petal",
+        "color": "#f7faff"
+      },
       "glow": true,
       "desc": "紅と金の二つの頭を持つ共命之鳥。池の左奥にある白い蓮の上で、左右の頭が水を飲み、羽を繕い、両翼をゆっくり広げます。",
       "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 / 骨格・動作・蓮上配置: 本プロジェクト"
@@ -19,12 +22,20 @@
       "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 多視点 / 骨格・瞬き・尾羽・飛行: 本プロジェクト"
     },
     {
+      "id": "karyobinga-biwa",
+      "name": "極楽鳥・迦陵頻伽（琵琶・浮遊）",
+      "file": "karyobinga-biwa/karyobinga-biwa-floating.glb.gz",
+      "preview": "karyobinga-biwa.html",
+      "desc": "エメラルドグリーンの衣と翼をまとい、琵琶を携えた迦陵頻伽。瞬きをしながら浮かび、細い髪と薄衣がゆっくり揺れます。如来さまに向かって左で漂います。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 多視点 / 顔・髪の再制作・浮遊アニメーション: 本プロジェクト"
+    },
+    {
       "id": "karyobinga",
-      "name": "極楽鳥・迦陵頻伽（浮遊）",
-      "file": "karyobinga/karyobinga-floating.glb.gz",
+      "name": "極楽鳥・迦陵頻伽（横笛・浮遊）",
+      "file": "karyobinga/karyobinga-flute-v11.glb.gz",
       "preview": "karyobinga.html",
-      "desc": "横笛を携えた極彩色の迦陵頻伽。体を少し前へ傾けて漂い、瞬き・呼吸・翼・薄布・両手が穏やかに動きます。浮遊姿勢の展示。",
-      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 / 顔・姿勢調整・アニメーション: 本プロジェクト"
+      "desc": "横笛を携えた極彩色の迦陵頻伽。顔と髪を細かく作り直し、瞬き・呼吸・翼・薄布・両手と髪が穏やかに動きます。如来さまに向かって右で漂います。",
+      "credit": "デザイン: 内蔵画像生成 / 3D: fal.ai経由 Tripo H3.1 / 顔・髪の再制作・浮遊アニメーション: 本プロジェクト"
     },
     {
       "id": "crane",

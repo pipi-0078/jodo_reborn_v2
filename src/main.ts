@@ -15,7 +15,7 @@ import { createPond } from './world/pond';
 import { createProps } from './world/props';
 import { createFallingFlowers } from './world/petals';
 import { createPurpleClouds } from './world/clouds';
-import { NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround, GUMYOCHO_VIEW_RADIUS } from './world/layout';
+import { ISLAND_TOP, NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround, GUMYOCHO_VIEW_RADIUS } from './world/layout';
 import { createWorldPeacock } from './birds/peacock/world.js';
 import { FirstPersonWalker } from './controls/firstPerson';
 
@@ -42,7 +42,10 @@ async function main(): Promise<void> {
   const peacock = await createWorldPeacock(scene);
   const parrot = await createWorldParrot(scene);
   const crane = await createWorldCrane(scene, sunDirection);
-  const karyobinga = await createWorldKaryobinga(scene);
+  const karyobingas = await Promise.all([
+    createWorldKaryobinga(scene, 'flute'),
+    createWorldKaryobinga(scene, 'biwa'),
+  ]);
   const shari = await createWorldShari(scene);
   const flowers = createFallingFlowers(scene); // 雨天曼陀羅華
 
@@ -82,6 +85,12 @@ async function main(): Promise<void> {
     camera.lookAt(focus);
   }
 
+  if (view === 'karyobinga') {
+    const viewpoint = BRIDGE_CENTER;
+    camera.position.set(viewpoint, bridgeHeight(viewpoint) + 1.6, 0);
+    camera.lookAt(0, ISLAND_TOP + AMIDA_SCALE * 0.7, 0);
+  }
+
   // 動作検証用フック(ヘッドレステストからカメラを動かす)
   (window as unknown as { __camera?: THREE.PerspectiveCamera }).__camera = camera;
   (window as unknown as { __scene?: THREE.Scene }).__scene = scene;
@@ -100,7 +109,7 @@ async function main(): Promise<void> {
     walker.update(dt);
     gumyocho.update(dt);
     shari.update(dt);
-    karyobinga.update(dt);
+    for (const bird of karyobingas) bird.update(dt);
     crane.update(dt);
     parrot.update(dt);
     parrotShadow.update(dt);
