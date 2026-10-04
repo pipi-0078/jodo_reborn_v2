@@ -19,6 +19,7 @@ interface GalleryItem {
   sources?: string[];
   preview?: string; // 行動付きアセットは専用の展示ページで確認する
   animation?: string; // GLBに収録された動作をそのまま展示する
+  surfaceY?: number; // 水面に触れる動作はGLB内の接触面を展示床に合わせる
   tint?: { materialName: string; color: string };
   glow?: boolean; // 蓮など、tint の色で淡く光らせる(発光マップ+光のスプライト+床の光輪)
   attach?: string[]; // 同じ座標系の添え物(光背の後ろに坐像を置く等)。一緒に読み込んで同じ枠で見せる
@@ -204,7 +205,7 @@ async function main(): Promise<void> {
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    model.position.set(-center.x, -box.min.y, -center.z);
+    model.position.set(-center.x, -(item.surfaceY ?? box.min.y), -center.z);
     if (item.tint && item.glow) {
       // 花の芯の光と、展示台に落ちる光輪
       const radius = Math.max(size.x, size.z) / 2;
@@ -212,7 +213,7 @@ async function main(): Promise<void> {
       sprite.position.set(0, Math.min(size.y * 0.35, 0.2), 0);
       model.add(sprite);
       const halo = makeHaloMesh(item.tint.color, radius * 1.35, 0.5);
-      halo.position.y = 0.02;
+      halo.position.y = (item.surfaceY ?? 0) + 0.02;
       model.add(halo);
     }
     scene.add(model);
@@ -230,8 +231,9 @@ async function main(): Promise<void> {
     }
 
     const radius = Math.max(size.x, size.y, size.z) / 2;
-    controls.target.set(0, size.y * 0.45, 0);
-    camera.position.set(radius * 1.6, size.y * 0.55, radius * 2.4);
+    const visibleHeight = box.max.y + model.position.y;
+    controls.target.set(0, visibleHeight * 0.45, 0);
+    camera.position.set(radius * 1.6, visibleHeight * 0.55, radius * 2.4);
     // Leave room for the open wings and forward drinking pose on portrait screens.
     cameraFit = (animatedFraming ? 1.3 : 1.15) * Math.max(1, 1 / camera.aspect);
     camera.position.sub(controls.target).multiplyScalar(cameraFit).add(controls.target);

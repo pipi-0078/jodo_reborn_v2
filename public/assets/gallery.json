@@ -5,6 +5,7 @@
       "name": "極楽鳥・共命之鳥（白蓮上）",
       "file": "gumyocho-on-lotus.glb",
       "animation": "Everyday life",
+      "surfaceY": -0.36,
       "tint": {
         "materialName": "petal",
         "color": "#f7faff"
