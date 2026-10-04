@@ -10,6 +10,7 @@ import { applyPureGold, createGoldEnvironment } from './world/gold';
 interface GalleryItem {
   id: string;
   name: string;
+  category: string;
   file: string;
   desc: string;
   credit: string;
@@ -78,11 +79,11 @@ async function main(): Promise<void> {
   preview.id = 'asset-preview';
   preview.hidden = true;
   document.body.appendChild(preview);
-  const listElement = document.getElementById('list')!;
+  const browseElement = document.getElementById('browse')!;
   const captionElement = document.getElementById('caption')!;
   const fitPreview = (): void => {
     backdropDirty = true;
-    const top = listElement.getBoundingClientRect().bottom;
+    const top = browseElement.getBoundingClientRect().bottom;
     const bottom = captionElement.getBoundingClientRect().height;
     const availableHeight = Math.max(1, window.innerHeight - top - bottom);
     preview.style.top = `${top}px`;
@@ -118,7 +119,7 @@ async function main(): Promise<void> {
     camera.updateProjectionMatrix();
     backdropDirty = true;
   });
-  new ResizeObserver(fitPreview).observe(listElement);
+  new ResizeObserver(fitPreview).observe(browseElement);
   new ResizeObserver(fitPreview).observe(captionElement);
 
   async function show(item: GalleryItem): Promise<void> {
@@ -245,26 +246,79 @@ async function main(): Promise<void> {
   sources = manifest.sources ?? {};
   const items: GalleryItem[] = manifest.items;
   const list = document.getElementById('list')!;
-  const initialId = new URLSearchParams(location.search).get('asset') ?? items[0]?.id;
-  items.forEach((item) => {
-    const button = document.createElement('button');
-    button.textContent = item.name;
-    button.addEventListener('click', () => {
-      list.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
-      button.classList.add('active');
-      void show(item);
+  const categoryList = document.getElementById('categories')!;
+  const categories: { id: string; name: string }[] = [
+    { id: 'all', name: 'すべて' }, ...(manifest.categories ?? []),
+  ];
+  const params = new URLSearchParams(location.search);
+  const initialItem = items.find(item => item.id === params.get('asset'));
+  const requestedCategory = params.get('category');
+  let activeCategory = categories.some(category => category.id === requestedCategory)
+    ? requestedCategory! : initialItem?.category ?? 'all';
+  let selectedId: string | undefined;
+  const itemButtons = new Map<string, HTMLButtonElement>();
+  const categoryButtons = new Map<string, HTMLButtonElement>();
+
+  function selectItem(item: GalleryItem): void {
+    itemButtons.forEach((button, id) => {
+      button.classList.toggle('active', id === item.id);
+      button.setAttribute('aria-pressed', String(id === item.id));
     });
+    const url = new URL(location.href);
+    url.searchParams.set('asset', item.id);
+    url.searchParams.set('category', activeCategory);
+    history.replaceState(null, '', url);
+    if (selectedId !== item.id) {
+      selectedId = item.id;
+      void show(item);
+    }
+  }
+
+  function selectCategory(id: string, preferredId = selectedId): void {
+    activeCategory = id;
+    const visible = items.filter(item => id === 'all' || item.category === id);
+    const visibleIds = new Set(visible.map(item => item.id));
+    itemButtons.forEach((button, itemId) => { button.hidden = !visibleIds.has(itemId); });
+    categoryButtons.forEach((button, categoryId) => {
+      button.setAttribute('aria-pressed', String(categoryId === id));
+    });
+    list.scrollTop = 0;
+    const next = visible.find(item => item.id === preferredId) ?? visible[0];
+    if (next) {
+      selectItem(next);
+      itemButtons.get(next.id)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    fitPreview();
+  }
+
+  items.forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = item.name;
+    button.dataset.asset = item.id;
+    button.addEventListener('click', () => selectItem(item));
     list.appendChild(button);
-    if (item.id === initialId) button.click();
+    itemButtons.set(item.id, button);
   });
-  if (!list.querySelector('.active')) list.querySelector('button')?.click();
+  categories.forEach(category => {
+    const count = items.filter(item => category.id === 'all' || item.category === category.id).length;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `${category.name} ${count}`;
+    button.dataset.category = category.id;
+    button.setAttribute('aria-controls', 'list');
+    button.addEventListener('click', () => selectCategory(category.id));
+    categoryList.appendChild(button);
+    categoryButtons.set(category.id, button);
+  });
+  selectCategory(activeCategory, initialItem?.id);
 
   // 動作検証用フック
   (window as unknown as { __camera?: THREE.PerspectiveCamera; __show?: (id: string) => void }).__camera = camera;
   (window as unknown as { __controls?: unknown }).__controls = controls; // ヘッドレス検品で注視点を動かす用
   (window as unknown as { __show?: (id: string) => void }).__show = (id: string) => {
     const item = items.find((i) => i.id === id);
-    if (item) void show(item);
+    if (item) selectCategory(activeCategory === 'all' ? 'all' : item.category, item.id);
   };
 
   window.addEventListener('resize', () => {

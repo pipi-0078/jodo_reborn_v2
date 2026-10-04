@@ -11,12 +11,23 @@
     #asset-preview { position: fixed; left: 0; width: 100%; border: 0;
       height: auto; z-index: 4; background: transparent; }
     #asset-preview[hidden] { display: none; }
-    #list {
-      position: fixed; top: 0; left: 0; right: 96px; z-index: 10;
-      display: flex; flex-wrap: wrap; gap: 8px; padding: 14px;
-      box-sizing: border-box; max-height: 30vh; overflow-y: auto;
-      background: linear-gradient(to bottom, rgba(26,20,8,0.85), rgba(26,20,8,0.35) 70%, transparent);
+    #browse {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; flex-direction: column; box-sizing: border-box;
+      max-height: 30vh; max-height: 30dvh; padding: 12px 14px;
+      background: rgba(26,20,8,0.96); border-bottom: 1px solid rgba(232,195,122,0.25);
     }
+    #categories { display: flex; flex-wrap: wrap; gap: 6px; padding-right: 94px; flex: none; }
+    #categories button {
+      padding: 7px 12px; border: 1px solid rgba(232,195,122,0.4); border-radius: 7px;
+      color: #e8c37a; background: transparent; font-size: 13px; font-family: inherit; cursor: pointer;
+    }
+    #categories button[aria-pressed="true"] { color: #2a2010; background: #e8c37a; border-color: #e8c37a; }
+    #list {
+      display: flex; flex-wrap: wrap; flex: 0 1 auto; min-height: 0;
+      gap: 8px; padding: 10px 0 2px; overflow-y: auto; overscroll-behavior: contain;
+    }
+    #list button[hidden] { display: none; }
     #list button {
       flex: none; padding: 7px 14px; border-radius: 999px; cursor: pointer;
       border: 1px solid rgba(232,195,122,0.5); background: rgba(26,20,8,0.55);
@@ -39,9 +50,12 @@
     #caption .sources { margin: 8px 0; padding-left: 20px; }
     #caption a { color: #ead29e; text-underline-offset: 3px; }
     #caption .desc, #caption .credit { margin-top: 8px; color: #d2c6af; }
-    #caption :focus-visible, #list button:focus-visible { outline: 2px solid #fff1cd; outline-offset: 3px; }
+    #caption :focus-visible, #browse button:focus-visible { outline: 2px solid #fff1cd; outline-offset: 3px; }
     @media (max-width: 600px) {
-      #list { padding: 10px; gap: 6px; max-height: 25vh; max-height: 25dvh; }
+      #browse { padding: 10px; max-height: 32vh; max-height: 32dvh; }
+      #categories button { padding: 6px 9px; font-size: 12px; }
+      #list { gap: 6px; padding-top: 8px; }
+      #list button { font-size: 12px; padding: 6px 10px; }
       #caption { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
       #caption .name { font-size: 17px; }
       #caption .explanation, #caption .scene-note { font-size: 14px; }
@@ -55,7 +69,10 @@
   </style>
 </head>
 <body>
-  <div id="list"></div>
+  <div id="browse">
+    <nav id="categories" aria-label="アセットのカテゴリ"></nav>
+    <div id="list" role="group" aria-label="アセット一覧"></div>
+  </div>
   <a id="back" href="./">世界へ →</a>
   <div id="loading">読み込み中</div>
   <section id="caption" aria-label="アセットの解説" tabindex="0"><div class="content">

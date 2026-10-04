@@ -17,7 +17,8 @@
       "sources": [
         "sutra",
         "gumyocho"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "shari",
@@ -31,7 +32,8 @@
       "sources": [
         "sutra",
         "shari"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "karyobinga-biwa",
@@ -45,7 +47,8 @@
       "sources": [
         "karyobinga",
         "sutra"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "karyobinga",
@@ -59,7 +62,8 @@
       "sources": [
         "karyobinga",
         "sutra"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "crane",
@@ -73,7 +77,8 @@
       "sources": [
         "sutra",
         "birds"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "parrot",
@@ -86,7 +91,8 @@
       "sceneNote": "橋の欄干にとまり、周囲を見たり、首をかしげたりします。真珠色や淡い緑、藤色の羽は、この作品のために考えた色づかいです。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "peacock",
@@ -99,7 +105,8 @@
       "sceneNote": "池の岸で飾り羽を開閉しながら、歩いたり休んだりします。現実の孔雀をもとに、真珠や宝石を思わせる淡い色で表しました。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "birds"
     },
     {
       "id": "amida_hitem3d_eighth",
@@ -112,7 +119,8 @@
       "sources": [
         "sutra",
         "nyorai"
-      ]
+      ],
+      "category": "amida"
     },
     {
       "id": "island_dais",
@@ -124,7 +132,8 @@
       "sceneNote": "池の中島に設けた、阿弥陀さまのための壇です。四方の階段や灯籠を備えた形は、この空間のために設計しました。",
       "sources": [
         "dais"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "ramou",
@@ -136,7 +145,8 @@
       "sceneNote": "真珠や水晶の鎖が垂れる、天井飾りのように表しました。池の上に輪を重ね、この長い区画を外側の四周に使っています。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "ramou_short",
@@ -148,7 +158,8 @@
       "sceneNote": "内側の三周に使う、短い網飾りです。長い区画と組み合わせて輪にしています。この長短の作り分けは、空間に合わせた設計です。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_tree",
@@ -164,7 +175,8 @@
       "sceneNote": "金色の幹と葉に、真珠の鎖や淡い宝石を添えました。枝ぶりや飾りの形を見ながら、宝の木を立体で味わえるようにしています。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_takara",
@@ -176,7 +188,8 @@
       "sceneNote": "池に近い、いちばん内側の並木に使う宝樹です。金の幹に宝石の実や鎖を添え、近くを歩いたときに細部を楽しめる姿にしました。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_yanagi",
@@ -188,7 +201,8 @@
       "sceneNote": "垂れる枝を持つ柳の形で、宝の木を表しました。柳という種類や枝先の真珠の鎖は、お経の描写をもとに加えたデザインです。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_conifer",
@@ -200,7 +214,8 @@
       "sceneNote": "上に向かって細くなる、針葉樹の姿を取り入れました。この木の種類は制作上の工夫。丸く広がる木と並べ、並木に形の変化をつけています。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_broadleaf",
@@ -212,7 +227,8 @@
       "sceneNote": "枝葉が横へ広がる、広葉樹の形で表しました。金の幹と淡い宝石を組み合わせた姿は、宝樹の描写から思い描いたものです。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "houju_lod",
@@ -228,7 +244,8 @@
       "sceneNote": "外側の四周に並ぶ宝樹です。遠くから見ても金色の葉と宝石の飾りが分かるように、形をすっきりまとめました。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "pavilion",
@@ -240,7 +257,8 @@
       "sceneNote": "青い屋根を持つ、二階建ての楼閣にしました。反り上がる屋根や灯籠などは、日本のお寺の建築を取り入れた表現です。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "pavilion_b",
@@ -252,7 +270,8 @@
       "sceneNote": "八角形の建物を三層に重ね、黄金の塔のように表しました。八角形や屋根の形は、お経に寸法が指定されたものではなく、この作品のデザインです。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "bridge_long",
@@ -264,7 +283,8 @@
       "sceneNote": "岸と阿弥陀さまのいる中島を結びます。中央がゆるやかに盛り上がる形を反橋（そりばし）と呼び、ここでは四方から渡れるようにしました。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "lotus_blue",
@@ -282,7 +302,8 @@
       "sources": [
         "sutra",
         "lotus"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "lotus_yellow",
@@ -299,7 +320,8 @@
       "sceneNote": "花の中心から温かな黄色の光が透けるようにしました。同じ形の花でも、色が変わると池の印象が変わります。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "lotus_red",
@@ -317,7 +339,8 @@
       "sources": [
         "lotus",
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "lotus_white",
@@ -335,7 +358,8 @@
       "sources": [
         "sutra",
         "lotus"
-      ]
+      ],
+      "category": "adornments"
     },
     {
       "id": "lotus_bud",
@@ -352,7 +376,8 @@
       "sceneNote": "開いた花に淡い桃色の蕾を交ぜ、池の風景に変化をつけました。蕾の配置や色づかいは、この作品で加えた工夫です。",
       "sources": [
         "sutra"
-      ]
+      ],
+      "category": "adornments"
     }
   ],
   "sources": {
@@ -388,5 +413,19 @@
       "label": "蓮華（新纂浄土宗大辞典）",
       "url": "https://jodoshuzensho.jp/daijiten/index.php/蓮華"
     }
-  }
+  },
+  "categories": [
+    {
+      "id": "birds",
+      "name": "極楽鳥"
+    },
+    {
+      "id": "adornments",
+      "name": "荘厳"
+    },
+    {
+      "id": "amida",
+      "name": "阿弥陀如来"
+    }
+  ]
 }
