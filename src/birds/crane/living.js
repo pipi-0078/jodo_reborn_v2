@@ -1,3 +1,4 @@
+import { useGalleryBackdrop, usesGalleryBackdrop } from '../../galleryBackdrop';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -5,7 +6,7 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {Water} from 'three/addons/objects/Water.js';
 import {rigCrane} from './rig.js';
 const scene=new T.Scene();scene.background=new T.Color('#dce6df');scene.fog=new T.Fog('#dce6df',3,8);
-const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.3));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.85;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;document.body.append(renderer.domElement);
+const renderer=new T.WebGLRenderer({antialias:true,alpha:usesGalleryBackdrop});renderer.setPixelRatio(Math.min(devicePixelRatio,1.3));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.85;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;document.body.append(renderer.domElement);
 const camera=new T.PerspectiveCamera(38,innerWidth/innerHeight,.01,20);camera.position.set(1.6,1.15,1.9);const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,.22,0);controls.maxPolarAngle=Math.PI*.48;controls.minDistance=.5;controls.maxDistance=6;controls.update();
 const pmrem=new T.PMREMGenerator(renderer),room=new RoomEnvironment();scene.environment=pmrem.fromScene(room).texture;room.dispose();pmrem.dispose();scene.add(new T.HemisphereLight('#fff8e9','#7b9a93',1.5));const sun=new T.DirectionalLight('#fff0cf',2.0);sun.position.set(-1.8,3,2);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-2,right:2,top:2,bottom:-2,near:.1,far:8});sun.shadow.normalBias=.002;scene.add(sun);
 const bed=new T.Mesh(new T.CircleGeometry(4,80),new T.MeshStandardMaterial({color:'#c4b68a',roughness:.95}));bed.rotation.x=-Math.PI/2;bed.position.y=-.002;bed.receiveShadow=true;scene.add(bed);
@@ -16,7 +17,8 @@ for(let i=0;i<36;i++){const m=new T.Mesh(ringGeo,new T.MeshBasicMaterial({color:
 let events=0;
 function ripple(p){events++;for(let j=0;j<3;j++){const r=rings[cursor++%rings.length];r.age=-j*.17;r.m.position.set(p.x,level+.001+j*.0001,p.z);r.m.visible=false;}}
 // A few shoreline stones give scale without obscuring the feet.
-for(let i=0;i<12;i++){const a=i*2.399,rad=1.5+(i%3)*.13,m=new T.Mesh(new T.SphereGeometry(1,12,8),new T.MeshStandardMaterial({color:i%2?'#b4b6a5':'#ccc7b0',roughness:1}));m.position.set(Math.cos(a)*rad,.006,Math.sin(a)*rad);m.scale.set(.09,.035,.06);m.castShadow=true;scene.add(m);}
+for(let i=0;i<12;i++){const a=i*2.399,rad=1.5+(i%3)*.13,m=new T.Mesh(new T.SphereGeometry(1,12,8),new T.MeshStandardMaterial({color:i%2?'#b4b6a5':'#ccc7b0',roughness:1}));m.position.set(Math.cos(a)*rad,.006,Math.sin(a)*rad);m.scale.set(.09,.035,.06);m.castShadow=true;if(!usesGalleryBackdrop)scene.add(m);}
+useGalleryBackdrop(scene,renderer,camera,controls,0,[bed,water,...rings.map(r=>r.m)]);
 const rig=rigCrane((await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/crane/crane.glb`)).scene);scene.add(rig.group);
 let time=0,walkTime=0,paused=false,close=false,dirty=true,velocity=0,sway=0,active=0,stepAge=0,swing=null,maxReach=0;const feet=rig.legs.map(l=>l.foot.clone()),worldFeet=feet.map(p=>p.clone());
 const duration=.88,hold=.20,speed=.028;rig.group.position.set(-.45,-.004,0);worldFeet.forEach(p=>p.x-=.45);let heading=0;

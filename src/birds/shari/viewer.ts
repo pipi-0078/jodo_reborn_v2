@@ -1,3 +1,4 @@
+import { useGalleryBackdrop, usesGalleryBackdrop } from '../../galleryBackdrop';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -7,7 +8,7 @@ const embedded = new URLSearchParams(location.search).get('embedded') === '1';
 document.body.classList.toggle('embedded', embedded);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#e9e7ee');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: usesGalleryBackdrop });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.8;
@@ -26,6 +27,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = false;
 controls.minDistance = 0.12;
 controls.maxDistance = 6;
+useGalleryBackdrop(scene, renderer, camera, controls, -0.6);
 let viewName = 'side';
 let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let dirty = true;
@@ -57,8 +59,8 @@ for (const name of ['side', 'front', 'back', 'face']) document.getElementById(na
 document.getElementById('pause')!.onclick = () => { paused = !paused; syncPause(); dirty = true; };
 syncPause();
 function resize() {
-  const top = innerWidth < 650 ? (embedded ? 105 : 195) : 0;
-  const height = Math.max(150, innerHeight - top);
+  const top = usesGalleryBackdrop ? 0 : innerWidth < 650 ? (embedded ? 105 : 195) : 0;
+  const height = Math.max(usesGalleryBackdrop ? 1 : 150, innerHeight - top);
   renderer.domElement.style.marginTop = top + 'px';
   renderer.setSize(innerWidth, height);
   camera.aspect = innerWidth / height;

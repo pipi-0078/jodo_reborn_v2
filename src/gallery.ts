@@ -62,6 +62,7 @@ async function main(): Promise<void> {
   let mixer: THREE.AnimationMixer | null = null;
   let animatedFraming = false;
   let cameraFit = 1;
+  let backdropDirty = true;
   let showToken = 0; // 読み込み中に別の品目へ切り替えたとき、遅れて届いた前の品目を捨てる
 
   const loading = document.getElementById('loading')!;
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
   const listElement = document.getElementById('list')!;
   const captionElement = document.getElementById('caption')!;
   const fitPreview = (): void => {
+    backdropDirty = true;
     const top = listElement.getBoundingClientRect().bottom;
     const bottom = captionElement.getBoundingClientRect().height;
     const availableHeight = Math.max(1, window.innerHeight - top - bottom);
@@ -97,6 +99,25 @@ async function main(): Promise<void> {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, height);
   };
+  window.addEventListener('message', (event) => {
+    if (event.origin !== location.origin || event.source !== preview.contentWindow || preview.hidden) return;
+    const data = event.data;
+    if (data?.type !== 'gallery-backdrop-camera') return;
+    const { position, quaternion, fov, viewport } = data;
+    if (!Array.isArray(position) || position.length !== 3 || !position.every(Number.isFinite)
+      || !Array.isArray(quaternion) || quaternion.length !== 4 || !quaternion.every(Number.isFinite)
+      || !Number.isFinite(fov) || fov <= 0 || fov >= 180 || !viewport
+      || ![viewport.left, viewport.top, viewport.width, viewport.height].every(Number.isFinite)
+      || viewport.width <= 0 || viewport.height <= 0) return;
+    camera.position.fromArray(position);
+    camera.quaternion.fromArray(quaternion);
+    camera.fov = fov;
+    // Extend the bird's view across its toolbar margins without shifting the horizon.
+    camera.setViewOffset(viewport.width, viewport.height, -viewport.left, -viewport.top,
+      preview.clientWidth, preview.clientHeight);
+    camera.updateProjectionMatrix();
+    backdropDirty = true;
+  });
   new ResizeObserver(fitPreview).observe(listElement);
   new ResizeObserver(fitPreview).observe(captionElement);
 
@@ -132,14 +153,17 @@ async function main(): Promise<void> {
     }
     const token = ++showToken;
     preview.hidden = true;
+    camera.clearViewOffset();
+    camera.fov = 45;
     preview.removeAttribute('src'); // 他の品目では孔雀の描画・行動を停止
     renderer.domElement.style.display = '';
     fitPreview();
     if (item.preview) {
       preview.title = `${item.name}の動作展示`;
-      preview.src = `${import.meta.env.BASE_URL}${item.preview}?embedded=1`;
+      preview.src = `${import.meta.env.BASE_URL}${item.preview}?embedded=1&backdrop=gallery`;
       preview.hidden = false;
-      renderer.domElement.style.display = 'none';
+      // Draw the statue's sky and golden floor behind the transparent bird viewer.
+      backdropDirty = true;
       fitPreview();
       loading.classList.add('hidden');
       (window as unknown as { __model?: unknown }).__model = null;
@@ -250,7 +274,12 @@ async function main(): Promise<void> {
   const timer = new THREE.Timer();
   renderer.setAnimationLoop(() => {
     timer.update();
-    if (document.hidden || !preview.hidden) return;
+    if (document.hidden) return;
+    if (!preview.hidden) {
+      if (backdropDirty) postProcessing.render();
+      backdropDirty = false;
+      return;
+    }
     mixer?.update(Math.min(timer.getDelta(), 0.05));
     controls.update();
     postProcessing.render();

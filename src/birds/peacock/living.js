@@ -1,3 +1,4 @@
+import { useGalleryBackdrop, usesGalleryBackdrop } from '../../galleryBackdrop';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -9,12 +10,12 @@ import {PeacockBehavior} from './behavior.js';
 const embedded=new URLSearchParams(location.search).has('embedded');
 if(embedded)document.body.classList.add('embedded');
 const scene=new T.Scene();scene.background=new T.Color('#e8e3d7');scene.fog=new T.Fog('#e8e3d7',10,25);
-const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
+const renderer=new T.WebGLRenderer({antialias:true,alpha:usesGalleryBackdrop});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.75;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;document.body.append(renderer.domElement);
 const camera=new T.PerspectiveCamera(36,innerWidth/innerHeight,.01,40);
 function resize(){
-  const mobile=innerWidth<600,left=mobile?0:(embedded?260:330),top=mobile?(embedded?180:360):0;
-  const w=Math.max(1,innerWidth-left),h=Math.max(180,innerHeight-top);
+  const mobile=innerWidth<600,left=usesGalleryBackdrop?0:mobile?0:(embedded?260:330),top=usesGalleryBackdrop?0:mobile?(embedded?180:360):0;
+  const w=Math.max(1,innerWidth-left),h=Math.max(usesGalleryBackdrop?1:180,innerHeight-top);
   renderer.domElement.style.marginLeft=`${left}px`;renderer.domElement.style.marginTop=`${top}px`;
   camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);
 }
@@ -26,6 +27,7 @@ scene.add(new T.HemisphereLight(0xffffff,0xab956c,.8));
 const sun=new T.DirectionalLight(0xffffff,1);sun.position.set(-3,6,-4);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-4;sun.shadow.camera.right=4;sun.shadow.camera.top=4;sun.shadow.camera.bottom=-4;sun.shadow.normalBias=.005;scene.add(sun);
 const ground=new T.Mesh(new T.CircleGeometry(3.4,128),new T.MeshStandardMaterial({color:'#d7c49b',roughness:.95}));ground.rotation.x=-Math.PI/2;ground.position.y=-.003;ground.receiveShadow=true;scene.add(ground);
 const rim=new T.Mesh(new T.RingGeometry(3.38,3.43,128),new T.MeshStandardMaterial({color:'#b7a17b',roughness:.9}));rim.rotation.x=-Math.PI/2;rim.position.y=-.002;scene.add(rim);
+useGalleryBackdrop(scene,renderer,camera,controls,-.003,[ground,rim]);
 const bird=new T.Group();scene.add(bird);const brain=new PeacockBehavior();
 let rig,train,paused=false,ready=false,lastState='',lastPosition=new T.Vector3();
 const labels={look:['周囲を眺めています','少し立ち止まり、辺りの様子を見ています。'],walk:['庭を歩いています','行き先を決めて、ゆっくり向かっています。'],rest:['ひと休みしています','次に動き出すまで、静かに過ごします。'],display:['飾り羽を広げています','立ち止まって、羽をゆっくり開閉します。']};
