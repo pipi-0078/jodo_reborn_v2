@@ -69,34 +69,6 @@
       "credit": "生成: 施主が fal.ai の Hitem3D multi-view-to-3d で作成 / 改変: Blender で減面のみ"
     },
     {
-      "id": "amida",
-      "name": "阿弥陀如来坐像",
-      "file": "amida_gold.glb",
-      "desc": "弥陀の定印を結ぶ坐像。木彫スキャンを金色化(Phase 2で中島に安置予定)",
-      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 減面・金色マテリアル化"
-    },
-    {
-      "id": "amida_polish",
-      "name": "阿弥陀如来坐像(磨き・台座なし)",
-      "file": "amida_polish.glb?v=5",
-      "desc": "スキャン像から台座を外し、写真の色だけを金一色のPBRに置き換えた本体。形・法線・分割は原型のまま。蓮華座へ載せる本体",
-      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 台座除去・金色マテリアル化(色のみ)"
-    },
-    {
-      "id": "amida_full",
-      "name": "阿弥陀如来坐像・蓮華座付き(定印)",
-      "file": "amida_full.glb",
-      "desc": "スキャン原型を金箔仕上げにし、黄金の蓮華座と古典比率(膝張=蓮肉径)で合成。中島安置の本命",
-      "credit": "原型: Atsushi Nakabayashi (Sketchfab) CC-BY-SA-4.0 / 改変: 台座差替・金箔リテクスチャ・減面 / 蓮華座: 本プロジェクト"
-    },
-    {
-      "id": "rengeza",
-      "name": "黄金の蓮華座",
-      "file": "rengeza.glb?v=12",
-      "desc": "阿弥陀如来坐像の台座。格狭間と連珠の框座・反花二重・瓔珞を垂らした敷茄子・轆轤挽きの受座・子弁を浮彫にした蓮弁四重・蓮肉",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
       "id": "island_dais",
       "name": "中島の壇",
       "file": "island_dais.glb",
@@ -104,17 +76,17 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
-      "id": "houdou",
-      "name": "宝幢",
-      "file": "houdou.glb",
-      "desc": "高さ9mの幢(はたほこ)。三重の台座、八角の金の柱、頂の玻璃の宝珠、金の笠から四方へ下がる瑠璃の幡に金の縁取り、朱と金の垂れ。中島の上段の四隅に立てる",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
       "id": "ramou",
       "name": "七重羅網(一区画)",
       "file": "ramou.glb",
       "desc": "並木の上空に渡す宝石の網。一区画は長さ12.4m×幅6m。3.1mおきの支点(八弁の華鬘の金具と大きな色石)のあいだに、真珠と水晶の鎖が三本重ねて弧を描いて垂れる花綱(スワッグ)。幅方向に三列を高さをずらして重ね、列どうしを斜めの鎖でつなぐ。支点からは長さ違いの垂れ飾りが下がり、先にルビー・サファイア・水晶の雫。七つの並木の環の上に環状に並べて七重にする",
+      "credit": "制作: 本プロジェクト(Blender手続き生成)"
+    },
+    {
+      "id": "ramou_short",
+      "name": "七重羅網(内側用・短区画)",
+      "file": "ramou_short.glb",
+      "desc": "七宝池の上空に渡す七重羅網の内側三周で使う、長さ6.2mの短い区画。真珠と水晶の鎖が弧を描き、金の金具と宝石の垂れ飾りで荘厳する。",
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
@@ -157,13 +129,6 @@
       "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
     },
     {
-      "id": "houju_weeping",
-      "name": "宝樹(宝飾・枝垂れ)",
-      "file": "houju_weeping.glb",
-      "desc": "枝垂れの木に宝飾を施した版。金の幹、真珠の鎖と淡い宝石の実",
-      "credit": "制作: 本プロジェクト(承認済みの木に Blender で宝飾を追加)"
-    },
-    {
       "id": "houju_lod",
       "name": "宝樹(宝飾・外周軽量)",
       "file": "houju_lod.glb",
@@ -189,61 +154,11 @@
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
     },
     {
-      "id": "takara_tree",
-      "name": "大樹(写実型)",
-      "file": "takara_tree.glb",
-      "desc": "池の最前列に立つ主役の木。葉には四宝の色を乗せられる",
-      "credit": "原型: toshiki3782「tesuto tree」(Sketchfab) CC-BY-4.0 / 改変: 減面・葉のグレースケール化",
-      "tint": {
-        "materialName": "material_1",
-        "color": "#f0c050"
-      }
-    },
-    {
-      "id": "tree_conifer",
-      "name": "針葉宝樹(Blender製)",
-      "file": "tree_conifer.glb",
-      "desc": "円錐の葉を五段重ねた針葉樹型。頂に宝珠。葉は四宝の色に染められる",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
-      "id": "tree_broadleaf",
-      "name": "金葉樹(Blender製)",
-      "file": "tree_broadleaf.glb",
-      "desc": "骨格から生やした枝ぶりに、金の葉の房をまとう広葉樹型",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
-      "id": "tree_weeping",
-      "name": "垂宝樹(Blender製)",
-      "file": "tree_weeping.glb",
-      "desc": "枝垂れの房の先に光る宝玉を提げる。羅網の気配をまとう木",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
-      "id": "bridge",
-      "name": "金の反橋",
-      "file": "bridge.glb",
-      "desc": "擬宝珠の欄干と朱の中桟、四隅に灯籠を灯した反橋(全長8m)",
-      "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
       "id": "bridge_long",
       "name": "金の反橋(長橋・全長29m)",
       "file": "bridge_long.glb",
       "desc": "七宝池の四方に架ける長橋。中島(r=9.5)と岸(r=38.5)を結ぶ。反り高3.2m・幅3m",
       "credit": "制作: 本プロジェクト(Blender手続き生成)"
-    },
-    {
-      "id": "tree_meiboku",
-      "name": "名木(tree-gen試作)",
-      "file": "tree_meiboku.glb",
-      "desc": "Weber&Penn法による植物学的な枝ぶりの広葉樹。葉は四宝の色に染められる",
-      "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整",
-      "tint": {
-        "materialName": "foliage",
-        "color": "#f0c050"
-      }
     },
     {
       "id": "lotus_blue",
@@ -304,20 +219,6 @@
         "color": "#f2a8c0"
       },
       "glow": true
-    },
-    {
-      "id": "tree_yanagi",
-      "name": "枝垂れ柳(tree-gen試作)",
-      "file": "tree_yanagi.glb",
-      "desc": "同じくWeber&Penn法による枝垂れ柳。金の葉が枝先まで流れる",
-      "credit": "生成: friggog/tree-gen (GPL-3.0) を本プロジェクトが調整"
-    },
-    {
-      "id": "amida_wip",
-      "name": "阿弥陀如来坐像・本体(制作中)",
-      "file": "amida_wip.glb?v=89",
-      "desc": "MakeHuman(MPFB2)の素体から組み立て中の本体。承認用ではなく途中経過の確認用",
-      "credit": "ベースメッシュ: MakeHuman(CC0) / 組み立て: 本プロジェクト"
     }
   ]
 }
