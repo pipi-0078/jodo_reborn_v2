@@ -13,6 +13,9 @@ interface GalleryItem {
   file: string;
   desc: string;
   credit: string;
+  explanation?: string;
+  sceneNote?: string;
+  sources?: string[];
   preview?: string; // 行動付きアセットは専用の展示ページで確認する
   animation?: string; // GLBに収録された動作をそのまま展示する
   tint?: { materialName: string; color: string };
@@ -64,6 +67,11 @@ async function main(): Promise<void> {
   const loading = document.getElementById('loading')!;
   const captionName = document.querySelector('#caption .name')!;
   const captionDesc = document.querySelector('#caption .desc')!;
+  const captionExplanation = document.querySelector('#caption .explanation')!;
+  const captionScene = document.querySelector<HTMLElement>('#caption .scene-note')!;
+  const captionSources = document.querySelector('#caption .sources')!;
+  const captionDetails = document.querySelector<HTMLDetailsElement>('#caption details')!;
+  let sources: Record<string, { label: string; url: string }> = {};
   const captionCredit = document.querySelector('#caption .credit')!;
   const preview = document.createElement('iframe');
   preview.id = 'asset-preview';
@@ -74,16 +82,16 @@ async function main(): Promise<void> {
   const fitPreview = (): void => {
     const top = listElement.getBoundingClientRect().bottom;
     const bottom = captionElement.getBoundingClientRect().height;
-    const availableHeight = Math.max(120, window.innerHeight - top - bottom);
+    const availableHeight = Math.max(1, window.innerHeight - top - bottom);
     preview.style.top = `${top}px`;
     preview.style.bottom = `${bottom}px`;
     preview.style.height = `${availableHeight}px`;
-    // Animated models need the same unobstructed display area as embedded previews.
-    const height = animatedFraming ? availableHeight : window.innerHeight;
-    renderer.domElement.style.position = animatedFraming ? 'fixed' : '';
-    renderer.domElement.style.top = animatedFraming ? `${top}px` : '';
+    // Keep every model above the explanation panel, including on portrait screens.
+    const height = availableHeight;
+    renderer.domElement.style.position = 'fixed';
+    renderer.domElement.style.top = `${top}px`;
     camera.aspect = window.innerWidth / height;
-    const nextFit = animatedFraming ? 1.3 * Math.max(1, 1 / camera.aspect) : 1;
+    const nextFit = (animatedFraming ? 1.3 : 1.15) * Math.max(1, 1 / camera.aspect);
     camera.position.sub(controls.target).multiplyScalar(nextFit / cameraFit).add(controls.target);
     cameraFit = nextFit;
     camera.updateProjectionMatrix();
@@ -93,6 +101,27 @@ async function main(): Promise<void> {
   new ResizeObserver(fitPreview).observe(captionElement);
 
   async function show(item: GalleryItem): Promise<void> {
+    captionName.textContent = item.name;
+    captionExplanation.textContent = item.explanation ?? item.desc;
+    captionScene.textContent = item.sceneNote ?? '';
+    captionScene.hidden = !item.sceneNote;
+    captionDesc.textContent = item.desc;
+    captionCredit.textContent = item.credit;
+    captionDetails.open = false;
+    captionSources.replaceChildren();
+    for (const id of item.sources ?? []) {
+      const source = sources[id];
+      if (!source) continue;
+      const li = document.createElement('li');
+      const link = document.createElement('a');
+      link.textContent = source.label;
+      link.href = source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      li.appendChild(link);
+      captionSources.appendChild(li);
+    }
+    captionElement.scrollTop = 0;
     loading.classList.remove('hidden');
     mixer?.stopAllAction();
     mixer = null;
@@ -107,9 +136,6 @@ async function main(): Promise<void> {
     renderer.domElement.style.display = '';
     fitPreview();
     if (item.preview) {
-      captionName.textContent = item.name;
-      captionDesc.textContent = item.desc;
-      captionCredit.textContent = item.credit;
       preview.title = `${item.name}の動作展示`;
       preview.src = `${import.meta.env.BASE_URL}${item.preview}?embedded=1`;
       preview.hidden = false;
@@ -182,19 +208,17 @@ async function main(): Promise<void> {
     controls.target.set(0, size.y * 0.45, 0);
     camera.position.set(radius * 1.6, size.y * 0.55, radius * 2.4);
     // Leave room for the open wings and forward drinking pose on portrait screens.
-    cameraFit = animatedFraming ? 1.3 * Math.max(1, 1 / camera.aspect) : 1;
+    cameraFit = (animatedFraming ? 1.3 : 1.15) * Math.max(1, 1 / camera.aspect);
     camera.position.sub(controls.target).multiplyScalar(cameraFit).add(controls.target);
     controls.update();
 
-    captionName.textContent = item.name;
-    captionDesc.textContent = item.desc;
-    captionCredit.textContent = item.credit;
     loading.classList.add('hidden');
   }
 
   // no-cacheで毎回サーバに確認する(GitHub Pagesのキャッシュで新作が見えなくなるのを防ぐ)
   const manifest = await fetch(`${import.meta.env.BASE_URL}assets/gallery.json`, { cache: 'no-cache' })
     .then((r) => r.json());
+  sources = manifest.sources ?? {};
   const items: GalleryItem[] = manifest.items;
   const list = document.getElementById('list')!;
   const initialId = new URLSearchParams(location.search).get('asset') ?? items[0]?.id;
