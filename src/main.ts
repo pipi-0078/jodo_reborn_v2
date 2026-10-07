@@ -18,7 +18,8 @@ import { createPurpleClouds } from './world/clouds';
 import { ISLAND_TOP, NO_REFLECT_LAYER, AMIDA_SCALE, BRIDGE_CENTER, bridgeHeight, sampleGround, GUMYOCHO_VIEW_RADIUS } from './world/layout';
 import { createWorldPeacock } from './birds/peacock/world.js';
 import { FirstPersonWalker } from './controls/firstPerson';
-import { AmbientBgm } from './audio/bgm';
+import { setupEntrance } from './experience/entrance';
+import { FrameScheduler } from './experience/frameScheduler';
 
 async function main(): Promise<void> {
   const renderer = new THREE.WebGPURenderer({ antialias: true });
@@ -66,29 +67,9 @@ async function main(): Promise<void> {
   // ギャラリー(床の照り返しが弱い)だけで使う
   postProcessing.outputNode = scenePassColor.add(bloomPass);
 
-  const overlay = document.getElementById('overlay')!;
-  const walker = new FirstPersonWalker(camera, document.body, overlay, sampleGround);
+  const walker = new FirstPersonWalker(camera, document.body, sampleGround);
   scene.add(walker.controls.object);
-
-  const enterButton = document.getElementById('enter') as HTMLButtonElement;
-  const bgmEnabled = document.getElementById('bgm-enabled') as HTMLInputElement;
-  const audioError = document.getElementById('audio-error')!;
-  const bgm = new AmbientBgm(`${import.meta.env.BASE_URL}audio/celestial-resonance.mp3`, () => {
-    audioError.hidden = false;
-  });
-  // 音声の許可は入場ボタンの操作中に取得し、入場成功後に音量を上げる。
-  enterButton.addEventListener('click', () => {
-    audioError.hidden = true;
-    if (bgmEnabled.checked) bgm.prepare();
-  });
-  const updateBgm = () => bgm.setActive(document.pointerLockElement === document.body && bgmEnabled.checked && !document.hidden);
-  walker.controls.addEventListener('lock', updateBgm);
-  walker.controls.addEventListener('unlock', updateBgm);
-  document.addEventListener('pointerlockerror', () => bgm.setActive(false));
-  document.addEventListener('visibilitychange', updateBgm);
-  window.addEventListener('pagehide', () => bgm.stopImmediately());
-  enterButton.disabled = false;
-  enterButton.textContent = 'クリックして入場';
+  const isInside = setupEntrance(walker.controls, document.body);
 
   // 展示ページから来たときは東の橋から舎利を見上げる。通常の入場位置は維持する。
   const view = new URLSearchParams(location.search).get('view');
@@ -123,21 +104,16 @@ async function main(): Promise<void> {
   });
 
   const timer = new THREE.Timer();
+  const frames = new FrameScheduler();
+  const actors = [gumyocho, shari, ...karyobingas, crane, parrot, peacock, flowers, clouds];
   renderer.setAnimationLoop(() => {
     timer.update();
-    if (document.hidden) return;
-    const dt = Math.min(timer.getDelta(), 0.05);
-    walker.update(dt);
-    gumyocho.update(dt);
-    shari.update(dt);
-    for (const bird of karyobingas) bird.update(dt);
-    crane.update(dt);
-    parrot.update(dt);
+    const dt = frames.step(timer.getDelta(), isInside(), document.hidden);
+    if (dt === null) return;
+    walker.update(Math.min(dt, 0.05));
+    for (const actor of actors) actor.update(dt);
     parrotShadow.update(dt);
-    peacock.update(dt);
     peacockShadow.update(dt);
-    flowers.update(dt);
-    clouds.update(dt);
     shadows.update(dt);
     postProcessing.render();
   });

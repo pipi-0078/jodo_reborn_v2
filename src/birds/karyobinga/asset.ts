@@ -1,4 +1,4 @@
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGltfAssetWithData } from '../../assets/loadGltf';
 
 export const KARYOBINGA_ASSETS = {
   flute: {
@@ -18,15 +18,7 @@ export type KaryobingaVariant = keyof typeof KARYOBINGA_ASSETS;
 
 export async function loadKaryobinga(variant: KaryobingaVariant) {
   const config = KARYOBINGA_ASSETS[variant];
-  const response = await fetch(`${import.meta.env.BASE_URL}assets/${config.file}`);
-  if (!response.ok) throw new Error(`Karyobinga ${variant} HTTP ${response.status}`);
-  const packed = await response.arrayBuffer();
-  const bytes = new Uint8Array(packed);
-  // Some hosts decode .gz automatically. Check before inflating.
-  const data = bytes[0] === 0x1f && bytes[1] === 0x8b
-    ? await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
-    : packed;
-  const gltf = await new GLTFLoader().parseAsync(data, '');
+  const { gltf, data } = await loadGltfAssetWithData(`${import.meta.env.BASE_URL}assets/${config.file}`);
   const clip = gltf.animations.find(a => a.name === config.clip);
   const body = gltf.scene.getObjectByName(config.body);
   if (!clip || !body) throw new Error(`Karyobinga ${variant}: missing animation or body`);

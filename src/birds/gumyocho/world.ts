@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGltfAsset } from '../../assets/loadGltf';
 import { tintPetal } from '../../world/glow';
 import { applyPureGold } from '../../world/gold';
 import { GUMYOCHO_PERCH, WATER_LEVEL } from '../../world/layout';
@@ -7,7 +7,7 @@ import { gumyochoWaterFocus } from '../../world/waterSurface';
 
 // Preserve the approved bird/lotus contact and all animation tracks inside their original hierarchy.
 export async function createWorldGumyocho(scene: THREE.Scene, originalLotusMatrix: THREE.Matrix4) {
-  const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/gumyocho-on-lotus.glb`);
+  const gltf = await loadGltfAsset(`${import.meta.env.BASE_URL}assets/gumyocho-on-lotus.glb.gz`);
   const clip = gltf.animations.find(animation => animation.name === 'Everyday life');
   const bird = gltf.scene.getObjectByName('Bird_seated_on_receptacle');
   const lotus = gltf.scene.getObjectByName('Existing_lotus_in_bloom');

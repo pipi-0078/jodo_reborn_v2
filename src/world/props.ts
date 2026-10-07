@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGltfAsset } from '../assets/loadGltf';
 import { createWorldGumyocho } from '../birds/gumyocho/world';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeGlowSprite, makeHaloTexture, tintPetal } from './glow';
@@ -41,12 +41,10 @@ function makeRandom(seed: number): () => number {
   };
 }
 
-const loader = new GLTFLoader();
-
 // glbを読み、ノードの変換を頂点に焼き込み、マテリアルごとに1メッシュへまとめる。
 // floor: 最下点を y=0 に揃える(木や台座)。recenter: 原点から外れたモデルを中心へ寄せる
 async function loadTemplate(file: string, options: { floor?: boolean; recenter?: boolean } = {}): Promise<Template> {
-  const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/${file}`);
+  const gltf = await loadGltfAsset(`${import.meta.env.BASE_URL}assets/${file}.gz`);
   gltf.scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(gltf.scene, true);
   const center = box.getCenter(new THREE.Vector3());
@@ -195,14 +193,13 @@ function goldFoliage(name: string, leaf: number = GOLD_LEAF): (material: THREE.M
 // 七重行樹。内から: 宝樹(最内周)→名木・柳→針葉樹・広葉樹・名木(銀)→軽量宝樹4周
 // 9/4: すべての木を宝飾版(houju_*.glb: 金の幹、真珠の鎖、淡い宝石の雫と実)に差し替え
 async function placeTrees(scene: THREE.Scene): Promise<void> {
-  const [takara, meiboku, yanagi, conifer, broadleaf, lod, houju] = await Promise.all([
+  const [takara, houju, yanagi, conifer, broadleaf, lod] = await Promise.all([
     loadTemplate('houju_takara.glb', { floor: true, recenter: true }),
     loadTemplate('houju_tree.glb', { floor: true }),
     loadTemplate('houju_yanagi.glb', { floor: true }),
     loadTemplate('houju_conifer.glb', { floor: true }),
     loadTemplate('houju_broadleaf.glb', { floor: true }),
     loadTemplate('houju_lod.glb', { floor: true }),
-    loadTemplate('houju_tree.glb', { floor: true }),
   ]);
   const pavilions = pavilionPositions();
   const random = makeRandom(77);
@@ -255,7 +252,7 @@ async function placeTrees(scene: THREE.Scene): Promise<void> {
     const kind = i % 2;
     ring1[kind].push(compose(s.x, 0, s.z, random() * Math.PI * 2, (kind === 0 ? 1.0 : 1.3) * (0.9 + random() * 0.2)));
   });
-  instance(scene, meiboku, ring1[0], goldFoliage('foliage'), true);
+  instance(scene, houju, ring1[0], goldFoliage('foliage'), true);
   instance(scene, yanagi, ring1[1], undefined, true);
 
   // 第3周: 針葉樹・広葉樹・名木(銀の葉)を巡回(枝垂れは施主の指示で名木に差し替え 9/4)

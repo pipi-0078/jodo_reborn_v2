@@ -1,11 +1,11 @@
 import * as T from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadGltfAsset} from '../../assets/loadGltf';
 import {rigParrot} from './rig.js';
 import {ParrotBehavior} from './behavior.js';
 import {PARROT_PERCH,PARROT_SCALE} from '../../world/layout';
 
 export async function createWorldParrot(scene){
-  const gltf=await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/parrot/parrot.glb`);
+  const gltf=await loadGltfAsset(`${import.meta.env.BASE_URL}assets/parrot/parrot.glb.gz`);
   const rig=rigParrot(gltf.scene),bird=rig.group,brain=new ParrotBehavior();
   scene.updateMatrixWorld(true);
   const bridges=scene.children.filter(o=>o.name==='BridgeAsset');

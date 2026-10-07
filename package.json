@@ -5,7 +5,10 @@
   "type": "module",
   "description": "仏説阿弥陀経に基づく極楽浄土の3D再現",
   "scripts": {
+    "prepare:assets": "node tools/compress-world-assets.mjs",
+    "predev": "npm run prepare:assets",
     "dev": "vite",
+    "prebuild": "npm run prepare:assets",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

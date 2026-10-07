@@ -1,12 +1,12 @@
 import * as T from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadGltfAsset} from '../../assets/loadGltf';
 import {rigBody} from './rig.js';
 import {createTrain} from './train.js';
 import {PeacockBehavior} from './behavior.js';
 import {PEACOCK_HOME, PEACOCK_SCALE, sampleGround} from '../../world/layout';
 
 export async function createWorldPeacock(scene) {
-  const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/peacock/peacock-body.glb`);
+  const gltf = await loadGltfAsset(`${import.meta.env.BASE_URL}assets/peacock/peacock-body.glb.gz`);
   const bird = new T.Group();
   bird.name = 'PureLandPeacock';
   const rig = rigBody(gltf.scene);

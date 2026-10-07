@@ -19,13 +19,8 @@ export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
 
   const loader = new THREE.TextureLoader();
 
-  // 砂のマテリアル。同じテクスチャを角度・縮尺を変えて三重に貼り、低周波ノイズで切り替える
-  // (アンチタイリング: 1.6m ごとに同じ模様が繰り返す規則性を消す 9/3)
-  // 水面下の砂は光が減衰して暗く青みがかる(tintで表現)
-  // ripple: 水流の砂紋入り(池底の平場用)。斜面に貼ると横線が地層に見えるので、斜面は砂紋なし
-  const makeSand = (repeatU: number, repeatV = repeatU, side: THREE.Side = THREE.FrontSide,
-    depth = false, ripple = false): THREE.Material => {
-    const file = ripple ? 'pond_sand' : 'pond_sand_flat';
+  // UV の縮尺は各マテリアルのノード側で決めるため、画像は同じ Texture を共有する。
+  const loadSandTextures = (file: string) => {
     const map = loader.load(`${import.meta.env.BASE_URL}textures/${file}.png`);
     map.wrapS = map.wrapT = THREE.RepeatWrapping;
     map.colorSpace = THREE.SRGBColorSpace;
@@ -33,6 +28,18 @@ export function createPond(scene: THREE.Scene, camera: THREE.Camera): void {
     const normalTex = loader.load(`${import.meta.env.BASE_URL}textures/${file}_normal.png`);
     normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping;
     normalTex.anisotropy = 8;
+    return { map, normalTex };
+  };
+  const flatSand = loadSandTextures('pond_sand_flat');
+  const rippledSand = loadSandTextures('pond_sand');
+
+  // 砂のマテリアル。同じテクスチャを角度・縮尺を変えて三重に貼り、低周波ノイズで切り替える
+  // (アンチタイリング: 1.6m ごとに同じ模様が繰り返す規則性を消す 9/3)
+  // 水面下の砂は光が減衰して暗く青みがかる(tintで表現)
+  // ripple: 水流の砂紋入り(池底の平場用)。斜面に貼ると横線が地層に見えるので、斜面は砂紋なし
+  const makeSand = (repeatU: number, repeatV = repeatU, side: THREE.Side = THREE.FrontSide,
+    depth = false, ripple = false): THREE.Material => {
+    const { map, normalTex } = ripple ? rippledSand : flatSand;
 
     const base = uv().mul(vec2(repeatU, repeatV));
     const c1 = Math.cos(0.62), s1 = Math.sin(0.62);

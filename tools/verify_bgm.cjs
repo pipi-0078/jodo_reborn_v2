@@ -7,6 +7,12 @@ const { chromium } = require('playwright-core');
   const page = await browser.newPage({ viewport: { width: 1100, height: 760 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error' && !message.location().url.includes('favicon')) errors.push(message.text());
+  });
+  page.on('response', response => {
+    if (response.status() >= 400 && !response.url().includes('favicon')) errors.push(`${response.status()} ${response.url()}`);
+  });
   await page.addInitScript(() => {
     window.__bgmProbe = { media: [], gains: [] };
     const createMedia = AudioContext.prototype.createMediaElementSource;
@@ -58,6 +64,7 @@ const { chromium } = require('playwright-core');
     assert.equal(results.playing.loop, true);
     assert.equal(results.playing.paused, false);
     assert(results.playing.duration > 299 && results.playing.duration < 301);
+    if (process.env.WORLD_SCREENSHOT) await page.screenshot({ path: `${out}/world.png`, timeout: 60000 });
 
     // Seek through the actual MP3 end and observe the native loop restart.
     await page.evaluate(() => {

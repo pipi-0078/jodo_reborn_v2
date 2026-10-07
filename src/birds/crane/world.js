@@ -1,11 +1,11 @@
 import * as T from 'three/webgpu';
 import {positionLocal,positionWorld,vec3,lights} from 'three/tsl';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadGltfAsset} from '../../assets/loadGltf';
 import {rigCrane} from './rig.js';
 import {pondWave,craneWaterFocus} from '../../world/waterSurface';
 import {CRANE_RADIUS,CRANE_ANGLE,CRANE_SCALE,WATER_LEVEL} from '../../world/layout';
 export async function createWorldCrane(scene,sunDirection){
- const rig=rigCrane((await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/crane/crane.glb`)).scene),bird=rig.group;bird.name='PureLandCrane';bird.scale.setScalar(CRANE_SCALE);scene.add(bird);
+ const rig=rigCrane((await loadGltfAsset(`${import.meta.env.BASE_URL}assets/crane/crane.glb.gz`)).scene),bird=rig.group;bird.name='PureLandCrane';bird.scale.setScalar(CRANE_SCALE);scene.add(bird);
  rig.mesh.material.emissive.set(0xffffff);rig.mesh.material.emissiveMap=rig.mesh.material.map;rig.mesh.material.emissiveIntensity=.10;
  const bank=scene.getObjectByName('ShallowBank');scene.updateMatrixWorld(true);const ray=new T.Raycaster();
  function bed(x,z){ray.set(new T.Vector3(x,2,z),new T.Vector3(0,-1,0));const hit=ray.intersectObject(bank,false)[0];if(!hit)throw Error('Crane outside shallow bank');return hit.point.y+.003;}

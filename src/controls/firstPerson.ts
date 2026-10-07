@@ -17,7 +17,7 @@ export class FirstPersonWalker {
   private readonly keys = { forward: false, back: false, left: false, right: false };
   private readonly sampleGround: GroundSampler;
 
-  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement, overlay: HTMLElement,
+  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement,
     sampleGround: GroundSampler = FLAT_GROUND) {
     this.sampleGround = sampleGround;
     camera.position.set(52, EYE_HEIGHT, 0); // 東側、並木の内側にスポーン
@@ -25,14 +25,9 @@ export class FirstPersonWalker {
 
     this.controls = new PointerLockControls(camera, domElement);
 
-    overlay.querySelector<HTMLButtonElement>('#enter')!.addEventListener('click', () => this.controls.lock());
-    this.controls.addEventListener('lock', () => {
-      overlay.classList.add('hidden');
-      overlay.inert = true;
-    });
     this.controls.addEventListener('unlock', () => {
-      overlay.classList.remove('hidden');
-      overlay.inert = false;
+      this.keys.forward = this.keys.back = this.keys.left = this.keys.right = false;
+      this.velocity.set(0, 0, 0);
     });
 
     document.addEventListener('keydown', (e) => this.setKey(e.code, true));
