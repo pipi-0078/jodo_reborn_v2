@@ -10,7 +10,7 @@
     #overlay {
       position: fixed; inset: 0; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1.2rem; cursor: pointer; text-align: center;
+      gap: 1.2rem; text-align: center; padding: 1.5rem; box-sizing: border-box; overflow-y: auto;
       background: radial-gradient(ellipse at center, rgba(26, 20, 8, 0.55), rgba(26, 20, 8, 0.92));
       color: #e8c37a;
       font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
@@ -19,14 +19,23 @@
     #overlay.hidden { opacity: 0; pointer-events: none; }
     #overlay h1 { font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 500; letter-spacing: 0.35em; margin: 0; }
     #overlay p { font-size: clamp(0.85rem, 2.5vw, 1.05rem); letter-spacing: 0.12em; line-height: 2; margin: 0; opacity: 0.85; }
-    #overlay .enter { border: 1px solid rgba(232, 195, 122, 0.6); padding: 0.6em 2.2em; letter-spacing: 0.3em; }
+    #overlay .enter { border: 1px solid rgba(232, 195, 122, 0.6); padding: 0.6em 2.2em; letter-spacing: 0.3em; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    #overlay .enter:disabled { opacity: 0.5; cursor: wait; }
+    #overlay .enter:focus-visible { outline: 2px solid #e8c37a; outline-offset: 5px; }
+    #overlay .sound-notice { opacity: 1; }
+    #overlay .sound-option { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; }
+    #bgm-enabled { accent-color: #e8c37a; width: 1.1rem; height: 1.1rem; }
+    #overlay .audio-error { color: #ffe0b0; font-size: 0.85rem; }
   </style>
 </head>
 <body>
   <div id="overlay">
     <h1>極楽国土</h1>
     <p>其国衆生 無有衆苦 但受諸楽 故名極楽</p>
-    <p class="enter">クリックして入場</p>
+    <p id="sound-notice" class="sound-notice"><strong>音が出ます</strong><br>入場すると、控えめな音量でBGMが流れます。</p>
+    <label class="sound-option"><input id="bgm-enabled" type="checkbox" checked>音楽を流す</label>
+    <button id="enter" class="enter" type="button" aria-describedby="sound-notice" disabled>準備しています</button>
+    <p id="audio-error" class="audio-error" role="status" hidden>BGMを再生できませんでした。再入場すると、もう一度再生を試みます。</p>
     <p>移動:W A S D ／ 見回す:マウス ／ 退出:ESC</p>
     <p><a href="gallery.html" style="color:#e8c37a">アセットギャラリーを見る →</a></p>
   </div>

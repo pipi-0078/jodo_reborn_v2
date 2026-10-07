@@ -25,9 +25,15 @@ export class FirstPersonWalker {
 
     this.controls = new PointerLockControls(camera, domElement);
 
-    overlay.addEventListener('click', () => this.controls.lock());
-    this.controls.addEventListener('lock', () => overlay.classList.add('hidden'));
-    this.controls.addEventListener('unlock', () => overlay.classList.remove('hidden'));
+    overlay.querySelector<HTMLButtonElement>('#enter')!.addEventListener('click', () => this.controls.lock());
+    this.controls.addEventListener('lock', () => {
+      overlay.classList.add('hidden');
+      overlay.inert = true;
+    });
+    this.controls.addEventListener('unlock', () => {
+      overlay.classList.remove('hidden');
+      overlay.inert = false;
+    });
 
     document.addEventListener('keydown', (e) => this.setKey(e.code, true));
     document.addEventListener('keyup', (e) => this.setKey(e.code, false));
